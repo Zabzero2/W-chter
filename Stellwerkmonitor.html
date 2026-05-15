@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESTW Monitor Alarm v7 - Echte Zeit</title>
+    <title>ESTW Monitor Alarm v8 - Fehlalarm Filter</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #222; color: white; margin: 0; padding: 10px; overflow-x: hidden;}
         #ui { margin-top: 5px; display: flex; flex-direction: column; align-items: center; gap: 10px;}
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-    <h2 style="margin: 5px 0;">ESTW Wächter Pro v7</h2>
+    <h2 style="margin: 5px 0;">ESTW Wächter Pro v8</h2>
     
     <div id="ui">
         <button id="startBtn">Kamera & Alarm Starten</button>
@@ -58,7 +58,6 @@
         let audioCtx;
         let lastBeepTime = 0;
 
-        // history speichert jetzt Objekte mit Wert und genauem Zeitstempel
         let boxes = [
             { id: 1, x: 50, y: 50, w: 120, h: 40, isAlarm: false, history: [] },
             { id: 2, x: 50, y: 150, w: 120, h: 40, isAlarm: false, history: [] }
@@ -73,11 +72,13 @@
             let w = parseInt(e.target.value);
             document.getElementById('valWidth').innerText = w;
             boxes.forEach(b => b.w = w);
+            boxes.forEach(b => b.history = []); // Reset history beim Ändern der Größe
         });
         slideHeight.addEventListener('input', e => {
             let h = parseInt(e.target.value);
             document.getElementById('valHeight').innerText = h;
             boxes.forEach(b => b.h = h);
+            boxes.forEach(b => b.history = []); // Reset history beim Ändern der Größe
         });
 
         function getPointerPos(e) {
@@ -98,6 +99,7 @@
                     draggingBox = box;
                     dragOffsetX = pos.x - box.x;
                     dragOffsetY = pos.y - box.y;
+                    box.history = []; // Reset history beim Antippen
                     e.preventDefault(); 
                     break;
                 }
@@ -111,6 +113,7 @@
                 draggingBox.y = pos.y - dragOffsetY;
                 draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, draggingBox.x));
                 draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, draggingBox.y));
+                draggingBox.history = []; // Reset history, solange bewegt wird
                 e.preventDefault();
             }
         }
@@ -174,6 +177,8 @@
 
                     isRunning = true;
                     startBtn.innerText = "Stoppen (Neuladen)";
+                    // Setze den Speicher für alle Boxen beim Start zurück
+                    boxes.forEach(b => b.history = []);
                     video.onplaying = () => { processFrame(); };
 
                 } catch (err) {
@@ -208,16 +213,12 @@
                 
                 let avgBrightness = totalBrightness / (rw * rh);
                 
-                // Speichere Helligkeit mit aktuellem Zeitstempel
                 box.history.push({ val: avgBrightness, time: currentTime });
-                
-                // Lösche alle Einträge, die älter als 4000 Millisekunden (4 Sekunden) sind
                 box.history = box.history.filter(item => currentTime - item.time <= 4000);
 
                 let diff = 0;
                 let crossings = 0;
                 
-                // Extrahiere nur die reinen Helligkeitswerte für die Berechnung
                 let recentVals = box.history.map(item => item.val);
 
                 if (recentVals.length > 10) {
@@ -243,7 +244,8 @@
                         }
                     }
 
-                    if (diff >= threshold && crossings >= 2) {
+                    // NEU: Alarm erst ab 3 Wechseln (überspringt Kamera-Ruckler)
+                    if (diff >= threshold && crossings >= 3) {
                         box.isAlarm = true;
                         anyAlarm = true;
                     } else {
