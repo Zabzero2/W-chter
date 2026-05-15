@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESTW Monitor Alarm v4</title>
+    <title>ESTW Monitor Alarm v5 - Blink-Erkennung</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #222; color: white; margin: 0; padding: 10px; overflow-x: hidden;}
         #ui { margin-top: 5px; display: flex; flex-direction: column; align-items: center; gap: 10px;}
@@ -12,7 +12,6 @@
         .controls { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 14px; background: #333; padding: 10px; border-radius: 8px; width: 90%; max-width: 400px;}
         .slider-row { display: flex; justify-content: space-between; width: 100%; align-items: center;}
         input[type="range"] { flex-grow: 1; margin-left: 10px; }
-        .checkbox-row { margin-top: 5px; font-weight: bold; color: #ffeb3b; background: #444; padding: 8px; border-radius: 5px; width: 100%; box-sizing: border-box;}
         #container { position: relative; display: inline-block; margin-top: 10px; max-width: 100%; }
         video { display: none; } 
         canvas { background: #000; width: 100%; height: auto; touch-action: none; border: 2px solid #555; border-radius: 8px; }
@@ -20,14 +19,14 @@
 </head>
 <body>
 
-    <h2 style="margin: 5px 0;">ESTW Wächter Pro</h2>
+    <h2 style="margin: 5px 0;">ESTW Wächter Pro v5</h2>
     
     <div id="ui">
         <button id="startBtn">Kamera & Alarm Starten</button>
         <div class="controls">
-            <div class="slider-row">
-                <label>Empfindlichkeit: <span id="valSens">100</span></label>
-                <input type="range" id="slideSens" min="10" max="600" value="100">
+            <div class="slider-row" title="Wie stark muss sich das Bild verändern, um Alarm auszulösen?">
+                <label>Empfindlichkeit: <span id="valSens">15</span></label>
+                <input type="range" id="slideSens" min="2" max="100" value="15">
             </div>
             <div class="slider-row">
                 <label>Box Breite: <span id="valWidth">120</span></label>
@@ -36,9 +35,6 @@
             <div class="slider-row">
                 <label>Box Höhe: <span id="valHeight">40</span></label>
                 <input type="range" id="slideHeight" min="20" max="150" value="40">
-            </div>
-            <div class="checkbox-row">
-                <label><input type="checkbox" id="blinkMode" checked> Nur auf BLINKEN reagieren</label>
             </div>
         </div>
     </div>
@@ -57,23 +53,20 @@
         const slideSens = document.getElementById('slideSens');
         const slideWidth = document.getElementById('slideWidth');
         const slideHeight = document.getElementById('slideHeight');
-        const blinkMode = document.getElementById('blinkMode');
         
         let isRunning = false;
         let audioCtx;
         let lastBeepTime = 0;
 
-        // history-Array speichert die Gelb-Werte der letzten Bilder für die Blink-Erkennung
         let boxes = [
-            { id: 1, x: 50, y: 50, w: 120, h: 40, isAlarm: false, count: 0, history: [] },
-            { id: 2, x: 50, y: 150, w: 120, h: 40, isAlarm: false, count: 0, history: [] }
+            { id: 1, x: 50, y: 50, w: 120, h: 40, isAlarm: false, history: [] },
+            { id: 2, x: 50, y: 150, w: 120, h: 40, isAlarm: false, history: [] }
         ];
         
         let draggingBox = null;
         let dragOffsetX = 0;
         let dragOffsetY = 0;
 
-        // UI Updates
         slideSens.addEventListener('input', e => document.getElementById('valSens').innerText = e.target.value);
         slideWidth.addEventListener('input', e => {
             let w = parseInt(e.target.value);
@@ -132,7 +125,7 @@
 
         function playBeep() {
             const now = Date.now();
-            if (now - lastBeepTime < 1000) return; // Maximal 1 Piepton pro Sekunde
+            if (now - lastBeepTime < 1000) return; 
             lastBeepTime = now;
 
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -196,7 +189,6 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             let anyAlarm = false;
             const threshold = parseInt(slideSens.value); 
-            const isBlinkMode = blinkMode.checked;
 
             for (let i = 0; i < boxes.length; i++) {
                 let box = boxes[i];
@@ -205,41 +197,31 @@
 
                 const frame = ctx.getImageData(rx, ry, rw, rh);
                 const data = frame.data;
-                let yellowPixels = 0;
+                
+                let totalBrightness = 0;
 
+                // Berechne die Gesamthelligkeit aller Pixel im Rahmen
                 for (let j = 0; j < data.length; j += 4) {
-                    let r = data[j]; let g = data[j+1]; let b = data[j+2];
-                    if (r > 150 && g > 150 && b < 100) {
-                        yellowPixels++;
-                    }
+                    totalBrightness += data[j] + data[j+1] + data[j+2];
                 }
                 
-                box.count = yellowPixels;
+                // Durchschnittliche Helligkeit pro Pixel
+                let avgBrightness = totalBrightness / (rw * rh);
                 
-                // Historie aktualisieren (speichert die letzten ~60 Frames / ca. 1.5 Sekunden)
-                box.history.push(yellowPixels);
-                if (box.history.length > 60) {
-                    box.history.shift(); // Ältesten Wert löschen
+                // Merke die Helligkeit der letzten ~90 Bilder (ca. 3 Sekunden)
+                box.history.push(avgBrightness);
+                if (box.history.length > 90) {
+                    box.history.shift(); 
                 }
 
-                if (isBlinkMode) {
-                    // BLINK-LOGIK: Wir suchen nach dem stärksten Schwanken im Zeitverlauf
-                    if (box.history.length === 60) {
-                        let maxYellow = Math.max(...box.history);
-                        let minYellow = Math.min(...box.history);
-                        let difference = maxYellow - minYellow;
+                let diff = 0;
+                if (box.history.length > 30) {
+                    let maxBrightness = Math.max(...box.history);
+                    let minBrightness = Math.min(...box.history);
+                    diff = Math.floor(maxBrightness - minBrightness);
 
-                        // Wenn der Unterschied zwischen "An" und "Aus" groß genug ist
-                        if (difference >= threshold && maxYellow >= threshold) {
-                            box.isAlarm = true;
-                            anyAlarm = true;
-                        } else {
-                            box.isAlarm = false;
-                        }
-                    }
-                } else {
-                    // NORMALE LOGIK: Alarm, wenn aktuell genug Gelb da ist
-                    if (yellowPixels >= threshold) {
+                    // Wenn der Unterschied zwischen "hellster Moment" und "dunkelster Moment" groß genug ist
+                    if (diff >= threshold) {
                         box.isAlarm = true;
                         anyAlarm = true;
                     } else {
@@ -247,16 +229,18 @@
                     }
                 }
 
+                // Rahmen zeichnen
                 ctx.beginPath();
                 ctx.rect(box.x, box.y, box.w, box.h);
                 ctx.lineWidth = box.isAlarm ? 4 : 2;
                 ctx.strokeStyle = box.isAlarm ? "#ff0000" : "#00ff00";
                 ctx.stroke();
                 
+                // Text zeichnen
                 ctx.fillStyle = box.isAlarm ? "#ff0000" : "#00ff00";
                 ctx.font = "bold 18px Arial";
                 
-                let text = isBlinkMode ? `Box ${box.id} (Diff: ${Math.max(0, Math.max(...box.history) - Math.min(...box.history))})` : `Box ${box.id}: ${yellowPixels}`;
+                let text = `Box ${box.id} | Diff: ${diff}`;
                 ctx.strokeText(text, box.x, box.y - 8);
                 ctx.fillText(text, box.x, box.y - 8);
             }
