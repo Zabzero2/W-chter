@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESTW Monitor Alarm v6 - Puls-Filter</title>
+    <title>ESTW Monitor Alarm v7 - Echte Zeit</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #222; color: white; margin: 0; padding: 10px; overflow-x: hidden;}
         #ui { margin-top: 5px; display: flex; flex-direction: column; align-items: center; gap: 10px;}
@@ -19,7 +19,7 @@
 </head>
 <body>
 
-    <h2 style="margin: 5px 0;">ESTW Wächter Pro v6</h2>
+    <h2 style="margin: 5px 0;">ESTW Wächter Pro v7</h2>
     
     <div id="ui">
         <button id="startBtn">Kamera & Alarm Starten</button>
@@ -58,6 +58,7 @@
         let audioCtx;
         let lastBeepTime = 0;
 
+        // history speichert jetzt Objekte mit Wert und genauem Zeitstempel
         let boxes = [
             { id: 1, x: 50, y: 50, w: 120, h: 40, isAlarm: false, history: [] },
             { id: 2, x: 50, y: 150, w: 120, h: 40, isAlarm: false, history: [] }
@@ -189,6 +190,7 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             let anyAlarm = false;
             const threshold = parseInt(slideSens.value); 
+            const currentTime = Date.now();
 
             for (let i = 0; i < boxes.length; i++) {
                 let box = boxes[i];
@@ -206,44 +208,41 @@
                 
                 let avgBrightness = totalBrightness / (rw * rh);
                 
-                // Wir speichern jetzt die letzten 120 Bilder (ca. 3.5 bis 4 Sekunden bei 30fps)
-                box.history.push(avgBrightness);
-                if (box.history.length > 120) {
-                    box.history.shift(); 
-                }
+                // Speichere Helligkeit mit aktuellem Zeitstempel
+                box.history.push({ val: avgBrightness, time: currentTime });
+                
+                // Lösche alle Einträge, die älter als 4000 Millisekunden (4 Sekunden) sind
+                box.history = box.history.filter(item => currentTime - item.time <= 4000);
 
                 let diff = 0;
                 let crossings = 0;
+                
+                // Extrahiere nur die reinen Helligkeitswerte für die Berechnung
+                let recentVals = box.history.map(item => item.val);
 
-                if (box.history.length > 30) {
-                    let maxBrightness = Math.max(...box.history);
-                    let minBrightness = Math.min(...box.history);
+                if (recentVals.length > 10) {
+                    let maxBrightness = Math.max(...recentVals);
+                    let minBrightness = Math.min(...recentVals);
                     diff = Math.floor(maxBrightness - minBrightness);
 
-                    // Nur wenn der Unterschied groß genug ist, zählen wir die Wechsel (Pulse)
                     if (diff >= threshold) {
                         let midPoint = minBrightness + (diff / 2);
-                        let margin = diff * 0.2; // 20% Puffer-Zone, damit Bildrauschen nicht als Blinken zählt
-                        let state = 0; // 1 = hell, -1 = dunkel
+                        let margin = diff * 0.2; 
+                        let state = 0; 
                         
-                        for (let k = 0; k < box.history.length; k++) {
-                            let val = box.history[k];
-                            // Wenn das Bild deutlich heller wird als die Mitte
+                        for (let k = 0; k < recentVals.length; k++) {
+                            let val = recentVals[k];
                             if (val > midPoint + margin) {
-                                if (state === -1) crossings++; // Wechsel von dunkel zu hell
+                                if (state === -1) crossings++; 
                                 state = 1;
                             } 
-                            // Wenn das Bild deutlich dunkler wird als die Mitte
                             else if (val < midPoint - margin) {
-                                if (state === 1) crossings++; // Wechsel von hell zu dunkel
+                                if (state === 1) crossings++; 
                                 state = -1;
                             }
                         }
                     }
 
-                    // ALARMBEDINGUNG:
-                    // Es muss hell/dunkel genug sein (diff >= threshold) UND 
-                    // es muss mindestens 2 Mal gewechselt haben (crossings >= 2)
                     if (diff >= threshold && crossings >= 2) {
                         box.isAlarm = true;
                         anyAlarm = true;
@@ -252,14 +251,12 @@
                     }
                 }
 
-                // Rahmen zeichnen
                 ctx.beginPath();
                 ctx.rect(box.x, box.y, box.w, box.h);
                 ctx.lineWidth = box.isAlarm ? 4 : 2;
                 ctx.strokeStyle = box.isAlarm ? "#ff0000" : "#00ff00";
                 ctx.stroke();
                 
-                // Text zeichnen
                 ctx.fillStyle = box.isAlarm ? "#ff0000" : "#00ff00";
                 ctx.font = "bold 18px Arial";
                 
