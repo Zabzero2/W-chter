@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESTW Monitor Alarm v2</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #222; color: white; margin: 0; padding: 10px; overflow-x: hidden;}
+        #ui { margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 15px;}
+        button { padding: 12px 24px; font-size: 16px; font-weight: bold; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;}
+        button:active { background: #0056b3; }
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 14px; background: #333; padding: 10px; border-radius: 8px;}
+        #container { position: relative; display: inline-block; margin-top: 15px; }
+        video { display: none; } 
+        /* Touch-Action none ist wichtig, damit das Handy beim Box-Verschieben nicht die Seite scrollt */
+        canvas { background: #000; max-width: 100%; touch-action: none; border: 2px solid #555; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    <h2>ESTW Kamera-Wächter</h2>
+    <p style="font-size: 14px; margin-top:-10px;">Verschiebe die Kästchen mit dem Finger.</p>
+    
+    <div id="ui">
+        <button id="startBtn">Kamera & Alarm Starten</button>
+        <div class="controls">
+            <label for="sensitivitySlider">Schwellenwert (ab wie viel Gelb = Alarm?): <span id="sensitivityValue">150</span></label>
+            <input type="range" id="sensitivitySlider" min="10" max="1000" value="150" style="width: 250px;">
+        </div>
+    </div>
+
+    <div id="container">
+        <video id="video" playsinline></video>
+        <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const slider = document.getElementById('sensitivitySlider');
+        const sliderValue = document.getElementById('sensitivityValue');
+        
+        let isRunning = false;
+        let audioCtx;
+        let lastBeepTime = 0;
+
+        // Zwei Boxen definieren (Position und Größe)
+        let boxes = [
+            { id: 1, x: 50, y: 50, w: 120, h: 40, isAlarm: false, count: 0 },
+            { id: 2, x: 50, y: 150, w: 120, h: 40, isAlarm: false, count: 0 }
+        ];
+        
+        // Variablen für das Verschieben per Touch
+        let draggingBox = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // Slider Text updaten
+        slider.addEventListener('input', (e) => {
+            sliderValue.innerText = e.target.value;
+        });
+
+        // Berechnet die Touch-Position exakt auf dem Canvas (auch wenn das Bild herunterskaliert ist)
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        // Finger berührt den Bildschirm
+        function handleStart(e) {
+            if (!isRunning) return;
+            const pos = getPointerPos(e);
+            for (let i = boxes.length - 1; i >= 0; i--) {
+                let box = boxes[i];
+                if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
+                    draggingBox = box;
+                    dragOffsetX = pos.x - box.x;
+                    dragOffsetY = pos.y - box.y;
+                    e.preventDefault(); 
+                    break;
+                }
+            }
+        }
+
+        // Finger bewegt sich
+        function handleMove(e) {
+            if (draggingBox) {
+                const pos = getPointerPos(e);
+                draggingBox.x = pos.x - dragOffsetX;
+                draggingBox.y = pos.y - dragOffsetY;
+                
+                // Box nicht aus dem Bild schieben lassen
+                draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, draggingBox.x));
+                draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, draggingBox.y));
+                e.preventDefault();
+            }
+        }
+
+        // Finger verlässt den Bildschirm
+        function handleEnd() { draggingBox = null; }
+
+        // Touch-Events registrieren (fürs Handy)
+        canvas.addEventListener('touchstart', handleStart, {passive: false});
+        canvas.addEventListener('touchmove', handleMove, {passive: false});
+        window.addEventListener('touchend', handleEnd);
+        
+        // Maus-Events registrieren (falls du es am PC testest)
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+
+        // Alarmton (piept maximal 1x pro Sekunde, um nicht zu übersteuern)
+        function playBeep() {
+            const now = Date.now();
+            if (now - lastBeepTime < 1000) return; 
+            lastBeepTime = now;
+
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        }
+
+        // Kamera Starten
+        startBtn.addEventListener('click', async () => {
+            if (!isRunning) {
+                try {
+                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Rückkamera anfordern (idealerweise in 720p für gute Performance)
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                    });
+                    video.srcObject = stream;
+                    
+                    video.onloadedmetadata = () => {
+                        canvas.width = video.videoWidth || 640;
+                        canvas.height = video.videoHeight || 480;
+                        video.play();
+                    };
+
+                    // Versuch, das Display wachzuhalten (funktioniert meistens in Chrome)
+                    if ('wakeLock' in navigator) {
+                        navigator.wakeLock.request('screen').catch(()=>{});
+                    }
+
+                    isRunning = true;
+                    startBtn.innerText = "Stoppen (Neuladen)";
+                    
+                    video.onplaying = () => { processFrame(); };
+
+                } catch (err) {
+                    alert("Kamerafehler: Bitte Browser-Berechtigungen prüfen! " + err.message);
+                }
+            } else {
+                location.reload();
+            }
+        });
+
+        // Das Herzstück: Die Videoüberwachung in Dauerschleife
+        function processFrame() {
+            if (!isRunning) return;
+
+            // 1. Videobild auf die Leinwand (Canvas) zeichnen
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            let anyAlarm = false;
+            const threshold = parseInt(slider.value); 
+
+            // 2. Jede Box überprüfen
+            for (let i = 0; i < boxes.length; i++) {
+                let box = boxes[i];
+                
+                // Pixel aus exakt diesem Rechteck holen
+                let rx = Math.floor(box.x);
+                let ry = Math.floor(box.y);
+                let rw = Math.floor(box.w);
+                let rh = Math.floor(box.h);
+
+                const frame = ctx.getImageData(rx, ry, rw, rh);
+                const data = frame.data;
+                let yellowPixels = 0;
+
+                // 3. Nach Gelb suchen
+                for (let j = 0; j < data.length; j += 4) {
+                    let r = data[j];
+                    let g = data[j+1];
+                    let b = data[j+2];
+
+                    // Leuchtendes Gelb: Viel Rot, Viel Grün, Wenig Blau
+                    if (r > 150 && g > 150 && b < 100) {
+                        yellowPixels++;
+                    }
+                }
+                
+                box.count = yellowPixels;
+
+                // 4. Alarm-Logik auswerten
+                if (yellowPixels >= threshold) {
+                    box.isAlarm = true;
+                    anyAlarm = true;
+                } else {
+                    box.isAlarm = false;
+                }
+
+                // 5. Box und Live-Wert ins Bild zeichnen
+                ctx.beginPath();
+                ctx.rect(box.x, box.y, box.w, box.h);
+                ctx.lineWidth = box.isAlarm ? 4 : 2;
+                ctx.strokeStyle = box.isAlarm ? "#ff0000" : "#00ff00"; // Rot bei Alarm, sonst Grün
+                ctx.stroke();
+                
+                // Text über der Box (zeigt den Live-Wert der gelben Pixel an)
+                ctx.fillStyle = box.isAlarm ? "#ff0000" : "#00ff00";
+                ctx.font = "bold 18px Arial";
+                // Fügt schwarzen Umriss um den Text hinzu, damit er auf dem Monitor lesbar bleibt
+                ctx.strokeText("Box " + box.id + ": " + yellowPixels, box.x, box.y - 8);
+                ctx.fillText("Box " + box.id + ": " + yellowPixels, box.x, box.y - 8);
+            }
+
+            if (anyAlarm) {
+                playBeep();
+            }
+
+            // Nächsten Frame abwarten und wiederholen
+            requestAnimationFrame(processFrame);
+        }
+    </script>
+</body>
+</html>
