@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v15</title>
+<title>ESTW Wächter Pro v16</title>
 
 <style>
     body {
@@ -14,10 +14,47 @@
         font-family: Arial, sans-serif;
         text-align: center;
         overflow-x: hidden;
-        user-select: none; /* Verhindert Text-Markieren beim schnellen Tippen */
+        user-select: none;
     }
 
     h2 { margin: 5px 0 10px; }
+
+    /* Container für die gezoomten Vorschaubilder */
+    #zoomHeader {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        background: #2b2b2b;
+        padding: 10px;
+        border-radius: 10px;
+        min-height: 60px;
+    }
+
+    .zoom-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #444;
+        padding: 4px;
+        border-radius: 5px;
+        border: 1px solid #666;
+    }
+
+    .zoom-canvas {
+        width: 80px; /* Kompakte Breite am Tablet */
+        height: 40px;
+        background: black;
+        border: 1px solid #00ff88;
+        image-rendering: pixelated; /* Macht den Zoom schärfer */
+    }
+
+    .zoom-label {
+        font-size: 10px;
+        margin-top: 2px;
+        font-weight: bold;
+    }
 
     #ui {
         display: flex;
@@ -28,21 +65,21 @@
 
     .button-row {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         flex-wrap: wrap;
         justify-content: center;
     }
 
     button {
-        padding: 12px 18px;
+        padding: 12px 16px;
         border: none;
         border-radius: 8px;
         background: #007bff;
         color: white;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: bold;
         cursor: pointer;
-        touch-action: manipulation; /* Verhindert Zoom auf Tablets */
+        touch-action: manipulation;
     }
 
     button:hover { background: #0060d1; }
@@ -58,7 +95,7 @@
         padding: 12px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
 
     .slider-row {
@@ -69,48 +106,40 @@
     }
 
     .slider-row label {
-        width: 170px;
+        width: 160px;
         text-align: left;
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .slider-row input, .slider-row select { 
         flex-grow: 1; 
-        padding: 5px;
         background: #444;
         color: white;
         border: 1px solid #666;
         border-radius: 4px;
     }
 
-    /* Steuerkreuz (D-Pad) für präzises Verschieben */
     .dpad-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 5px;
         background: #333;
-        padding: 10px;
+        padding: 8px;
         border-radius: 8px;
-        margin-top: 5px;
     }
     
-    .dpad-row {
-        display: flex;
-        gap: 10px;
-    }
+    .dpad-row { display: flex; gap: 15px; }
 
     .dpad-btn {
         background: #555;
         font-size: 18px;
-        padding: 12px 20px;
+        padding: 10px 25px;
     }
-    
-    .dpad-btn:active { background: #777; }
 
     #container {
         position: relative;
-        margin-top: 12px;
+        margin-top: 10px;
         display: inline-block;
         max-width: 100%;
     }
@@ -130,7 +159,8 @@
 </head>
 <body>
 
-<h2>ESTW Wächter Pro v15</h2>
+<div id="zoomHeader">
+    </div>
 
 <div id="ui">
     <div class="button-row">
@@ -150,19 +180,19 @@
             </select>
         </div>
         
-        <div class="slider-row" title="Wie hoch muss Diff mindestens sein?">
+        <div class="slider-row">
             <label>Empfindlichkeit: <span id="valSens">15</span></label>
             <input type="range" id="slideSens" min="2" max="100" value="15">
         </div>
         <div class="slider-row">
-            <label>Box Breite: <span id="valWidth">120</span></label>
-            <input type="range" id="slideWidth" min="30" max="300" value="120">
+            <label>Box Breite: <span id="valWidth">80</span></label>
+            <input type="range" id="slideWidth" min="20" max="100" value="80">
         </div>
         <div class="slider-row">
-            <label>Box Höhe: <span id="valHeight">40</span></label>
-            <input type="range" id="slideHeight" min="20" max="150" value="40">
+            <label>Box Höhe: <span id="valHeight">30</span></label>
+            <input type="range" id="slideHeight" min="10" max="50" value="30">
         </div>
-        <div class="slider-row" title="Wie oft muss das Licht langsam wechseln?">
+        <div class="slider-row">
             <label>Min. Pulse: <span id="valPulse">4</span></label>
             <input type="range" id="slidePulse" min="1" max="10" value="4">
         </div>
@@ -172,8 +202,8 @@
         </div>
 
         <div class="dpad-container" id="dpadPanel">
-            <div style="font-size: 14px; margin-bottom: 5px; color: #00ff88;">
-                Feinjustierung für Box <span id="selectedBoxId">1</span>
+            <div style="font-size: 13px; margin-bottom: 5px; color: #00ff88;">
+                Feinjustierung Box <span id="selectedBoxId">1</span>
             </div>
             <div class="dpad-row">
                 <button class="dpad-btn" id="btnUp">🔼</button>
@@ -196,6 +226,7 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const zoomHeader = document.getElementById('zoomHeader');
 
 const startBtn = document.getElementById('startBtn');
 const monitorBtn = document.getElementById('monitorBtn');
@@ -226,20 +257,39 @@ let lastBeep = 0;
 
 const HISTORY_MS = 5000; 
 const MIN_CROSS_TIME = 400; 
-const PIXEL_STEP = 4; // Kern-Algorithmus aus v12!
+const PIXEL_STEP = 4; 
 
-const DEFAULTS = { sens: 15, width: 120, height: 40, pulse: 4, hold: 1.5, count: 2 };
+const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2 };
 
-// Bis zu 4 Boxen werden vorbereitet
 let boxes = [
-    { id: 1, x: 60, y: 60, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 },
-    { id: 2, x: 60, y: 160, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 },
-    { id: 3, x: 60, y: 260, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 },
-    { id: 4, x: 60, y: 360, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 }
+    { id: 1, x: 60, y: 60, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null },
+    { id: 2, x: 60, y: 160, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null },
+    { id: 3, x: 60, y: 260, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null },
+    { id: 4, x: 60, y: 360, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null }
 ];
 
 let activeBoxCount = 2;
-let selectedBox = boxes[0]; // Box 1 ist standardmäßig ausgewählt
+let selectedBox = boxes[0];
+
+// Erstelle die Zoom-Canvases im Header
+function createZoomDisplays() {
+    zoomHeader.innerHTML = '';
+    for (let i = 0; i < activeBoxCount; i++) {
+        const div = document.createElement('div');
+        div.className = 'zoom-box';
+        const c = document.createElement('canvas');
+        c.className = 'zoom-canvas';
+        c.width = 100; // Interne Auflösung des Zooms
+        c.height = 50;
+        const label = document.createElement('div');
+        label.className = 'zoom-label';
+        label.innerText = 'BOX ' + (i+1);
+        div.appendChild(c);
+        div.appendChild(label);
+        zoomHeader.appendChild(div);
+        boxes[i].zoomCtx = c.getContext('2d');
+    }
+}
 
 function updateLabels() {
     valSens.innerText = slideSens.value;
@@ -252,20 +302,16 @@ function updateLabels() {
 
 function saveSettings() {
     const settings = {
-        sens: slideSens.value, 
-        width: slideWidth.value,
-        height: slideHeight.value, 
-        pulse: slidePulse.value, 
-        hold: slideHold.value,
-        count: activeBoxCount,
-        positions: boxes.map(b => ({ x: b.x, y: b.y })) // Speichert die Positionen!
+        sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
+        pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount,
+        positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v15', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v16', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v15');
+        const saved = localStorage.getItem('estw_settings_v16');
         if (saved) {
             const settings = JSON.parse(saved);
             if (settings.sens) slideSens.value = settings.sens;
@@ -279,20 +325,14 @@ function loadSettings() {
             }
             if (settings.positions) {
                 settings.positions.forEach((pos, idx) => {
-                    if (boxes[idx]) {
-                        boxes[idx].x = pos.x;
-                        boxes[idx].y = pos.y;
-                    }
+                    if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; }
                 });
             }
         }
     } catch(e) {}
-    
+    createZoomDisplays();
     updateLabels();
-    boxes.forEach(b => {
-        b.w = parseInt(slideWidth.value);
-        b.h = parseInt(slideHeight.value);
-    });
+    boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
 }
 
 loadSettings();
@@ -313,11 +353,9 @@ slideHeight.addEventListener('input', () => {
 
 boxCountSelect.addEventListener('change', (e) => {
     activeBoxCount = parseInt(e.target.value);
-    if (selectedBox.id > activeBoxCount) {
-        selectedBox = boxes[0]; // Fallback, falls die gewählte Box deaktiviert wird
-    }
-    updateLabels();
-    saveSettings();
+    createZoomDisplays();
+    if (selectedBox.id > activeBoxCount) selectedBox = boxes[0];
+    updateLabels(); saveSettings();
 });
 
 resetBtn.addEventListener('click', () => {
@@ -325,14 +363,11 @@ resetBtn.addEventListener('click', () => {
     slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse;
     slideHold.value = DEFAULTS.hold; activeBoxCount = DEFAULTS.count;
     boxCountSelect.value = activeBoxCount;
-    
+    createZoomDisplays();
     updateLabels(); saveSettings();
     boxes.forEach((b, idx) => { 
-        b.w = DEFAULTS.width; 
-        b.h = DEFAULTS.height; 
-        b.x = 60; 
-        b.y = 60 + (idx * 100); // Standardpositionen wiederherstellen
-        b.history = []; 
+        b.w = DEFAULTS.width; b.h = DEFAULTS.height; 
+        b.x = 60; b.y = 60 + (idx * 100); b.history = []; 
     });
 });
 
@@ -344,12 +379,11 @@ monitorBtn.addEventListener('click', () => {
     } else {
         monitorBtn.innerText = "Überwachung: AUS";
         monitorBtn.classList.add("off");
-        boxes.forEach(b => { b.history = []; b.isAlarm = false; });
+        boxes.forEach(b => { b.isAlarm = false; });
     }
 });
 
-// Feinjustierung (D-Pad) Buttons
-const stepSize = 2; // Pixel pro Klick
+const stepSize = 1; // Jetzt noch feiner (1 Pixel pro Klick)
 document.getElementById('btnUp').onclick = () => { if(selectedBox) { selectedBox.y -= stepSize; saveSettings(); } };
 document.getElementById('btnDown').onclick = () => { if(selectedBox) { selectedBox.y += stepSize; saveSettings(); } };
 document.getElementById('btnLeft').onclick = () => { if(selectedBox) { selectedBox.x -= stepSize; saveSettings(); } };
@@ -368,20 +402,12 @@ function getPointerPos(e) {
 function startDrag(e) {
     if (!isRunning) return;
     const pos = getPointerPos(e);
-    
-    // Nur durch die AKTIVEN Boxen gehen
     for (let i = activeBoxCount - 1; i >= 0; i--) {
         const box = boxes[i];
         if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
-            draggingBox = box;
-            selectedBox = box; // Box als ausgewählt markieren
-            updateLabels();
-            
-            dragOffsetX = pos.x - box.x;
-            dragOffsetY = pos.y - box.y;
-            box.history = [];
-            e.preventDefault();
-            break;
+            draggingBox = box; selectedBox = box; updateLabels();
+            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y;
+            box.history = []; e.preventDefault(); break;
         }
     }
 }
@@ -391,14 +417,10 @@ function moveDrag(e) {
     const pos = getPointerPos(e);
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
-    draggingBox.history = [];
-    e.preventDefault();
+    draggingBox.history = []; e.preventDefault();
 }
 
-function endDrag() { 
-    if(draggingBox) saveSettings(); // Position nach dem Loslassen speichern
-    draggingBox = null; 
-}
+function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
 
 canvas.addEventListener('mousedown', startDrag);
 canvas.addEventListener('mousemove', moveDrag);
@@ -416,25 +438,18 @@ function playBeep() {
     const now = Date.now();
     if (now - lastBeep < 1000) return;
     lastBeep = now;
-
     initAudio();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-
-    osc.type = 'square';
-    osc.frequency.value = 1000;
-    gain.gain.value = 0.08;
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.25);
+    osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
 }
 
 function adjustCanvas() {
     if (!video.videoWidth) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    createZoomDisplays();
 }
 
 async function startSystem() {
@@ -444,17 +459,10 @@ async function startSystem() {
         });
         video.srcObject = stream;
         video.onloadedmetadata = () => { adjustCanvas(); video.play(); };
-
-        if ('wakeLock' in navigator) {
-            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-        }
-
-        isRunning = true;
-        startBtn.innerText = 'Kamera stoppen';
+        if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
+        isRunning = true; startBtn.innerText = 'Stoppen';
         video.onplaying = () => processFrame();
-    } catch (err) {
-        alert('Kamerafehler: ' + err.message);
-    }
+    } catch (err) { alert('Kamerafehler: ' + err.message); }
 }
 
 function stopSystem() {
@@ -464,9 +472,7 @@ function stopSystem() {
     startBtn.innerText = 'Kamera starten';
 }
 
-startBtn.addEventListener('click', () => {
-    if (!isRunning) startSystem(); else stopSystem();
-});
+startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else stopSystem(); });
 
 function processFrame() {
     if (!isRunning) return;
@@ -479,135 +485,85 @@ function processFrame() {
     let anyAlarm = false;
     const now = Date.now();
 
-    // Nur die AKTIV gewählte Anzahl an Boxen berechnen und zeichnen
     for (let i = 0; i < activeBoxCount; i++) {
         const box = boxes[i];
-        let diff = 0;
-        let crossings = 0;
-        let frequency = 0;
+        let diff = 0; let crossings = 0; let frequency = 0;
 
-        if (isMonitoring) {
-            const rx = Math.floor(box.x);
-            const ry = Math.floor(box.y);
-            const rw = Math.floor(box.w);
-            const rh = Math.floor(box.h);
+        const rx = Math.floor(box.x); const ry = Math.floor(box.y);
+        const rw = Math.floor(box.w); const rh = Math.floor(box.h);
 
-            const frame = ctx.getImageData(rx, ry, rw, rh);
-            const data = frame.data;
+        // 1. ZOOM ANZEIGEN (Spiegelung oben)
+        if (box.zoomCtx) {
+            box.zoomCtx.fillStyle = "black";
+            box.zoomCtx.fillRect(0, 0, 100, 50);
+            // Zeichne den Ausschnitt vom Video skaliert auf den Zoom-Canvas
+            box.zoomCtx.drawImage(canvas, rx, ry, rw, rh, 0, 0, 100, 50);
+        }
 
-            let totalBrightness = 0;
-            let pixelCount = 0;
+        // 2. ANALYSE (Läuft immer!)
+        const frame = ctx.getImageData(rx, ry, rw, rh);
+        const data = frame.data;
+        let totalBrightness = 0; let pixelCount = 0;
 
-            for (let j = 0; j < data.length; j += PIXEL_STEP * 4) {
-                const r = data[j];
-                const g = data[j + 1];
-                const b = data[j + 2];
-                totalBrightness += r * 0.299 + g * 0.587 + b * 0.114;
-                pixelCount++;
-            }
+        for (let j = 0; j < data.length; j += PIXEL_STEP * 4) {
+            const r = data[j]; const g = data[j + 1]; const b = data[j + 2];
+            totalBrightness += r * 0.299 + g * 0.587 + b * 0.114;
+            pixelCount++;
+        }
+        const avgBrightness = totalBrightness / pixelCount;
+        box.history.push({ val: avgBrightness, time: now });
+        while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) { box.history.shift(); }
 
-            const avgBrightness = totalBrightness / pixelCount;
+        if (box.history.length > 5) {
+            const values = box.history.map(v => v.val);
+            const maxVal = Math.max(...values); const minVal = Math.min(...values);
+            diff = Math.round(maxVal - minVal);
+            const hysteresis = Math.max(diff * 0.2, threshold * 0.25);
+            const mid = minVal + diff / 2;
+            let state = 0; let lastCrossTime = 0;
 
-            box.history.push({ val: avgBrightness, time: now });
-
-            while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) {
-                box.history.shift();
-            }
-
-            if (box.history.length > 5) {
-                const values = box.history.map(v => v.val);
-                const maxVal = Math.max(...values);
-                const minVal = Math.min(...values);
-
-                diff = Math.round(maxVal - minVal);
-                
-                const hysteresis = Math.max(diff * 0.2, threshold * 0.25);
-                const mid = minVal + diff / 2;
-
-                let state = 0;
-                let lastCrossTime = 0;
-
-                for (const item of box.history) {
-                    const val = item.val;
-                    const t = item.time;
-
-                    if (val > mid + hysteresis) {
-                        if (state === -1) {
-                            if (t - lastCrossTime > MIN_CROSS_TIME) {
-                                crossings++;
-                                lastCrossTime = t;
-                            }
-                        }
-                        state = 1;
-                    } else if (val < mid - hysteresis) {
-                        if (state === 1) {
-                            if (t - lastCrossTime > MIN_CROSS_TIME) {
-                                crossings++;
-                                lastCrossTime = t;
-                            }
-                        }
-                        state = -1;
-                    }
+            for (const item of box.history) {
+                if (item.val > mid + hysteresis) {
+                    if (state === -1 && item.time - lastCrossTime > MIN_CROSS_TIME) { crossings++; lastCrossTime = item.time; }
+                    state = 1;
+                } else if (item.val < mid - hysteresis) {
+                    if (state === 1 && item.time - lastCrossTime > MIN_CROSS_TIME) { crossings++; lastCrossTime = item.time; }
+                    state = -1;
                 }
+            }
+            frequency = (crossings / (HISTORY_MS / 1000)).toFixed(1);
 
-                frequency = (crossings / (HISTORY_MS / 1000)).toFixed(1);
-
-                if (diff >= threshold && crossings >= minCrossings) {
-                    box.lastAlarmTime = now;
-                }
+            // 3. ALARM-LOGIK (Nur wenn Überwachung AN)
+            if (isMonitoring && diff >= threshold && crossings >= minCrossings) {
+                box.lastAlarmTime = now;
             }
         }
 
         if (isMonitoring && now - box.lastAlarmTime < holdMs) {
-            box.isAlarm = true;
-            anyAlarm = true;
+            box.isAlarm = true; anyAlarm = true;
         } else {
             box.isAlarm = false;
         }
 
-        let boxColor = '#00ff00'; 
-        let textColor = '#00ff88';
-        if (!isMonitoring) {
-            boxColor = '#888888'; 
-            textColor = '#aaaaaa';
-        } else if (box.isAlarm) {
-            boxColor = '#ff0000'; 
-            textColor = '#ff4040';
-        }
+        // 4. ZEICHNEN AUF HAUPTCANVAS
+        let boxColor = '#00ff00'; let textColor = '#00ff88';
+        if (!isMonitoring) { boxColor = '#888888'; textColor = '#aaaaaa'; } 
+        else if (box.isAlarm) { boxColor = '#ff0000'; textColor = '#ff4040'; }
 
-        // Zeichne zusätzliche blaue Hervorhebung für die aktuell ausgewählte Box
         if (box === selectedBox) {
-            ctx.beginPath();
-            ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#00aaff'; // Cyan/Blau
-            ctx.setLineDash([5, 5]); // Gestrichelte Linie
-            ctx.stroke();
-            ctx.setLineDash([]); // Zurücksetzen für den normalen Rahmen
+            ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8);
+            ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
         }
 
-        ctx.beginPath();
-        ctx.rect(box.x, box.y, box.w, box.h);
-        ctx.lineWidth = box.isAlarm ? 4 : 2;
-        ctx.strokeStyle = boxColor;
-        ctx.stroke();
+        ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h);
+        ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = boxColor; ctx.stroke();
 
-        ctx.font = 'bold 18px Arial';
-        ctx.fillStyle = textColor;
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 3;
-
+        ctx.font = 'bold 18px Arial'; ctx.fillStyle = textColor; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
         let text = `Diff:${diff} Puls:${crossings} Hz:${frequency}`;
-        if (!isMonitoring) text = "PAUSE";
-
-        ctx.strokeText(text, box.x, box.y - 8);
-        ctx.fillText(text, box.x, box.y - 8);
+        ctx.strokeText(text, box.x, box.y - 8); ctx.fillText(text, box.x, box.y - 8);
     }
 
-    if (anyAlarm) {
-        playBeep();
-    }
-
+    if (anyAlarm) playBeep();
     requestAnimationFrame(processFrame);
 }
 
