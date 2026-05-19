@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v12</title>
+<title>ESTW Wächter Pro v15</title>
 
 <style>
     body {
@@ -14,11 +14,10 @@
         font-family: Arial, sans-serif;
         text-align: center;
         overflow-x: hidden;
+        user-select: none; /* Verhindert Text-Markieren beim schnellen Tippen */
     }
 
-    h2 {
-        margin: 5px 0 10px;
-    }
+    h2 { margin: 5px 0 10px; }
 
     #ui {
         display: flex;
@@ -43,13 +42,12 @@
         font-size: 15px;
         font-weight: bold;
         cursor: pointer;
+        touch-action: manipulation; /* Verhindert Zoom auf Tablets */
     }
 
     button:hover { background: #0060d1; }
-
     #monitorBtn { background: #28a745; } 
     #monitorBtn.off { background: #dc3545; } 
-
     #resetBtn { background: #555; }
 
     .controls {
@@ -76,7 +74,39 @@
         font-size: 14px;
     }
 
-    .slider-row input { flex-grow: 1; }
+    .slider-row input, .slider-row select { 
+        flex-grow: 1; 
+        padding: 5px;
+        background: #444;
+        color: white;
+        border: 1px solid #666;
+        border-radius: 4px;
+    }
+
+    /* Steuerkreuz (D-Pad) für präzises Verschieben */
+    .dpad-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        background: #333;
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 5px;
+    }
+    
+    .dpad-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .dpad-btn {
+        background: #555;
+        font-size: 18px;
+        padding: 12px 20px;
+    }
+    
+    .dpad-btn:active { background: #777; }
 
     #container {
         position: relative;
@@ -100,10 +130,9 @@
 </head>
 <body>
 
-<h2>ESTW Wächter Pro v12</h2>
+<h2>ESTW Wächter Pro v15</h2>
 
 <div id="ui">
-
     <div class="button-row">
         <button id="startBtn">Kamera starten</button>
         <button id="monitorBtn">Überwachung: AN</button>
@@ -111,6 +140,16 @@
     </div>
 
     <div class="controls">
+        <div class="slider-row">
+            <label>Anzahl Boxen:</label>
+            <select id="boxCountSelect">
+                <option value="1">1 Box</option>
+                <option value="2">2 Boxen</option>
+                <option value="3">3 Boxen</option>
+                <option value="4">4 Boxen</option>
+            </select>
+        </div>
+        
         <div class="slider-row" title="Wie hoch muss Diff mindestens sein?">
             <label>Empfindlichkeit: <span id="valSens">15</span></label>
             <input type="range" id="slideSens" min="2" max="100" value="15">
@@ -131,11 +170,25 @@
             <label>Alarmdauer: <span id="valHold">1.5</span>s</label>
             <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="1.5">
         </div>
+
+        <div class="dpad-container" id="dpadPanel">
+            <div style="font-size: 14px; margin-bottom: 5px; color: #00ff88;">
+                Feinjustierung für Box <span id="selectedBoxId">1</span>
+            </div>
+            <div class="dpad-row">
+                <button class="dpad-btn" id="btnUp">🔼</button>
+            </div>
+            <div class="dpad-row">
+                <button class="dpad-btn" id="btnLeft">◀️</button>
+                <button class="dpad-btn" id="btnDown">🔽</button>
+                <button class="dpad-btn" id="btnRight">▶️</button>
+            </div>
+        </div>
     </div>
 </div>
 
 <div id="container">
-    <video id="video" playsinline></video>
+    <video id="video" playsinline autoplay muted></video>
     <canvas id="canvas"></canvas>
 </div>
 
@@ -153,12 +206,14 @@ const slideWidth = document.getElementById('slideWidth');
 const slideHeight = document.getElementById('slideHeight');
 const slidePulse = document.getElementById('slidePulse');
 const slideHold = document.getElementById('slideHold');
+const boxCountSelect = document.getElementById('boxCountSelect');
 
 const valSens = document.getElementById('valSens');
 const valWidth = document.getElementById('valWidth');
 const valHeight = document.getElementById('valHeight');
 const valPulse = document.getElementById('valPulse');
 const valHold = document.getElementById('valHold');
+const selectedBoxIdLabel = document.getElementById('selectedBoxId');
 
 let isRunning = false;
 let isMonitoring = true; 
@@ -169,19 +224,22 @@ let audioCtx = null;
 let wakeLock = null;
 let lastBeep = 0;
 
-// NEU: Längeres Gedächtnis für langsames Blinken (5 Sekunden)
 const HISTORY_MS = 5000; 
-// NEU: Entpreller (Debounce) - Lichtwechsel müssen mind. 400ms Abstand haben
 const MIN_CROSS_TIME = 400; 
+const PIXEL_STEP = 4; // Kern-Algorithmus aus v12!
 
-const PIXEL_STEP = 4; 
+const DEFAULTS = { sens: 15, width: 120, height: 40, pulse: 4, hold: 1.5, count: 2 };
 
-const DEFAULTS = { sens: 15, width: 120, height: 40, pulse: 4, hold: 1.5 };
-
+// Bis zu 4 Boxen werden vorbereitet
 let boxes = [
     { id: 1, x: 60, y: 60, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 },
-    { id: 2, x: 60, y: 160, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 }
+    { id: 2, x: 60, y: 160, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 },
+    { id: 3, x: 60, y: 260, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 },
+    { id: 4, x: 60, y: 360, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 }
 ];
+
+let activeBoxCount = 2;
+let selectedBox = boxes[0]; // Box 1 ist standardmäßig ausgewählt
 
 function updateLabels() {
     valSens.innerText = slideSens.value;
@@ -189,19 +247,25 @@ function updateLabels() {
     valHeight.innerText = slideHeight.value;
     valPulse.innerText = slidePulse.value;
     valHold.innerText = slideHold.value;
+    if (selectedBox) selectedBoxIdLabel.innerText = selectedBox.id;
 }
 
 function saveSettings() {
     const settings = {
-        sens: slideSens.value, width: slideWidth.value,
-        height: slideHeight.value, pulse: slidePulse.value, hold: slideHold.value
+        sens: slideSens.value, 
+        width: slideWidth.value,
+        height: slideHeight.value, 
+        pulse: slidePulse.value, 
+        hold: slideHold.value,
+        count: activeBoxCount,
+        positions: boxes.map(b => ({ x: b.x, y: b.y })) // Speichert die Positionen!
     };
-    localStorage.setItem('estw_settings_v12', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v15', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v12');
+        const saved = localStorage.getItem('estw_settings_v15');
         if (saved) {
             const settings = JSON.parse(saved);
             if (settings.sens) slideSens.value = settings.sens;
@@ -209,6 +273,18 @@ function loadSettings() {
             if (settings.height) slideHeight.value = settings.height;
             if (settings.pulse) slidePulse.value = settings.pulse;
             if (settings.hold) slideHold.value = settings.hold;
+            if (settings.count) {
+                activeBoxCount = parseInt(settings.count);
+                boxCountSelect.value = activeBoxCount;
+            }
+            if (settings.positions) {
+                settings.positions.forEach((pos, idx) => {
+                    if (boxes[idx]) {
+                        boxes[idx].x = pos.x;
+                        boxes[idx].y = pos.y;
+                    }
+                });
+            }
         }
     } catch(e) {}
     
@@ -235,13 +311,29 @@ slideHeight.addEventListener('input', () => {
     boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; });
 });
 
+boxCountSelect.addEventListener('change', (e) => {
+    activeBoxCount = parseInt(e.target.value);
+    if (selectedBox.id > activeBoxCount) {
+        selectedBox = boxes[0]; // Fallback, falls die gewählte Box deaktiviert wird
+    }
+    updateLabels();
+    saveSettings();
+});
+
 resetBtn.addEventListener('click', () => {
     slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width;
     slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse;
-    slideHold.value = DEFAULTS.hold;
+    slideHold.value = DEFAULTS.hold; activeBoxCount = DEFAULTS.count;
+    boxCountSelect.value = activeBoxCount;
     
     updateLabels(); saveSettings();
-    boxes.forEach(b => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.history = []; });
+    boxes.forEach((b, idx) => { 
+        b.w = DEFAULTS.width; 
+        b.h = DEFAULTS.height; 
+        b.x = 60; 
+        b.y = 60 + (idx * 100); // Standardpositionen wiederherstellen
+        b.history = []; 
+    });
 });
 
 monitorBtn.addEventListener('click', () => {
@@ -256,6 +348,13 @@ monitorBtn.addEventListener('click', () => {
     }
 });
 
+// Feinjustierung (D-Pad) Buttons
+const stepSize = 2; // Pixel pro Klick
+document.getElementById('btnUp').onclick = () => { if(selectedBox) { selectedBox.y -= stepSize; saveSettings(); } };
+document.getElementById('btnDown').onclick = () => { if(selectedBox) { selectedBox.y += stepSize; saveSettings(); } };
+document.getElementById('btnLeft').onclick = () => { if(selectedBox) { selectedBox.x -= stepSize; saveSettings(); } };
+document.getElementById('btnRight').onclick = () => { if(selectedBox) { selectedBox.x += stepSize; saveSettings(); } };
+
 function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -269,10 +368,15 @@ function getPointerPos(e) {
 function startDrag(e) {
     if (!isRunning) return;
     const pos = getPointerPos(e);
-    for (let i = boxes.length - 1; i >= 0; i--) {
+    
+    // Nur durch die AKTIVEN Boxen gehen
+    for (let i = activeBoxCount - 1; i >= 0; i--) {
         const box = boxes[i];
         if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
             draggingBox = box;
+            selectedBox = box; // Box als ausgewählt markieren
+            updateLabels();
+            
             dragOffsetX = pos.x - box.x;
             dragOffsetY = pos.y - box.y;
             box.history = [];
@@ -291,7 +395,10 @@ function moveDrag(e) {
     e.preventDefault();
 }
 
-function endDrag() { draggingBox = null; }
+function endDrag() { 
+    if(draggingBox) saveSettings(); // Position nach dem Loslassen speichern
+    draggingBox = null; 
+}
 
 canvas.addEventListener('mousedown', startDrag);
 canvas.addEventListener('mousemove', moveDrag);
@@ -300,14 +407,17 @@ canvas.addEventListener('touchstart', startDrag, { passive: false });
 canvas.addEventListener('touchmove', moveDrag, { passive: false });
 window.addEventListener('touchend', endDrag);
 
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
 function playBeep() {
     const now = Date.now();
     if (now - lastBeep < 1000) return;
     lastBeep = now;
 
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-
+    initAudio();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
@@ -360,7 +470,7 @@ startBtn.addEventListener('click', () => {
 
 function processFrame() {
     if (!isRunning) return;
-    
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const threshold = parseInt(slideSens.value);
@@ -369,7 +479,9 @@ function processFrame() {
     let anyAlarm = false;
     const now = Date.now();
 
-    for (const box of boxes) {
+    // Nur die AKTIV gewählte Anzahl an Boxen berechnen und zeichnen
+    for (let i = 0; i < activeBoxCount; i++) {
+        const box = boxes[i];
         let diff = 0;
         let crossings = 0;
         let frequency = 0;
@@ -386,10 +498,10 @@ function processFrame() {
             let totalBrightness = 0;
             let pixelCount = 0;
 
-            for (let i = 0; i < data.length; i += PIXEL_STEP * 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
+            for (let j = 0; j < data.length; j += PIXEL_STEP * 4) {
+                const r = data[j];
+                const g = data[j + 1];
+                const b = data[j + 2];
                 totalBrightness += r * 0.299 + g * 0.587 + b * 0.114;
                 pixelCount++;
             }
@@ -409,7 +521,6 @@ function processFrame() {
 
                 diff = Math.round(maxVal - minVal);
                 
-                // NEU: Hysterese ist jetzt eine feste Prozentzahl vom Schwellenwert (robuster gegen Rauschen)
                 const hysteresis = Math.max(diff * 0.2, threshold * 0.25);
                 const mid = minVal + diff / 2;
 
@@ -422,7 +533,6 @@ function processFrame() {
 
                     if (val > mid + hysteresis) {
                         if (state === -1) {
-                            // ENTPRELLER: Nur zählen, wenn der letzte Wechsel mind. 400ms her ist
                             if (t - lastCrossTime > MIN_CROSS_TIME) {
                                 crossings++;
                                 lastCrossTime = t;
@@ -431,7 +541,6 @@ function processFrame() {
                         state = 1;
                     } else if (val < mid - hysteresis) {
                         if (state === 1) {
-                            // ENTPRELLER
                             if (t - lastCrossTime > MIN_CROSS_TIME) {
                                 crossings++;
                                 lastCrossTime = t;
@@ -443,7 +552,6 @@ function processFrame() {
 
                 frequency = (crossings / (HISTORY_MS / 1000)).toFixed(1);
 
-                // Erst wenn "Diff" hoch genug ist, wird überhaupt Alarm zugelassen
                 if (diff >= threshold && crossings >= minCrossings) {
                     box.lastAlarmTime = now;
                 }
@@ -465,6 +573,17 @@ function processFrame() {
         } else if (box.isAlarm) {
             boxColor = '#ff0000'; 
             textColor = '#ff4040';
+        }
+
+        // Zeichne zusätzliche blaue Hervorhebung für die aktuell ausgewählte Box
+        if (box === selectedBox) {
+            ctx.beginPath();
+            ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#00aaff'; // Cyan/Blau
+            ctx.setLineDash([5, 5]); // Gestrichelte Linie
+            ctx.stroke();
+            ctx.setLineDash([]); // Zurücksetzen für den normalen Rahmen
         }
 
         ctx.beginPath();
