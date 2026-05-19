@@ -1,278 +1,514 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESTW Monitor Alarm v8 - Fehlalarm Filter</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; background: #222; color: white; margin: 0; padding: 10px; overflow-x: hidden;}
-        #ui { margin-top: 5px; display: flex; flex-direction: column; align-items: center; gap: 10px;}
-        button { padding: 12px 24px; font-size: 16px; font-weight: bold; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;}
-        button:active { background: #0056b3; }
-        .controls { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 14px; background: #333; padding: 10px; border-radius: 8px; width: 90%; max-width: 400px;}
-        .slider-row { display: flex; justify-content: space-between; width: 100%; align-items: center;}
-        input[type="range"] { flex-grow: 1; margin-left: 10px; }
-        #container { position: relative; display: inline-block; margin-top: 10px; max-width: 100%; }
-        video { display: none; } 
-        canvas { background: #000; width: 100%; height: auto; touch-action: none; border: 2px solid #555; border-radius: 8px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESTW Wächter Pro v10</title>
+
+<style>
+    body {
+        margin: 0;
+        padding: 10px;
+        background: #1e1e1e;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        overflow-x: hidden;
+    }
+
+    h2 {
+        margin: 5px 0 10px;
+    }
+
+    #ui {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .button-row {
+        display: flex;
+        gap: 10px;
+    }
+
+    button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        background: #007bff;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #0060d1;
+    }
+
+    #resetBtn {
+        background: #555;
+        font-size: 14px;
+        padding: 12px 15px;
+    }
+
+    #resetBtn:hover {
+        background: #777;
+    }
+
+    .controls {
+        width: 95%;
+        max-width: 450px;
+        background: #2b2b2b;
+        border-radius: 10px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .slider-row label {
+        width: 170px;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    .slider-row input {
+        flex-grow: 1;
+    }
+
+    #container {
+        position: relative;
+        margin-top: 12px;
+        display: inline-block;
+        max-width: 100%;
+    }
+
+    canvas {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        background: black;
+        border: 2px solid #555;
+        border-radius: 8px;
+        touch-action: none;
+    }
+
+    video {
+        display: none;
+    }
+</style>
 </head>
 <body>
 
-    <h2 style="margin: 5px 0;">ESTW Wächter Pro v8</h2>
-    
-    <div id="ui">
-        <button id="startBtn">Kamera & Alarm Starten</button>
-        <div class="controls">
-            <div class="slider-row" title="Wie stark muss der Kontrast beim Blinken sein?">
-                <label>Empfindlichkeit: <span id="valSens">15</span></label>
-                <input type="range" id="slideSens" min="2" max="100" value="15">
-            </div>
-            <div class="slider-row">
-                <label>Box Breite: <span id="valWidth">120</span></label>
-                <input type="range" id="slideWidth" min="20" max="300" value="120">
-            </div>
-            <div class="slider-row">
-                <label>Box Höhe: <span id="valHeight">40</span></label>
-                <input type="range" id="slideHeight" min="20" max="150" value="40">
-            </div>
+<h2>ESTW Wächter Pro v10</h2>
+
+<div id="ui">
+
+    <div class="button-row">
+        <button id="startBtn">Kamera starten</button>
+        <button id="resetBtn">Standardwerte</button>
+    </div>
+
+    <div class="controls">
+
+        <div class="slider-row">
+            <label>Empfindlichkeit: <span id="valSens">18</span></label>
+            <input type="range" id="slideSens" min="2" max="100" value="18">
         </div>
+
+        <div class="slider-row">
+            <label>Box Breite: <span id="valWidth">120</span></label>
+            <input type="range" id="slideWidth" min="30" max="300" value="120">
+        </div>
+
+        <div class="slider-row">
+            <label>Box Höhe: <span id="valHeight">40</span></label>
+            <input type="range" id="slideHeight" min="20" max="150" value="40">
+        </div>
+
+        <div class="slider-row">
+            <label>Min. Pulse: <span id="valPulse">4</span></label>
+            <input type="range" id="slidePulse" min="1" max="10" value="4">
+        </div>
+        
+        <div class="slider-row">
+            <label>Alarmdauer: <span id="valHold">1.5</span>s</label>
+            <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="1.5">
+        </div>
+
     </div>
+</div>
 
-    <div id="container">
-        <video id="video" playsinline></video>
-        <canvas id="canvas" width="640" height="480"></canvas>
-    </div>
+<div id="container">
+    <video id="video" playsinline></video>
+    <canvas id="canvas"></canvas>
+</div>
 
-    <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const startBtn = document.getElementById('startBtn');
-        
-        const slideSens = document.getElementById('slideSens');
-        const slideWidth = document.getElementById('slideWidth');
-        const slideHeight = document.getElementById('slideHeight');
-        
-        let isRunning = false;
-        let audioCtx;
-        let lastBeepTime = 0;
+<script>
 
-        let boxes = [
-            { id: 1, x: 50, y: 50, w: 120, h: 40, isAlarm: false, history: [] },
-            { id: 2, x: 50, y: 150, w: 120, h: 40, isAlarm: false, history: [] }
-        ];
-        
-        let draggingBox = null;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-        slideSens.addEventListener('input', e => document.getElementById('valSens').innerText = e.target.value);
-        slideWidth.addEventListener('input', e => {
-            let w = parseInt(e.target.value);
-            document.getElementById('valWidth').innerText = w;
-            boxes.forEach(b => b.w = w);
-            boxes.forEach(b => b.history = []); // Reset history beim Ändern der Größe
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+const slideSens = document.getElementById('slideSens');
+const slideWidth = document.getElementById('slideWidth');
+const slideHeight = document.getElementById('slideHeight');
+const slidePulse = document.getElementById('slidePulse');
+const slideHold = document.getElementById('slideHold');
+
+const valSens = document.getElementById('valSens');
+const valWidth = document.getElementById('valWidth');
+const valHeight = document.getElementById('valHeight');
+const valPulse = document.getElementById('valPulse');
+const valHold = document.getElementById('valHold');
+
+let isRunning = false;
+let draggingBox = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let audioCtx = null;
+let wakeLock = null;
+let lastBeep = 0;
+
+const HISTORY_MS = 3000;
+const PIXEL_STEP = 16;
+
+// Die besten Standardwerte
+const DEFAULTS = { sens: 18, width: 120, height: 40, pulse: 4, hold: 1.5 };
+
+let boxes = [
+    { id: 1, x: 60, y: 60, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 },
+    { id: 2, x: 60, y: 160, w: 120, h: 40, history: [], isAlarm: false, lastAlarmTime: 0 }
+];
+
+function updateLabels() {
+    valSens.innerText = slideSens.value;
+    valWidth.innerText = slideWidth.value;
+    valHeight.innerText = slideHeight.value;
+    valPulse.innerText = slidePulse.value;
+    valHold.innerText = slideHold.value;
+}
+
+function saveSettings() {
+    const settings = {
+        sens: slideSens.value,
+        width: slideWidth.value,
+        height: slideHeight.value,
+        pulse: slidePulse.value,
+        hold: slideHold.value
+    };
+    localStorage.setItem('estw_settings', JSON.stringify(settings));
+}
+
+function loadSettings() {
+    try {
+        const saved = localStorage.getItem('estw_settings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            if (settings.sens) slideSens.value = settings.sens;
+            if (settings.width) slideWidth.value = settings.width;
+            if (settings.height) slideHeight.value = settings.height;
+            if (settings.pulse) slidePulse.value = settings.pulse;
+            if (settings.hold) slideHold.value = settings.hold;
+        }
+    } catch(e) {}
+    
+    updateLabels();
+    boxes.forEach(b => {
+        b.w = parseInt(slideWidth.value);
+        b.h = parseInt(slideHeight.value);
+    });
+}
+
+// Einstellungen beim Start laden
+loadSettings();
+
+// Event Listener für Regler (Aktualisieren Anzeige & Speichern)
+slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+
+slideWidth.addEventListener('input', () => {
+    updateLabels();
+    saveSettings();
+    boxes.forEach(b => {
+        b.w = parseInt(slideWidth.value);
+        b.history = [];
+    });
+});
+
+slideHeight.addEventListener('input', () => {
+    updateLabels();
+    saveSettings();
+    boxes.forEach(b => {
+        b.h = parseInt(slideHeight.value);
+        b.history = [];
+    });
+});
+
+// Event Listener für Reset Button
+resetBtn.addEventListener('click', () => {
+    slideSens.value = DEFAULTS.sens;
+    slideWidth.value = DEFAULTS.width;
+    slideHeight.value = DEFAULTS.height;
+    slidePulse.value = DEFAULTS.pulse;
+    slideHold.value = DEFAULTS.hold;
+    
+    updateLabels();
+    saveSettings();
+    
+    boxes.forEach(b => {
+        b.w = DEFAULTS.width;
+        b.h = DEFAULTS.height;
+        b.history = [];
+    });
+});
+
+function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+    };
+}
+
+function startDrag(e) {
+    if (!isRunning) return;
+    const pos = getPointerPos(e);
+    for (let i = boxes.length - 1; i >= 0; i--) {
+        const box = boxes[i];
+        if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
+            draggingBox = box;
+            dragOffsetX = pos.x - box.x;
+            dragOffsetY = pos.y - box.y;
+            box.history = [];
+            e.preventDefault();
+            break;
+        }
+    }
+}
+
+function moveDrag(e) {
+    if (!draggingBox) return;
+    const pos = getPointerPos(e);
+    draggingBox.x = pos.x - dragOffsetX;
+    draggingBox.y = pos.y - dragOffsetY;
+    draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, draggingBox.x));
+    draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, draggingBox.y));
+    draggingBox.history = [];
+    e.preventDefault();
+}
+
+function endDrag() {
+    draggingBox = null;
+}
+
+canvas.addEventListener('mousedown', startDrag);
+canvas.addEventListener('mousemove', moveDrag);
+window.addEventListener('mouseup', endDrag);
+
+canvas.addEventListener('touchstart', startDrag, { passive: false });
+canvas.addEventListener('touchmove', moveDrag, { passive: false });
+window.addEventListener('touchend', endDrag);
+
+function playBeep() {
+    const now = Date.now();
+    if (now - lastBeep < 1000) return;
+    lastBeep = now;
+
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.value = 1000;
+    gain.gain.value = 0.08;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.25);
+}
+
+function adjustCanvas() {
+    if (!video.videoWidth) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+}
+
+async function startSystem() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
         });
-        slideHeight.addEventListener('input', e => {
-            let h = parseInt(e.target.value);
-            document.getElementById('valHeight').innerText = h;
-            boxes.forEach(b => b.h = h);
-            boxes.forEach(b => b.history = []); // Reset history beim Ändern der Größe
-        });
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+            adjustCanvas();
+            video.play();
+        };
 
-        function getPointerPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {}
         }
 
-        function handleStart(e) {
-            if (!isRunning) return;
-            const pos = getPointerPos(e);
-            for (let i = boxes.length - 1; i >= 0; i--) {
-                let box = boxes[i];
-                if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
-                    draggingBox = box;
-                    dragOffsetX = pos.x - box.x;
-                    dragOffsetY = pos.y - box.y;
-                    box.history = []; // Reset history beim Antippen
-                    e.preventDefault(); 
-                    break;
+        isRunning = true;
+        startBtn.innerText = 'Stoppen';
+        video.onplaying = () => processFrame();
+    } catch (err) {
+        alert('Kamerafehler: ' + err.message);
+    }
+}
+
+function stopSystem() {
+    isRunning = false;
+    if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+    }
+    if (wakeLock) {
+        wakeLock.release();
+    }
+    startBtn.innerText = 'Kamera starten';
+}
+
+startBtn.addEventListener('click', () => {
+    if (!isRunning) startSystem();
+    else stopSystem();
+});
+
+function processFrame() {
+    if (!isRunning) return;
+    
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const threshold = parseInt(slideSens.value);
+    const minCrossings = parseInt(slidePulse.value);
+    const holdMs = parseFloat(slideHold.value) * 1000;
+
+    let anyAlarm = false;
+    const now = Date.now();
+
+    for (const box of boxes) {
+        const rx = Math.floor(box.x);
+        const ry = Math.floor(box.y);
+        const rw = Math.floor(box.w);
+        const rh = Math.floor(box.h);
+
+        const frame = ctx.getImageData(rx, ry, rw, rh);
+        const data = frame.data;
+
+        let brightnessValues = [];
+
+        for (let i = 0; i < data.length; i += PIXEL_STEP) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const brightness = r * 0.299 + g * 0.587 + b * 0.114;
+            brightnessValues.push(brightness);
+        }
+
+        brightnessValues.sort((a, b) => a - b);
+        const medianBrightness = brightnessValues[Math.floor(brightnessValues.length / 2)] || 0;
+
+        box.history.push({ val: medianBrightness, time: now });
+
+        while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) {
+            box.history.shift();
+        }
+
+        let diff = 0;
+        let crossings = 0;
+        let frequency = 0;
+
+        if (box.history.length > 10) {
+            const values = box.history.map(v => v.val);
+            const maxVal = Math.max(...values);
+            const minVal = Math.min(...values);
+
+            diff = Math.round(maxVal - minVal);
+            const mid = minVal + diff / 2;
+            const hysteresis = diff * 0.15;
+
+            let state = 0;
+
+            for (const val of values) {
+                if (val > mid + hysteresis) {
+                    if (state === -1) crossings++;
+                    state = 1;
+                } else if (val < mid - hysteresis) {
+                    if (state === 1) crossings++;
+                    state = -1;
                 }
             }
-        }
 
-        function handleMove(e) {
-            if (draggingBox) {
-                const pos = getPointerPos(e);
-                draggingBox.x = pos.x - dragOffsetX;
-                draggingBox.y = pos.y - dragOffsetY;
-                draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, draggingBox.x));
-                draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, draggingBox.y));
-                draggingBox.history = []; // Reset history, solange bewegt wird
-                e.preventDefault();
+            frequency = (crossings / (HISTORY_MS / 1000)).toFixed(1);
+
+            if (diff >= threshold && crossings >= minCrossings) {
+                box.isAlarm = true;
+                box.lastAlarmTime = now;
+                anyAlarm = true;
             }
         }
 
-        function handleEnd() { draggingBox = null; }
-
-        canvas.addEventListener('touchstart', handleStart, {passive: false});
-        canvas.addEventListener('touchmove', handleMove, {passive: false});
-        window.addEventListener('touchend', handleEnd);
-        canvas.addEventListener('mousedown', handleStart);
-        canvas.addEventListener('mousemove', handleMove);
-        window.addEventListener('mouseup', handleEnd);
-
-        function playBeep() {
-            const now = Date.now();
-            if (now - lastBeepTime < 1000) return; 
-            lastBeepTime = now;
-
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            
-            oscillator.type = 'square';
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.3);
+        // ALARM HOLD (Nachlauf)
+        if (now - box.lastAlarmTime < holdMs) {
+            box.isAlarm = true;
+        } else {
+            box.isAlarm = false;
         }
 
-        function adjustCanvasSize() {
-            if (video.videoWidth && video.videoHeight) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-            }
-        }
+        // BOX ZEICHNEN
+        ctx.beginPath();
+        ctx.rect(box.x, box.y, box.w, box.h);
+        ctx.lineWidth = box.isAlarm ? 4 : 2;
+        ctx.strokeStyle = box.isAlarm ? '#ff0000' : '#00ff00';
+        ctx.stroke();
 
-        startBtn.addEventListener('click', async () => {
-            if (!isRunning) {
-                try {
-                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
-                    });
-                    video.srcObject = stream;
-                    
-                    video.onloadedmetadata = () => {
-                        adjustCanvasSize();
-                        video.play();
-                    };
+        // TEXT
+        ctx.font = 'bold 18px Arial';
+        ctx.fillStyle = box.isAlarm ? '#ff4040' : '#00ff88';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
 
-                    window.addEventListener('resize', adjustCanvasSize);
+        const text = `Diff:${diff} Puls:${crossings} Hz:${frequency}`;
 
-                    if ('wakeLock' in navigator) {
-                        navigator.wakeLock.request('screen').catch(()=>{});
-                    }
+        ctx.strokeText(text, box.x, box.y - 8);
+        ctx.fillText(text, box.x, box.y - 8);
+    }
 
-                    isRunning = true;
-                    startBtn.innerText = "Stoppen (Neuladen)";
-                    // Setze den Speicher für alle Boxen beim Start zurück
-                    boxes.forEach(b => b.history = []);
-                    video.onplaying = () => { processFrame(); };
+    if (anyAlarm) {
+        playBeep();
+    }
 
-                } catch (err) {
-                    alert("Kamerafehler: Bitte Browser-Berechtigungen prüfen! " + err.message);
-                }
-            } else {
-                location.reload();
-            }
-        });
+    requestAnimationFrame(processFrame);
+}
 
-        function processFrame() {
-            if (!isRunning) return;
+window.addEventListener('resize', adjustCanvas);
 
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            let anyAlarm = false;
-            const threshold = parseInt(slideSens.value); 
-            const currentTime = Date.now();
-
-            for (let i = 0; i < boxes.length; i++) {
-                let box = boxes[i];
-                let rx = Math.floor(box.x); let ry = Math.floor(box.y);
-                let rw = Math.floor(box.w); let rh = Math.floor(box.h);
-
-                const frame = ctx.getImageData(rx, ry, rw, rh);
-                const data = frame.data;
-                
-                let totalBrightness = 0;
-
-                for (let j = 0; j < data.length; j += 4) {
-                    totalBrightness += data[j] + data[j+1] + data[j+2];
-                }
-                
-                let avgBrightness = totalBrightness / (rw * rh);
-                
-                box.history.push({ val: avgBrightness, time: currentTime });
-                box.history = box.history.filter(item => currentTime - item.time <= 4000);
-
-                let diff = 0;
-                let crossings = 0;
-                
-                let recentVals = box.history.map(item => item.val);
-
-                if (recentVals.length > 10) {
-                    let maxBrightness = Math.max(...recentVals);
-                    let minBrightness = Math.min(...recentVals);
-                    diff = Math.floor(maxBrightness - minBrightness);
-
-                    if (diff >= threshold) {
-                        let midPoint = minBrightness + (diff / 2);
-                        let margin = diff * 0.2; 
-                        let state = 0; 
-                        
-                        for (let k = 0; k < recentVals.length; k++) {
-                            let val = recentVals[k];
-                            if (val > midPoint + margin) {
-                                if (state === -1) crossings++; 
-                                state = 1;
-                            } 
-                            else if (val < midPoint - margin) {
-                                if (state === 1) crossings++; 
-                                state = -1;
-                            }
-                        }
-                    }
-
-                    // NEU: Alarm erst ab 3 Wechseln (überspringt Kamera-Ruckler)
-                    if (diff >= threshold && crossings >= 3) {
-                        box.isAlarm = true;
-                        anyAlarm = true;
-                    } else {
-                        box.isAlarm = false;
-                    }
-                }
-
-                ctx.beginPath();
-                ctx.rect(box.x, box.y, box.w, box.h);
-                ctx.lineWidth = box.isAlarm ? 4 : 2;
-                ctx.strokeStyle = box.isAlarm ? "#ff0000" : "#00ff00";
-                ctx.stroke();
-                
-                ctx.fillStyle = box.isAlarm ? "#ff0000" : "#00ff00";
-                ctx.font = "bold 18px Arial";
-                
-                let text = `Diff: ${diff} | Puls: ${crossings}`;
-                ctx.strokeText(text, box.x, box.y - 8);
-                ctx.fillText(text, box.x, box.y - 8);
-            }
-
-            if (anyAlarm) {
-                playBeep();
-            }
-
-            requestAnimationFrame(processFrame);
-        }
-    </script>
+</script>
 </body>
 </html>
