@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v17</title>
+<title>ESTW Wächter Pro v18</title>
 
 <style>
     body {
@@ -31,7 +31,6 @@
         min-height: 60px;
     }
 
-    /* Neu: Klickbare, interaktive Zoom-Boxen */
     .zoom-box {
         display: flex;
         flex-direction: column;
@@ -282,7 +281,7 @@ let lastBeep = 0;
 
 const HISTORY_MS = 5000; 
 const MIN_CROSS_TIME = 400; 
-const PIXEL_STEP = 4; // Kern intakt
+const PIXEL_STEP = 4; 
 
 const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2 };
 
@@ -302,7 +301,6 @@ function createZoomDisplays() {
         const div = document.createElement('div');
         div.className = 'zoom-box';
         
-        // Klick auf Zoom-Box -> Box für D-Pad auswählen
         div.onclick = () => {
             selectedBox = boxes[i];
             updateZoomSelectionUI();
@@ -355,12 +353,12 @@ function saveSettings() {
         showZoomValues: showZoomValues, showCamera: showCamera,
         positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v17', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v18', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v17');
+        const saved = localStorage.getItem('estw_settings_v18');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -387,7 +385,6 @@ function loadSettings() {
 
 loadSettings();
 
-// Event Listener für die neuen Buttons
 toggleZoomTextBtn.addEventListener('click', (e) => {
     showZoomValues = !showZoomValues;
     e.target.innerText = showZoomValues ? "Werte (Oben): AN" : "Werte (Oben): AUS";
@@ -405,7 +402,6 @@ toggleCameraBtn.addEventListener('click', (e) => {
     saveSettings();
 });
 
-// Event Listener Slider etc.
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
@@ -470,7 +466,7 @@ function getPointerPos(e) {
 }
 
 function startDrag(e) {
-    if (!isRunning || !showCamera) return; // Kein Drag auf schwarzem Screen
+    if (!isRunning || !showCamera) return; 
     const pos = getPointerPos(e);
     for (let i = activeBoxCount - 1; i >= 0; i--) {
         const box = boxes[i];
@@ -548,7 +544,6 @@ startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else s
 function processFrame() {
     if (!isRunning) return;
 
-    // Video IMMER auf Canvas zeichnen, damit die Daten berechnet werden können
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const threshold = parseInt(slideSens.value);
@@ -557,7 +552,6 @@ function processFrame() {
     let anyAlarm = false;
     const now = Date.now();
 
-    // 1. DATEN SAMMELN UND BERECHNEN (Läuft immer im Hintergrund!)
     for (let i = 0; i < activeBoxCount; i++) {
         const box = boxes[i];
         let diff = 0; let crossings = 0; let frequency = 0;
@@ -565,7 +559,6 @@ function processFrame() {
         const rx = Math.floor(box.x); const ry = Math.floor(box.y);
         const rw = Math.floor(box.w); const rh = Math.floor(box.h);
 
-        // ZOOM ANZEIGEN (Selbst wenn Hauptkamera aus ist)
         if (box.zoomCtx) {
             box.zoomCtx.fillStyle = "black";
             box.zoomCtx.fillRect(0, 0, 100, 50);
@@ -619,17 +612,14 @@ function processFrame() {
         box.currentCrossings = crossings;
         box.currentFrequency = frequency;
 
-        // ZOOM-TEXT UPDATE
         if (box.zoomStatsDiv && showZoomValues) {
             let txt = `Diff: ${diff}<br>Puls: ${crossings}`;
-            if (!isMonitoring) txt = "PAUSE";
+            if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`;
             box.zoomStatsDiv.innerHTML = txt;
         }
     }
 
-    // 2. HAUPTBILD ZEICHNEN ODER SCHWARZ SCHALTEN
     if (!showCamera) {
-        // Macht das untere Bild komplett schwarz, stört nicht im Augenwinkel
         ctx.fillStyle = "#0a0a0a";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#333";
@@ -637,9 +627,8 @@ function processFrame() {
         ctx.textAlign = "center";
         ctx.fillText("Kamerabild ausgeblendet", canvas.width / 2, canvas.height / 2);
         ctx.fillText("Die Analyse läuft weiter...", canvas.width / 2, canvas.height / 2 + 30);
-        ctx.textAlign = "left"; // Reset für den nächsten Frame
+        ctx.textAlign = "left"; 
     } else {
-        // Normaler Modus: Boxen und Werte auf dem Video zeichnen
         for (let i = 0; i < activeBoxCount; i++) {
             const box = boxes[i];
             let boxColor = '#00ff00'; let textColor = '#00ff88';
@@ -656,7 +645,7 @@ function processFrame() {
 
             ctx.font = 'bold 18px Arial'; ctx.fillStyle = textColor; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
             let text = `Diff:${box.currentDiff} Puls:${box.currentCrossings} Hz:${box.currentFrequency}`;
-            if (!isMonitoring) text = "PAUSE";
+            if (!isMonitoring) text += " [PAUSE]";
             ctx.strokeText(text, box.x, box.y - 8); ctx.fillText(text, box.x, box.y - 8);
         }
     }
