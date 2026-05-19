@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v18</title>
+<title>ESTW Wächter Pro v19</title>
 
 <style>
     body {
@@ -101,6 +101,7 @@
     #monitorBtn { background: #28a745; } 
     #monitorBtn.off { background: #dc3545; } 
     #resetBtn { background: #555; }
+    #activateStealthBtn { background: #6c757d; }
 
     .controls {
         width: 95%;
@@ -174,6 +175,15 @@
 </head>
 <body>
 
+<div id="stealthOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 9999; justify-content: center; align-items: center; font-family: Arial, sans-serif; font-size: 22vw; font-weight: bold; color: white; gap: 3vw; box-sizing: border-box;">
+    <span id="hoursHTML">00</span>
+    <div style="display: flex; flex-direction: column; justify-content: space-between; height: 14vw; padding: 2.2vw 0; box-sizing: border-box;">
+        <div style="width: 3vw; height: 3vw; background: white; border-radius: 50%;"></div>
+        <div id="exitStealthBtn" style="width: 3vw; height: 3vw; background: white; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
+    </div>
+    <span id="minsHTML">00</span>
+</div>
+
 <div id="zoomHeader"></div>
 
 <div id="ui">
@@ -186,6 +196,7 @@
     
     <div class="button-row" style="margin-top: -2px;">
         <button id="toggleCameraBtn" style="background: #17a2b8;">Hauptkamera: SICHTBAR</button>
+        <button id="activateStealthBtn">Tarnmodus aktivieren</button>
     </div>
 
     <div class="controls">
@@ -252,6 +263,9 @@ const monitorBtn = document.getElementById('monitorBtn');
 const resetBtn = document.getElementById('resetBtn');
 const toggleZoomTextBtn = document.getElementById('toggleZoomTextBtn');
 const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+const activateStealthBtn = document.getElementById('activateStealthBtn');
+const stealthOverlay = document.getElementById('stealthOverlay');
+const exitStealthBtn = document.getElementById('exitStealthBtn');
 
 const slideSens = document.getElementById('slideSens');
 const slideWidth = document.getElementById('slideWidth');
@@ -266,6 +280,8 @@ const valHeight = document.getElementById('valHeight');
 const valPulse = document.getElementById('valPulse');
 const valHold = document.getElementById('valHold');
 const selectedBoxIdLabel = document.getElementById('selectedBoxId');
+const hoursHTML = document.getElementById('hoursHTML');
+const minsHTML = document.getElementById('minsHTML');
 
 let isRunning = false;
 let isMonitoring = true; 
@@ -281,7 +297,7 @@ let lastBeep = 0;
 
 const HISTORY_MS = 5000; 
 const MIN_CROSS_TIME = 400; 
-const PIXEL_STEP = 4; 
+const PIXEL_STEP = 4; // Kern unberührt aus v12
 
 const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2 };
 
@@ -300,33 +316,22 @@ function createZoomDisplays() {
     for (let i = 0; i < activeBoxCount; i++) {
         const div = document.createElement('div');
         div.className = 'zoom-box';
-        
-        div.onclick = () => {
-            selectedBox = boxes[i];
-            updateZoomSelectionUI();
-        };
+        div.onclick = () => { selectedBox = boxes[i]; updateZoomSelectionUI(); };
 
         const c = document.createElement('canvas');
-        c.className = 'zoom-canvas';
-        c.width = 100; 
-        c.height = 50;
+        c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
 
         const label = document.createElement('div');
-        label.className = 'zoom-label';
-        label.innerText = 'BOX ' + (i+1);
+        label.className = 'zoom-label'; label.innerText = 'BOX ' + (i+1);
 
         const stats = document.createElement('div');
-        stats.className = 'zoom-stats';
-        stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
         stats.innerHTML = `Diff: 0<br>Puls: 0`;
 
-        div.appendChild(c);
-        div.appendChild(label);
-        div.appendChild(stats);
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats);
         zoomHeader.appendChild(div);
 
-        boxes[i].zoomCtx = c.getContext('2d');
-        boxes[i].zoomStatsDiv = stats;
+        boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats;
     }
     updateZoomSelectionUI();
 }
@@ -353,12 +358,12 @@ function saveSettings() {
         showZoomValues: showZoomValues, showCamera: showCamera,
         positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v18', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v19', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v18');
+        const saved = localStorage.getItem('estw_settings_v19');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -378,12 +383,28 @@ function loadSettings() {
     toggleCameraBtn.innerText = showCamera ? "Hauptkamera: SICHTBAR" : "Hauptkamera: VERSTECKT";
     toggleCameraBtn.style.background = showCamera ? "#17a2b8" : "#555";
 
-    createZoomDisplays();
-    updateLabels();
+    createZoomDisplays(); updateLabels();
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
 }
 
 loadSettings();
+
+// Uhr-Logik für den Tarnmodus
+function updateStealthClock() {
+    const d = new Date();
+    hoursHTML.innerText = String(d.getHours()).padStart(2, '0');
+    minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
+}
+setInterval(updateStealthClock, 1000);
+
+activateStealthBtn.addEventListener('click', () => {
+    stealthOverlay.style.display = 'flex';
+    updateStealthClock();
+});
+
+exitStealthBtn.addEventListener('click', () => {
+    stealthOverlay.style.display = 'none';
+});
 
 toggleZoomTextBtn.addEventListener('click', (e) => {
     showZoomValues = !showZoomValues;
@@ -417,8 +438,7 @@ slideHeight.addEventListener('input', () => {
 });
 
 boxCountSelect.addEventListener('change', (e) => {
-    activeBoxCount = parseInt(e.target.value);
-    createZoomDisplays();
+    activeBoxCount = parseInt(e.target.value); createZoomDisplays();
     if (selectedBox.id > activeBoxCount) { selectedBox = boxes[0]; updateZoomSelectionUI(); }
     updateLabels(); saveSettings();
 });
@@ -427,15 +447,12 @@ resetBtn.addEventListener('click', () => {
     slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width;
     slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse;
     slideHold.value = DEFAULTS.hold; activeBoxCount = DEFAULTS.count;
-    boxCountSelect.value = activeBoxCount;
-    showZoomValues = true; showCamera = true;
+    boxCountSelect.value = activeBoxCount; showZoomValues = true; showCamera = true;
     toggleZoomTextBtn.innerText = "Werte (Oben): AN"; toggleZoomTextBtn.style.background = "#007bff";
     toggleCameraBtn.innerText = "Hauptkamera: SICHTBAR"; toggleCameraBtn.style.background = "#17a2b8";
-    
     createZoomDisplays(); updateLabels(); saveSettings();
     boxes.forEach((b, idx) => { 
-        b.w = DEFAULTS.width; b.h = DEFAULTS.height; 
-        b.x = 60; b.y = 60 + (idx * 100); b.history = []; 
+        b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; 
     });
 });
 
@@ -471,10 +488,8 @@ function startDrag(e) {
     for (let i = activeBoxCount - 1; i >= 0; i--) {
         const box = boxes[i];
         if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
-            draggingBox = box; selectedBox = box; 
-            updateZoomSelectionUI(); updateLabels();
-            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y;
-            box.history = []; e.preventDefault(); break;
+            draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
+            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; box.history = []; e.preventDefault(); break;
         }
     }
 }
@@ -489,12 +504,8 @@ function moveDrag(e) {
 
 function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
 
-canvas.addEventListener('mousedown', startDrag);
-canvas.addEventListener('mousemove', moveDrag);
-window.addEventListener('mouseup', endDrag);
-canvas.addEventListener('touchstart', startDrag, { passive: false });
-canvas.addEventListener('touchmove', moveDrag, { passive: false });
-window.addEventListener('touchend', endDrag);
+canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
+canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.addEventListener('touchmove', moveDrag, { passive: false }); window.addEventListener('touchend', endDrag);
 
 function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -502,21 +513,15 @@ function initAudio() {
 }
 
 function playBeep() {
-    const now = Date.now();
-    if (now - lastBeep < 1000) return;
-    lastBeep = now;
-    initAudio();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const now = Date.now(); if (now - lastBeep < 1000) return; lastBeep = now;
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
     osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08;
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25);
 }
 
 function adjustCanvas() {
     if (!video.videoWidth) return;
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    createZoomDisplays();
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays();
 }
 
 async function startSystem() {
@@ -524,21 +529,16 @@ async function startSystem() {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
         });
-        video.srcObject = stream;
-        video.onloadedmetadata = () => { adjustCanvas(); video.play(); };
+        video.srcObject = stream; video.onloadedmetadata = () => { adjustCanvas(); video.play(); };
         if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
-        isRunning = true; startBtn.innerText = 'Stoppen';
-        video.onplaying = () => processFrame();
+        isRunning = true; startBtn.innerText = 'Stoppen'; video.onplaying = () => processFrame();
     } catch (err) { alert('Kamerafehler: ' + err.message); }
 }
 
 function stopSystem() {
-    isRunning = false;
-    if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
-    if (wakeLock) wakeLock.release();
-    startBtn.innerText = 'Kamera starten';
+    isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+    if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera starten';
 }
-
 startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else stopSystem(); });
 
 function processFrame() {
@@ -549,41 +549,31 @@ function processFrame() {
     const threshold = parseInt(slideSens.value);
     const minCrossings = parseInt(slidePulse.value);
     const holdMs = parseFloat(slideHold.value) * 1000;
-    let anyAlarm = false;
-    const now = Date.now();
+    let anyAlarm = false; const now = Date.now();
 
     for (let i = 0; i < activeBoxCount; i++) {
-        const box = boxes[i];
-        let diff = 0; let crossings = 0; let frequency = 0;
-
-        const rx = Math.floor(box.x); const ry = Math.floor(box.y);
-        const rw = Math.floor(box.w); const rh = Math.floor(box.h);
+        const box = boxes[i]; let diff = 0; let crossings = 0; let frequency = 0;
+        const rx = Math.floor(box.x); const ry = Math.floor(box.y); const rw = Math.floor(box.w); const rh = Math.floor(box.h);
 
         if (box.zoomCtx) {
-            box.zoomCtx.fillStyle = "black";
-            box.zoomCtx.fillRect(0, 0, 100, 50);
+            box.zoomCtx.fillStyle = "black"; box.zoomCtx.fillRect(0, 0, 100, 50);
             box.zoomCtx.drawImage(canvas, rx, ry, rw, rh, 0, 0, 100, 50);
         }
 
-        const frame = ctx.getImageData(rx, ry, rw, rh);
-        const data = frame.data;
+        const frame = ctx.getImageData(rx, ry, rw, rh); const data = frame.data;
         let totalBrightness = 0; let pixelCount = 0;
 
         for (let j = 0; j < data.length; j += PIXEL_STEP * 4) {
-            const r = data[j]; const g = data[j + 1]; const b = data[j + 2];
-            totalBrightness += r * 0.299 + g * 0.587 + b * 0.114;
-            pixelCount++;
+            totalBrightness += data[j] * 0.299 + data[j + 1] * 0.587 + data[j + 2] * 0.114; pixelCount++;
         }
         const avgBrightness = totalBrightness / pixelCount;
         box.history.push({ val: avgBrightness, time: now });
         while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) { box.history.shift(); }
 
         if (box.history.length > 5) {
-            const values = box.history.map(v => v.val);
-            const maxVal = Math.max(...values); const minVal = Math.min(...values);
+            const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
             diff = Math.round(maxVal - minVal);
-            const hysteresis = Math.max(diff * 0.2, threshold * 0.25);
-            const mid = minVal + diff / 2;
+            const hysteresis = Math.max(diff * 0.2, threshold * 0.25); const mid = minVal + diff / 2;
             let state = 0; let lastCrossTime = 0;
 
             for (const item of box.history) {
@@ -596,21 +586,11 @@ function processFrame() {
                 }
             }
             frequency = (crossings / (HISTORY_MS / 1000)).toFixed(1);
-
-            if (isMonitoring && diff >= threshold && crossings >= minCrossings) {
-                box.lastAlarmTime = now;
-            }
+            if (isMonitoring && diff >= threshold && crossings >= minCrossings) { box.lastAlarmTime = now; }
         }
 
-        if (isMonitoring && now - box.lastAlarmTime < holdMs) {
-            box.isAlarm = true; anyAlarm = true;
-        } else {
-            box.isAlarm = false;
-        }
-
-        box.currentDiff = diff;
-        box.currentCrossings = crossings;
-        box.currentFrequency = frequency;
+        if (isMonitoring && now - box.lastAlarmTime < holdMs) { box.isAlarm = true; anyAlarm = true; } else { box.isAlarm = false; }
+        box.currentDiff = diff; box.currentCrossings = crossings; box.currentFrequency = frequency;
 
         if (box.zoomStatsDiv && showZoomValues) {
             let txt = `Diff: ${diff}<br>Puls: ${crossings}`;
@@ -620,18 +600,14 @@ function processFrame() {
     }
 
     if (!showCamera) {
-        ctx.fillStyle = "#0a0a0a";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#333";
-        ctx.font = "20px Arial";
-        ctx.textAlign = "center";
+        ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#333"; ctx.font = "20px Arial"; ctx.textAlign = "center";
         ctx.fillText("Kamerabild ausgeblendet", canvas.width / 2, canvas.height / 2);
         ctx.fillText("Die Analyse läuft weiter...", canvas.width / 2, canvas.height / 2 + 30);
         ctx.textAlign = "left"; 
     } else {
         for (let i = 0; i < activeBoxCount; i++) {
-            const box = boxes[i];
-            let boxColor = '#00ff00'; let textColor = '#00ff88';
+            const box = boxes[i]; let boxColor = '#00ff00'; let textColor = '#00ff88';
             if (!isMonitoring) { boxColor = '#888888'; textColor = '#aaaaaa'; } 
             else if (box.isAlarm) { boxColor = '#ff0000'; textColor = '#ff4040'; }
 
@@ -639,10 +615,7 @@ function processFrame() {
                 ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8);
                 ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
             }
-
-            ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h);
-            ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = boxColor; ctx.stroke();
-
+            ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = boxColor; ctx.stroke();
             ctx.font = 'bold 18px Arial'; ctx.fillStyle = textColor; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
             let text = `Diff:${box.currentDiff} Puls:${box.currentCrossings} Hz:${box.currentFrequency}`;
             if (!isMonitoring) text += " [PAUSE]";
@@ -653,7 +626,6 @@ function processFrame() {
     if (anyAlarm) playBeep();
     requestAnimationFrame(processFrame);
 }
-
 window.addEventListener('resize', adjustCanvas);
 </script>
 </body>
