@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v16</title>
+<title>ESTW Wächter Pro v17</title>
 
 <style>
     body {
@@ -19,7 +19,6 @@
 
     h2 { margin: 5px 0 10px; }
 
-    /* Container für die gezoomten Vorschaubilder */
     #zoomHeader {
         display: flex;
         justify-content: center;
@@ -32,28 +31,45 @@
         min-height: 60px;
     }
 
+    /* Neu: Klickbare, interaktive Zoom-Boxen */
     .zoom-box {
         display: flex;
         flex-direction: column;
         align-items: center;
         background: #444;
-        padding: 4px;
-        border-radius: 5px;
-        border: 1px solid #666;
+        padding: 5px;
+        border-radius: 6px;
+        border: 2px solid #555;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .zoom-box:active { background: #555; }
+    
+    .zoom-box.active-zoom {
+        border-color: #00aaff;
+        background: #2a4054;
     }
 
     .zoom-canvas {
-        width: 80px; /* Kompakte Breite am Tablet */
+        width: 80px; 
         height: 40px;
         background: black;
-        border: 1px solid #00ff88;
-        image-rendering: pixelated; /* Macht den Zoom schärfer */
+        border: 1px solid #111;
+        image-rendering: pixelated; 
     }
 
     .zoom-label {
-        font-size: 10px;
-        margin-top: 2px;
+        font-size: 11px;
+        margin-top: 4px;
         font-weight: bold;
+    }
+
+    .zoom-stats {
+        font-size: 11px;
+        color: #ccc;
+        margin-top: 2px;
+        line-height: 1.3;
     }
 
     #ui {
@@ -159,14 +175,18 @@
 </head>
 <body>
 
-<div id="zoomHeader">
-    </div>
+<div id="zoomHeader"></div>
 
 <div id="ui">
     <div class="button-row">
         <button id="startBtn">Kamera starten</button>
         <button id="monitorBtn">Überwachung: AN</button>
+        <button id="toggleZoomTextBtn">Werte (Oben): AN</button>
         <button id="resetBtn">Reset</button>
+    </div>
+    
+    <div class="button-row" style="margin-top: -2px;">
+        <button id="toggleCameraBtn" style="background: #17a2b8;">Hauptkamera: SICHTBAR</button>
     </div>
 
     <div class="controls">
@@ -231,6 +251,8 @@ const zoomHeader = document.getElementById('zoomHeader');
 const startBtn = document.getElementById('startBtn');
 const monitorBtn = document.getElementById('monitorBtn');
 const resetBtn = document.getElementById('resetBtn');
+const toggleZoomTextBtn = document.getElementById('toggleZoomTextBtn');
+const toggleCameraBtn = document.getElementById('toggleCameraBtn');
 
 const slideSens = document.getElementById('slideSens');
 const slideWidth = document.getElementById('slideWidth');
@@ -248,6 +270,9 @@ const selectedBoxIdLabel = document.getElementById('selectedBoxId');
 
 let isRunning = false;
 let isMonitoring = true; 
+let showZoomValues = true;
+let showCamera = true;
+
 let draggingBox = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
@@ -257,7 +282,7 @@ let lastBeep = 0;
 
 const HISTORY_MS = 5000; 
 const MIN_CROSS_TIME = 400; 
-const PIXEL_STEP = 4; 
+const PIXEL_STEP = 4; // Kern intakt
 
 const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2 };
 
@@ -271,65 +296,90 @@ let boxes = [
 let activeBoxCount = 2;
 let selectedBox = boxes[0];
 
-// Erstelle die Zoom-Canvases im Header
 function createZoomDisplays() {
     zoomHeader.innerHTML = '';
     for (let i = 0; i < activeBoxCount; i++) {
         const div = document.createElement('div');
         div.className = 'zoom-box';
+        
+        // Klick auf Zoom-Box -> Box für D-Pad auswählen
+        div.onclick = () => {
+            selectedBox = boxes[i];
+            updateZoomSelectionUI();
+        };
+
         const c = document.createElement('canvas');
         c.className = 'zoom-canvas';
-        c.width = 100; // Interne Auflösung des Zooms
+        c.width = 100; 
         c.height = 50;
+
         const label = document.createElement('div');
         label.className = 'zoom-label';
         label.innerText = 'BOX ' + (i+1);
+
+        const stats = document.createElement('div');
+        stats.className = 'zoom-stats';
+        stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Diff: 0<br>Puls: 0`;
+
         div.appendChild(c);
         div.appendChild(label);
+        div.appendChild(stats);
         zoomHeader.appendChild(div);
+
         boxes[i].zoomCtx = c.getContext('2d');
+        boxes[i].zoomStatsDiv = stats;
     }
+    updateZoomSelectionUI();
+}
+
+function updateZoomSelectionUI() {
+    const zBoxes = document.querySelectorAll('.zoom-box');
+    zBoxes.forEach((div, idx) => {
+        if (boxes[idx] === selectedBox) div.classList.add('active-zoom');
+        else div.classList.remove('active-zoom');
+    });
+    if (selectedBox) selectedBoxIdLabel.innerText = selectedBox.id;
 }
 
 function updateLabels() {
-    valSens.innerText = slideSens.value;
-    valWidth.innerText = slideWidth.value;
-    valHeight.innerText = slideHeight.value;
-    valPulse.innerText = slidePulse.value;
+    valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value;
+    valHeight.innerText = slideHeight.value; valPulse.innerText = slidePulse.value;
     valHold.innerText = slideHold.value;
-    if (selectedBox) selectedBoxIdLabel.innerText = selectedBox.id;
 }
 
 function saveSettings() {
     const settings = {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount,
+        showZoomValues: showZoomValues, showCamera: showCamera,
         positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v16', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v17', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v16');
+        const saved = localStorage.getItem('estw_settings_v17');
         if (saved) {
-            const settings = JSON.parse(saved);
-            if (settings.sens) slideSens.value = settings.sens;
-            if (settings.width) slideWidth.value = settings.width;
-            if (settings.height) slideHeight.value = settings.height;
-            if (settings.pulse) slidePulse.value = settings.pulse;
-            if (settings.hold) slideHold.value = settings.hold;
-            if (settings.count) {
-                activeBoxCount = parseInt(settings.count);
-                boxCountSelect.value = activeBoxCount;
-            }
-            if (settings.positions) {
-                settings.positions.forEach((pos, idx) => {
-                    if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; }
-                });
+            const s = JSON.parse(saved);
+            if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
+            if (s.height) slideHeight.value = s.height; if (s.pulse) slidePulse.value = s.pulse;
+            if (s.hold) slideHold.value = s.hold;
+            if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
+            if (s.showZoomValues !== undefined) { showZoomValues = s.showZoomValues; }
+            if (s.showCamera !== undefined) { showCamera = s.showCamera; }
+            if (s.positions) {
+                s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } });
             }
         }
     } catch(e) {}
+    
+    toggleZoomTextBtn.innerText = showZoomValues ? "Werte (Oben): AN" : "Werte (Oben): AUS";
+    toggleZoomTextBtn.style.background = showZoomValues ? "#007bff" : "#555";
+    toggleCameraBtn.innerText = showCamera ? "Hauptkamera: SICHTBAR" : "Hauptkamera: VERSTECKT";
+    toggleCameraBtn.style.background = showCamera ? "#17a2b8" : "#555";
+
     createZoomDisplays();
     updateLabels();
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
@@ -337,6 +387,25 @@ function loadSettings() {
 
 loadSettings();
 
+// Event Listener für die neuen Buttons
+toggleZoomTextBtn.addEventListener('click', (e) => {
+    showZoomValues = !showZoomValues;
+    e.target.innerText = showZoomValues ? "Werte (Oben): AN" : "Werte (Oben): AUS";
+    e.target.style.background = showZoomValues ? "#007bff" : "#555";
+    for (let i = 0; i < activeBoxCount; i++) {
+        if (boxes[i].zoomStatsDiv) boxes[i].zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
+    }
+    saveSettings();
+});
+
+toggleCameraBtn.addEventListener('click', (e) => {
+    showCamera = !showCamera;
+    e.target.innerText = showCamera ? "Hauptkamera: SICHTBAR" : "Hauptkamera: VERSTECKT";
+    e.target.style.background = showCamera ? "#17a2b8" : "#555";
+    saveSettings();
+});
+
+// Event Listener Slider etc.
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
@@ -354,7 +423,7 @@ slideHeight.addEventListener('input', () => {
 boxCountSelect.addEventListener('change', (e) => {
     activeBoxCount = parseInt(e.target.value);
     createZoomDisplays();
-    if (selectedBox.id > activeBoxCount) selectedBox = boxes[0];
+    if (selectedBox.id > activeBoxCount) { selectedBox = boxes[0]; updateZoomSelectionUI(); }
     updateLabels(); saveSettings();
 });
 
@@ -363,8 +432,11 @@ resetBtn.addEventListener('click', () => {
     slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse;
     slideHold.value = DEFAULTS.hold; activeBoxCount = DEFAULTS.count;
     boxCountSelect.value = activeBoxCount;
-    createZoomDisplays();
-    updateLabels(); saveSettings();
+    showZoomValues = true; showCamera = true;
+    toggleZoomTextBtn.innerText = "Werte (Oben): AN"; toggleZoomTextBtn.style.background = "#007bff";
+    toggleCameraBtn.innerText = "Hauptkamera: SICHTBAR"; toggleCameraBtn.style.background = "#17a2b8";
+    
+    createZoomDisplays(); updateLabels(); saveSettings();
     boxes.forEach((b, idx) => { 
         b.w = DEFAULTS.width; b.h = DEFAULTS.height; 
         b.x = 60; b.y = 60 + (idx * 100); b.history = []; 
@@ -374,16 +446,14 @@ resetBtn.addEventListener('click', () => {
 monitorBtn.addEventListener('click', () => {
     isMonitoring = !isMonitoring;
     if (isMonitoring) {
-        monitorBtn.innerText = "Überwachung: AN";
-        monitorBtn.classList.remove("off");
+        monitorBtn.innerText = "Überwachung: AN"; monitorBtn.classList.remove("off");
     } else {
-        monitorBtn.innerText = "Überwachung: AUS";
-        monitorBtn.classList.add("off");
+        monitorBtn.innerText = "Überwachung: AUS"; monitorBtn.classList.add("off");
         boxes.forEach(b => { b.isAlarm = false; });
     }
 });
 
-const stepSize = 1; // Jetzt noch feiner (1 Pixel pro Klick)
+const stepSize = 1; 
 document.getElementById('btnUp').onclick = () => { if(selectedBox) { selectedBox.y -= stepSize; saveSettings(); } };
 document.getElementById('btnDown').onclick = () => { if(selectedBox) { selectedBox.y += stepSize; saveSettings(); } };
 document.getElementById('btnLeft').onclick = () => { if(selectedBox) { selectedBox.x -= stepSize; saveSettings(); } };
@@ -400,12 +470,13 @@ function getPointerPos(e) {
 }
 
 function startDrag(e) {
-    if (!isRunning) return;
+    if (!isRunning || !showCamera) return; // Kein Drag auf schwarzem Screen
     const pos = getPointerPos(e);
     for (let i = activeBoxCount - 1; i >= 0; i--) {
         const box = boxes[i];
         if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
-            draggingBox = box; selectedBox = box; updateLabels();
+            draggingBox = box; selectedBox = box; 
+            updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y;
             box.history = []; e.preventDefault(); break;
         }
@@ -413,7 +484,7 @@ function startDrag(e) {
 }
 
 function moveDrag(e) {
-    if (!draggingBox) return;
+    if (!draggingBox || !showCamera) return;
     const pos = getPointerPos(e);
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
@@ -477,6 +548,7 @@ startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else s
 function processFrame() {
     if (!isRunning) return;
 
+    // Video IMMER auf Canvas zeichnen, damit die Daten berechnet werden können
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const threshold = parseInt(slideSens.value);
@@ -485,89 +557,4 @@ function processFrame() {
     let anyAlarm = false;
     const now = Date.now();
 
-    for (let i = 0; i < activeBoxCount; i++) {
-        const box = boxes[i];
-        let diff = 0; let crossings = 0; let frequency = 0;
-
-        const rx = Math.floor(box.x); const ry = Math.floor(box.y);
-        const rw = Math.floor(box.w); const rh = Math.floor(box.h);
-
-        // 1. ZOOM ANZEIGEN (Spiegelung oben)
-        if (box.zoomCtx) {
-            box.zoomCtx.fillStyle = "black";
-            box.zoomCtx.fillRect(0, 0, 100, 50);
-            // Zeichne den Ausschnitt vom Video skaliert auf den Zoom-Canvas
-            box.zoomCtx.drawImage(canvas, rx, ry, rw, rh, 0, 0, 100, 50);
-        }
-
-        // 2. ANALYSE (Läuft immer!)
-        const frame = ctx.getImageData(rx, ry, rw, rh);
-        const data = frame.data;
-        let totalBrightness = 0; let pixelCount = 0;
-
-        for (let j = 0; j < data.length; j += PIXEL_STEP * 4) {
-            const r = data[j]; const g = data[j + 1]; const b = data[j + 2];
-            totalBrightness += r * 0.299 + g * 0.587 + b * 0.114;
-            pixelCount++;
-        }
-        const avgBrightness = totalBrightness / pixelCount;
-        box.history.push({ val: avgBrightness, time: now });
-        while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) { box.history.shift(); }
-
-        if (box.history.length > 5) {
-            const values = box.history.map(v => v.val);
-            const maxVal = Math.max(...values); const minVal = Math.min(...values);
-            diff = Math.round(maxVal - minVal);
-            const hysteresis = Math.max(diff * 0.2, threshold * 0.25);
-            const mid = minVal + diff / 2;
-            let state = 0; let lastCrossTime = 0;
-
-            for (const item of box.history) {
-                if (item.val > mid + hysteresis) {
-                    if (state === -1 && item.time - lastCrossTime > MIN_CROSS_TIME) { crossings++; lastCrossTime = item.time; }
-                    state = 1;
-                } else if (item.val < mid - hysteresis) {
-                    if (state === 1 && item.time - lastCrossTime > MIN_CROSS_TIME) { crossings++; lastCrossTime = item.time; }
-                    state = -1;
-                }
-            }
-            frequency = (crossings / (HISTORY_MS / 1000)).toFixed(1);
-
-            // 3. ALARM-LOGIK (Nur wenn Überwachung AN)
-            if (isMonitoring && diff >= threshold && crossings >= minCrossings) {
-                box.lastAlarmTime = now;
-            }
-        }
-
-        if (isMonitoring && now - box.lastAlarmTime < holdMs) {
-            box.isAlarm = true; anyAlarm = true;
-        } else {
-            box.isAlarm = false;
-        }
-
-        // 4. ZEICHNEN AUF HAUPTCANVAS
-        let boxColor = '#00ff00'; let textColor = '#00ff88';
-        if (!isMonitoring) { boxColor = '#888888'; textColor = '#aaaaaa'; } 
-        else if (box.isAlarm) { boxColor = '#ff0000'; textColor = '#ff4040'; }
-
-        if (box === selectedBox) {
-            ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8);
-            ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
-        }
-
-        ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h);
-        ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = boxColor; ctx.stroke();
-
-        ctx.font = 'bold 18px Arial'; ctx.fillStyle = textColor; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-        let text = `Diff:${diff} Puls:${crossings} Hz:${frequency}`;
-        ctx.strokeText(text, box.x, box.y - 8); ctx.fillText(text, box.x, box.y - 8);
-    }
-
-    if (anyAlarm) playBeep();
-    requestAnimationFrame(processFrame);
-}
-
-window.addEventListener('resize', adjustCanvas);
-</script>
-</body>
-</html>
+    // 1. DATEN SAMMELN UND
