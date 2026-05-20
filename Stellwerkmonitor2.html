@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v21</title>
+<title>ESTW Wächter Pro v22</title>
 
 <style>
     body {
@@ -52,7 +52,6 @@
     .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
     .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; }
 
-    /* NEU: Steuerkreuz direkt unter dem Header */
     .dpad-container {
         display: flex; flex-direction: column; align-items: center; gap: 5px;
         background: #333; padding: 10px; border-radius: 0 0 10px 10px;
@@ -68,18 +67,28 @@
 
     #ui { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
-    .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 450px;}
 
+    /* NEUES BUTTON DESIGN: Neutral Grau */
     button {
         padding: 12px 16px; border: none; border-radius: 8px;
-        background: #007bff; color: white; font-size: 14px; font-weight: bold;
-        cursor: pointer; touch-action: manipulation;
+        background: #555; color: white; font-size: 14px; font-weight: bold;
+        cursor: pointer; touch-action: manipulation; transition: 0.2s;
     }
-    button:hover { background: #0060d1; }
-    #monitorBtn { background: #28a745; } 
+    button:hover { background: #666; }
+    
+    /* Ausnahme: Roter Warn-Button wenn Überwachung AUS ist */
     #monitorBtn.off { background: #dc3545; } 
-    #resetBtn { background: #555; }
-    #activateStealthBtn { background: #6c757d; }
+
+    .stealth-hint {
+        font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px;
+    }
+
+    #toggleSettingsBtn {
+        width: 100%; max-width: 450px; background: #333; border: 1px solid #555;
+        margin-bottom: 5px; font-size: 13px; color: #ccc;
+    }
+    #toggleSettingsBtn:active { background: #444; }
 
     .controls {
         width: 95%; max-width: 450px; background: #2b2b2b;
@@ -95,7 +104,6 @@
         border: 1px solid #666; border-radius: 4px; padding: 5px;
     }
     
-    /* NEU: +/- Buttons für die Regler */
     .adj-btn {
         width: 32px; height: 32px; padding: 0; background: #555;
         font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center;
@@ -141,18 +149,22 @@
 
 <div id="ui">
     <div class="button-row">
-        <button id="startBtn">Kamera starten</button>
-        <button id="monitorBtn">Überwachung: AN</button>
-        <button id="toggleZoomTextBtn">Werte (Oben): AN</button>
+        <button id="startBtn">Kamera Start</button>
+        <button id="monitorBtn">Überwachung: AKTIV</button>
+        <button id="toggleZoomTextBtn">Werte: EIN</button>
         <button id="resetBtn">Reset</button>
     </div>
     
-    <div class="button-row" style="margin-top: -2px;">
-        <button id="toggleCameraBtn" style="background: #17a2b8;">Hauptkamera: SICHTBAR</button>
-        <button id="activateStealthBtn">Tarnmodus aktivieren</button>
+    <div class="button-row">
+        <button id="toggleCameraBtn">Live-Bild: SICHTBAR</button>
+        <button id="activateStealthBtn">Tarnmodus</button>
     </div>
+    
+    <div class="stealth-hint">Tipp: Tarnmodus beenden durch Tippen auf den unteren Uhr-Punkt.</div>
 
-    <div class="controls">
+    <button id="toggleSettingsBtn">⚙️ Einstellungen ausblenden</button>
+
+    <div class="controls" id="settingsPanel">
         <div class="camera-row">
             <div class="slider-row">
                 <label>Kamera:</label>
@@ -231,6 +243,9 @@ const activateStealthBtn = document.getElementById('activateStealthBtn');
 const stealthOverlay = document.getElementById('stealthOverlay');
 const exitStealthBtn = document.getElementById('exitStealthBtn');
 
+const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+
 const cameraSelect = document.getElementById('cameraSelect');
 const slideCamZoom = document.getElementById('slideCamZoom');
 const valCamZoom = document.getElementById('valCamZoom');
@@ -255,6 +270,7 @@ let isRunning = false;
 let isMonitoring = true; 
 let showZoomValues = true;
 let showCamera = true;
+let settingsVisible = true;
 let currentTrack = null; 
 
 let draggingBox = null;
@@ -267,6 +283,7 @@ let lastBeep = 0;
 let lastFrameTime = 0;
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
+const HIT_PAD = 20; // 20 Pixel extra unsichtbarer Greif-Bereich um winzige Boxen
 
 const HISTORY_MS = 5000; 
 const MIN_CROSS_TIME = 400; 
@@ -284,7 +301,15 @@ let boxes = [
 let activeBoxCount = 2;
 let selectedBox = boxes[0];
 
-// -- Hilfsfunktion für die Plus/Minus Buttons --
+// -- Einstellungen Toggle Logik --
+toggleSettingsBtn.addEventListener('click', () => {
+    settingsVisible = !settingsVisible;
+    settingsPanel.style.display = settingsVisible ? 'flex' : 'none';
+    toggleSettingsBtn.innerText = settingsVisible ? '⚙️ Einstellungen ausblenden' : '⚙️ Einstellungen einblenden';
+    saveSettings();
+});
+
+// -- Plus/Minus Buttons Logik --
 function setupAdjBtn(minusId, plusId, sliderId) {
     const slider = document.getElementById(sliderId);
     document.getElementById(minusId).addEventListener('click', (e) => {
@@ -300,7 +325,6 @@ function setupAdjBtn(minusId, plusId, sliderId) {
         slider.dispatchEvent(new Event('input'));
     });
 }
-
 setupAdjBtn('sensMinus', 'sensPlus', 'slideSens');
 setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth');
 setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
@@ -308,12 +332,10 @@ setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse');
 setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
 setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom');
 
-
 async function loadCameras() {
     try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        
         if (videoDevices.length > 0) {
             cameraSelect.innerHTML = '';
             videoDevices.forEach((device, index) => {
@@ -322,7 +344,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v21');
+            const saved = localStorage.getItem('estw_settings_v22');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -330,9 +352,7 @@ async function loadCameras() {
                 }
             }
         }
-    } catch (e) {
-        console.log("Kameras konnten nicht geladen werden", e);
-    }
+    } catch (e) {}
 }
 
 cameraSelect.addEventListener('change', () => {
@@ -342,9 +362,7 @@ cameraSelect.addEventListener('change', () => {
 
 slideCamZoom.addEventListener('input', (e) => {
     valCamZoom.innerText = parseFloat(e.target.value).toFixed(1);
-    if (currentTrack) {
-        try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {}
-    }
+    if (currentTrack) { try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {} }
 });
 
 function createZoomDisplays() {
@@ -392,33 +410,36 @@ function saveSettings() {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount,
         showZoomValues: showZoomValues, showCamera: showCamera,
-        cameraId: cameraSelect.value,
+        settingsVisible: settingsVisible, cameraId: cameraSelect.value,
         positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v21', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v22', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v21');
+        const saved = localStorage.getItem('estw_settings_v22');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
             if (s.height) slideHeight.value = s.height; if (s.pulse) slidePulse.value = s.pulse;
             if (s.hold) slideHold.value = s.hold;
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
-            if (s.showZoomValues !== undefined) { showZoomValues = s.showZoomValues; }
-            if (s.showCamera !== undefined) { showCamera = s.showCamera; }
+            if (s.showZoomValues !== undefined) showZoomValues = s.showZoomValues; 
+            if (s.showCamera !== undefined) showCamera = s.showCamera; 
+            if (s.settingsVisible !== undefined) {
+                settingsVisible = s.settingsVisible;
+                settingsPanel.style.display = settingsVisible ? 'flex' : 'none';
+                toggleSettingsBtn.innerText = settingsVisible ? '⚙️ Einstellungen ausblenden' : '⚙️ Einstellungen einblenden';
+            }
             if (s.positions) {
                 s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } });
             }
         }
     } catch(e) {}
     
-    toggleZoomTextBtn.innerText = showZoomValues ? "Werte (Oben): AN" : "Werte (Oben): AUS";
-    toggleZoomTextBtn.style.background = showZoomValues ? "#007bff" : "#555";
-    toggleCameraBtn.innerText = showCamera ? "Hauptkamera: SICHTBAR" : "Hauptkamera: VERSTECKT";
-    toggleCameraBtn.style.background = showCamera ? "#17a2b8" : "#555";
+    toggleZoomTextBtn.innerText = showZoomValues ? "Werte: EIN" : "Werte: AUS";
+    toggleCameraBtn.innerText = showCamera ? "Live-Bild: SICHTBAR" : "Live-Bild: VERSTECKT";
 
     createZoomDisplays(); updateLabels();
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
@@ -433,17 +454,12 @@ function updateStealthClock() {
 }
 setInterval(updateStealthClock, 1000);
 
-activateStealthBtn.addEventListener('click', () => {
-    stealthOverlay.style.display = 'flex';
-    updateStealthClock();
-});
-
+activateStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'flex'; updateStealthClock(); });
 exitStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'none'; });
 
 toggleZoomTextBtn.addEventListener('click', (e) => {
     showZoomValues = !showZoomValues;
-    e.target.innerText = showZoomValues ? "Werte (Oben): AN" : "Werte (Oben): AUS";
-    e.target.style.background = showZoomValues ? "#007bff" : "#555";
+    e.target.innerText = showZoomValues ? "Werte: EIN" : "Werte: AUS";
     for (let i = 0; i < activeBoxCount; i++) {
         if (boxes[i].zoomStatsDiv) boxes[i].zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
     }
@@ -452,24 +468,15 @@ toggleZoomTextBtn.addEventListener('click', (e) => {
 
 toggleCameraBtn.addEventListener('click', (e) => {
     showCamera = !showCamera;
-    e.target.innerText = showCamera ? "Hauptkamera: SICHTBAR" : "Hauptkamera: VERSTECKT";
-    e.target.style.background = showCamera ? "#17a2b8" : "#555";
+    e.target.innerText = showCamera ? "Live-Bild: SICHTBAR" : "Live-Bild: VERSTECKT";
     saveSettings();
 });
 
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
-
-slideWidth.addEventListener('input', () => {
-    updateLabels(); saveSettings();
-    boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; });
-});
-
-slideHeight.addEventListener('input', () => {
-    updateLabels(); saveSettings();
-    boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; });
-});
+slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
+slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
 
 boxCountSelect.addEventListener('change', (e) => {
     activeBoxCount = parseInt(e.target.value); createZoomDisplays();
@@ -482,70 +489,42 @@ resetBtn.addEventListener('click', () => {
     slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse;
     slideHold.value = DEFAULTS.hold; activeBoxCount = DEFAULTS.count;
     boxCountSelect.value = activeBoxCount; showZoomValues = true; showCamera = true;
-    toggleZoomTextBtn.innerText = "Werte (Oben): AN"; toggleZoomTextBtn.style.background = "#007bff";
-    toggleCameraBtn.innerText = "Hauptkamera: SICHTBAR"; toggleCameraBtn.style.background = "#17a2b8";
+    toggleZoomTextBtn.innerText = "Werte: EIN"; toggleCameraBtn.innerText = "Live-Bild: SICHTBAR";
     createZoomDisplays(); updateLabels(); saveSettings();
-    boxes.forEach((b, idx) => { 
-        b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; 
-    });
+    boxes.forEach((b, idx) => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; });
 });
 
 monitorBtn.addEventListener('click', () => {
     isMonitoring = !isMonitoring;
     if (isMonitoring) {
-        monitorBtn.innerText = "Überwachung: AN"; monitorBtn.classList.remove("off");
+        monitorBtn.innerText = "Überwachung: AKTIV"; monitorBtn.classList.remove("off");
     } else {
-        monitorBtn.innerText = "Überwachung: AUS"; monitorBtn.classList.add("off");
+        monitorBtn.innerText = "Überwachung: PAUSIERT"; monitorBtn.classList.add("off");
         boxes.forEach(b => { b.isAlarm = false; });
     }
 });
 
 
-// -- NEU: Turbo-D-Pad (Gedrückthalten zum schnelleren Verschieben) --
-let moveInterval = null;
-let moveTick = 0;
-let moveSpeed = 1;
-
+let moveInterval = null; let moveTick = 0; let moveSpeed = 1;
 function startDpadMove(dx, dy) {
-    if (!selectedBox) return;
-    moveTick = 0;
-    moveSpeed = 1;
-    
+    if (!selectedBox) return; moveTick = 0; moveSpeed = 1;
     const move = () => {
-        selectedBox.x += dx * moveSpeed;
-        selectedBox.y += dy * moveSpeed;
-        saveSettings();
-        
+        selectedBox.x += dx * moveSpeed; selectedBox.y += dy * moveSpeed; saveSettings();
         moveTick++;
-        if (moveTick > 8) moveSpeed = 3;  // Nach ca. 0.4 Sekunden wird es schneller
-        if (moveTick > 20) moveSpeed = 8; // Nach ca. 1.0 Sekunden wird es richtig schnell (Turbo)
+        if (moveTick > 8) moveSpeed = 3;  if (moveTick > 20) moveSpeed = 8; 
     };
-    
-    move(); // Einmaliger Schritt sofort beim ersten Tippen
-    moveInterval = setInterval(move, 50); // Wiederhole alle 50 Millisekunden
+    move(); moveInterval = setInterval(move, 50); 
 }
-
-function stopDpadMove() {
-    if (moveInterval) clearInterval(moveInterval);
-    moveInterval = null;
-}
-
+function stopDpadMove() { if (moveInterval) clearInterval(moveInterval); moveInterval = null; }
 function bindDpadButton(btnId, dx, dy) {
     const btn = document.getElementById(btnId);
     btn.addEventListener('mousedown', (e) => { e.preventDefault(); startDpadMove(dx, dy); });
     btn.addEventListener('touchstart', (e) => { e.preventDefault(); startDpadMove(dx, dy); });
-    
-    btn.addEventListener('mouseup', stopDpadMove);
-    btn.addEventListener('mouseleave', stopDpadMove);
-    btn.addEventListener('touchend', stopDpadMove);
-    btn.addEventListener('touchcancel', stopDpadMove);
+    btn.addEventListener('mouseup', stopDpadMove); btn.addEventListener('mouseleave', stopDpadMove);
+    btn.addEventListener('touchend', stopDpadMove); btn.addEventListener('touchcancel', stopDpadMove);
 }
-
-bindDpadButton('btnUp', 0, -1);
-bindDpadButton('btnDown', 0, 1);
-bindDpadButton('btnLeft', -1, 0);
-bindDpadButton('btnRight', 1, 0);
-
+bindDpadButton('btnUp', 0, -1); bindDpadButton('btnDown', 0, 1);
+bindDpadButton('btnLeft', -1, 0); bindDpadButton('btnRight', 1, 0);
 
 function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
@@ -562,13 +541,14 @@ function startDrag(e) {
     const pos = getPointerPos(e);
     for (let i = activeBoxCount - 1; i >= 0; i--) {
         const box = boxes[i];
-        if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
+        // HIT_PAD = 20: Großzügiger unsichtbarer Rand zum leichten Greifen
+        if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && 
+            pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
             draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; box.history = []; e.preventDefault(); break;
         }
     }
 }
-
 function moveDrag(e) {
     if (!draggingBox || !showCamera) return;
     const pos = getPointerPos(e);
@@ -576,7 +556,6 @@ function moveDrag(e) {
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
     draggingBox.history = []; e.preventDefault();
 }
-
 function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
 
 canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
@@ -602,21 +581,17 @@ function adjustCanvas() {
 async function startSystem() {
     try {
         let constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
-        
         if (cameraSelect.value && cameraSelect.value !== 'default') {
             constraints.video = { deviceId: { exact: cameraSelect.value }, width: { ideal: 1280 }, height: { ideal: 720 } };
         }
-
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = stream; 
-        currentTrack = stream.getVideoTracks()[0];
+        video.srcObject = stream; currentTrack = stream.getVideoTracks()[0];
 
         setTimeout(() => {
             try {
                 const capabilities = currentTrack.getCapabilities();
                 if (capabilities.zoom) {
-                    slideCamZoom.min = capabilities.zoom.min;
-                    slideCamZoom.max = capabilities.zoom.max;
+                    slideCamZoom.min = capabilities.zoom.min; slideCamZoom.max = capabilities.zoom.max;
                     slideCamZoom.step = capabilities.zoom.step;
                     slideCamZoom.value = currentTrack.getSettings().zoom || capabilities.zoom.min;
                     valCamZoom.innerText = parseFloat(slideCamZoom.value).toFixed(1);
@@ -629,15 +604,14 @@ async function startSystem() {
         video.onloadedmetadata = () => { adjustCanvas(); video.play(); };
         if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
         
-        isRunning = true; startBtn.innerText = 'Stoppen'; 
-        lastFrameTime = Date.now();
-        requestAnimationFrame(processFrame);
+        isRunning = true; startBtn.innerText = 'Kamera Stoppen'; 
+        lastFrameTime = Date.now(); requestAnimationFrame(processFrame);
     } catch (err) { alert('Kamerafehler: ' + err.message); }
 }
 
 function stopSystem() {
     isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
-    if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera starten';
+    if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera Start';
 }
 startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else stopSystem(); });
 
@@ -645,18 +619,14 @@ function processFrame() {
     if (!isRunning) return;
 
     requestAnimationFrame(processFrame);
-
-    const now = Date.now();
-    const elapsed = now - lastFrameTime;
+    const now = Date.now(); const elapsed = now - lastFrameTime;
     if (elapsed < FRAME_INTERVAL) return;
     lastFrameTime = now - (elapsed % FRAME_INTERVAL);
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const threshold = parseInt(slideSens.value);
-    const minCrossings = parseInt(slidePulse.value);
-    const holdMs = parseFloat(slideHold.value) * 1000;
-    let anyAlarm = false; 
+    const threshold = parseInt(slideSens.value); const minCrossings = parseInt(slidePulse.value);
+    const holdMs = parseFloat(slideHold.value) * 1000; let anyAlarm = false; 
 
     for (let i = 0; i < activeBoxCount; i++) {
         const box = boxes[i]; let diff = 0; let crossings = 0; let frequency = 0;
@@ -714,19 +684,29 @@ function processFrame() {
         ctx.textAlign = "left"; 
     } else {
         for (let i = 0; i < activeBoxCount; i++) {
-            const box = boxes[i]; let boxColor = '#00ff00'; let textColor = '#00ff88';
-            if (!isMonitoring) { boxColor = '#888888'; textColor = '#aaaaaa'; } 
-            else if (box.isAlarm) { boxColor = '#ff0000'; textColor = '#ff4040'; }
+            const box = boxes[i]; 
+            
+            // NEU: Halbtransparente Füllung zur besseren Sichtbarkeit
+            let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)';
+            let borderColor = box.isAlarm ? '#ff0000' : '#00ff00';
+            
+            if (!isMonitoring) {
+                fillColor = 'rgba(136,136,136,0.3)';
+                borderColor = '#888888';
+            }
+            
+            ctx.fillStyle = fillColor;
+            ctx.fillRect(box.x, box.y, box.w, box.h);
 
             if (box === selectedBox) {
                 ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8);
                 ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
             }
-            ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = boxColor; ctx.stroke();
-            ctx.font = 'bold 18px Arial'; ctx.fillStyle = textColor; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-            let text = `Diff:${box.currentDiff} Puls:${box.currentCrossings} Hz:${box.currentFrequency}`;
-            if (!isMonitoring) text += " [PAUSE]";
-            ctx.strokeText(text, box.x, box.y - 8); ctx.fillText(text, box.x, box.y - 8);
+            
+            ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); 
+            ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = borderColor; ctx.stroke();
+            
+            // Text auf dem Kamerabild wurde absichtlich entfernt für saubere Sicht!
         }
     }
 
