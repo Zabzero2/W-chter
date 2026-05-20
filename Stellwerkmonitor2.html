@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v25</title>
+<title>ESTW Wächter Pro v26</title>
 
 <style>
     body {
@@ -19,37 +19,17 @@
 
     h2 { margin: 5px 0 10px; }
 
-    /* NEU: Integrierter Rahmen für Zoom-Boxen UND Ausblend-Button */
-    #topPanelContainer {
-        background: #2b2b2b;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        overflow: hidden;
-        width: 100%;
-    }
-
     #zoomHeader {
         display: flex;
         justify-content: center;
         gap: 8px;
+        margin-bottom: 10px;
         flex-wrap: wrap;
+        background: #2b2b2b;
         padding: 10px;
+        border-radius: 10px;
         min-height: 60px;
     }
-
-    /* Der Button ist jetzt Teil des oberen Panels */
-    #toggleDpadBtn {
-        width: 100%;
-        background: #333;
-        border: none;
-        border-top: 1px solid #444;
-        padding: 12px;
-        color: #ccc;
-        font-size: 13px;
-        cursor: pointer;
-        transition: 0.2s;
-    }
-    #toggleDpadBtn:active { background: #444; }
 
     .zoom-box {
         display: flex;
@@ -75,11 +55,20 @@
     .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; }
 
     .dpad-container {
-        display: flex; flex-direction: column; align-items: center; gap: 5px;
+        display: flex; flex-direction: column; align-items: center; gap: 15px;
         background: #333; padding: 15px 10px; border-radius: 10px;
         margin-bottom: 10px;
     }
-    .dpad-row { display: flex; gap: 15px; }
+    
+    /* NEU: Starres Raster, damit nichts mehr gequetscht wird */
+    .dpad-grid {
+        display: grid;
+        grid-template-columns: auto auto auto;
+        gap: 15px 25px;
+        justify-content: center;
+        align-items: end;
+    }
+    
     .dpad-btn { 
         background: #555; font-size: 18px; padding: 12px 25px; 
         border-radius: 6px; border: none; color: white; cursor: pointer;
@@ -152,40 +141,37 @@
 
 <div style="width: 100%; max-width: 474px; margin: 0 auto;">
     
-    <div id="topPanelContainer">
-        <div id="zoomHeader"></div>
-        <button id="toggleDpadBtn">🎯 Feinjustierung ausblenden</button>
-    </div>
+    <div id="zoomHeader"></div>
 
     <div class="dpad-container" id="dpadPanel">
-        <div style="font-size: 13px; margin-bottom: 5px; color: #00ff88;">
+        <div style="font-size: 13px; color: #00ff88; margin-bottom: 5px;">
             Ausgewählte Box <span id="selectedBoxId">1</span>
         </div>
         
-        <div style="display: flex; justify-content: center; align-items: flex-end; gap: 30px; width: 100%; margin-bottom: -5px;">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <span style="font-size: 10px; color:#aaa;">Rahmen-Breite</span>
-                <div style="display:flex; gap:2px;">
-                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnWMinus">-</button>
-                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnWPlus">+</button>
+        <div class="dpad-grid">
+            
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+                <span style="font-size: 11px; color:#aaa;">Rahmen-Breite</span>
+                <div style="display:flex; gap:5px;">
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnWMinus">-</button>
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnWPlus">+</button>
                 </div>
             </div>
             
-            <button class="dpad-btn" id="btnUp" style="margin-bottom: 5px;">🔼</button>
+            <button class="dpad-btn" id="btnUp" style="padding: 15px 25px;">🔼</button>
             
-            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <span style="font-size: 10px; color:#aaa;">Rahmen-Höhe</span>
-                <div style="display:flex; gap:2px;">
-                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnHMinus">-</button>
-                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnHPlus">+</button>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+                <span style="font-size: 11px; color:#aaa;">Rahmen-Höhe</span>
+                <div style="display:flex; gap:5px;">
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnHMinus">-</button>
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnHPlus">+</button>
                 </div>
             </div>
-        </div>
 
-        <div class="dpad-row">
-            <button class="dpad-btn" id="btnLeft">◀️</button>
-            <button class="dpad-btn" id="btnDown">🔽</button>
-            <button class="dpad-btn" id="btnRight">▶️</button>
+            <button class="dpad-btn" id="btnLeft" style="padding: 15px 25px;">◀️</button>
+            <button class="dpad-btn" id="btnDown" style="padding: 15px 25px;">🔽</button>
+            <button class="dpad-btn" id="btnRight" style="padding: 15px 25px;">▶️</button>
+            
         </div>
     </div>
 </div>
@@ -202,6 +188,9 @@
     <button id="toggleSettingsBtn" class="toggle-btn">⚙️ Einstellungen einblenden</button>
 
     <div class="controls" id="settingsPanel" style="display: none;">
+        
+        <button id="toggleDpadBtn" class="toggle-btn" style="margin-bottom: 15px; border-color: #777;">🎯 Feinjustierung ausblenden</button>
+
         <div class="button-row" style="margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px;">
             <button id="toggleZoomTextBtn">Werte: EIN</button>
             <button id="toggleCameraBtn">Live-Bild: SICHTBAR</button>
@@ -395,7 +384,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v25');
+            const saved = localStorage.getItem('estw_settings_v26');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -467,12 +456,12 @@ function saveSettings() {
         settingsVisible: settingsVisible, dpadVisible: dpadVisible, cameraId: cameraSelect.value,
         positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v25', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v26', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v25');
+        const saved = localStorage.getItem('estw_settings_v26');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -568,32 +557,51 @@ monitorBtn.addEventListener('click', () => {
 });
 
 
-let moveInterval = null; let moveTick = 0; let moveSpeed = 1;
+// --- NEUE TURBO LOGIK ---
+let turboTimeout = null;
+let turboInterval = null;
 
 function startTurboAction(actionFn) {
     if (!selectedBox) return; 
-    moveTick = 0; moveSpeed = 1;
-    const step = () => {
-        actionFn(moveSpeed);
-        saveSettings();
-        moveTick++;
+
+    // 1. Sofort exakt einen Schritt beim Antippen ausführen
+    actionFn(1);
+    saveSettings();
+
+    // 2. Halbe Sekunde (600ms) warten, bevor der Turbo überhaupt losgeht!
+    turboTimeout = setTimeout(() => {
+        let speed = 1;
+        let tick = 0;
         
-        // NEU: Turbo zündet deutlich später!
-        if (moveTick > 15) moveSpeed = 3;  // Nach ca. 0.75 Sekunden
-        if (moveTick > 35) moveSpeed = 8;  // Nach ca. 1.75 Sekunden
-    };
-    step(); 
-    moveInterval = setInterval(step, 50); 
+        // 3. Dauerfeuer aktivieren (läuft alle 50 Millisekunden)
+        turboInterval = setInterval(() => {
+            tick++;
+            if (tick > 10) speed = 3;  // Nach weiteren 0.5s etwas schneller
+            if (tick > 30) speed = 8;  // Nach weiteren 1.5s richtig schnell
+            
+            actionFn(speed);
+            saveSettings();
+        }, 50);
+    }, 600); // <-- Das war der Puffer, der im alten Code gefehlt hat!
 }
 
-function stopTurboAction() { if (moveInterval) clearInterval(moveInterval); moveInterval = null; }
+function stopTurboAction() { 
+    if (turboTimeout) clearTimeout(turboTimeout); 
+    if (turboInterval) clearInterval(turboInterval); 
+    turboTimeout = null;
+    turboInterval = null;
+}
 
 function bindTurboButton(btnId, actionFn) {
     const btn = document.getElementById(btnId);
     btn.addEventListener('mousedown', (e) => { e.preventDefault(); startTurboAction(actionFn); });
     btn.addEventListener('touchstart', (e) => { e.preventDefault(); startTurboAction(actionFn); });
-    btn.addEventListener('mouseup', stopTurboAction); btn.addEventListener('mouseleave', stopTurboAction);
-    btn.addEventListener('touchend', stopTurboAction); btn.addEventListener('touchcancel', stopTurboAction);
+    
+    // Stoppe den Turbo, sobald der Finger weggeht
+    btn.addEventListener('mouseup', stopTurboAction); 
+    btn.addEventListener('mouseleave', stopTurboAction);
+    btn.addEventListener('touchend', stopTurboAction); 
+    btn.addEventListener('touchcancel', stopTurboAction);
 }
 
 bindTurboButton('btnUp', (s) => selectedBox.y -= s);
