@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESTW Wächter Pro v20</title>
+
+<style>
+    body {
+        margin: 0;
+        padding: 10px;
+        background: #1e1e1e;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        overflow-x: hidden;
+        user-select: none;
+    }
+
+    h2 { margin: 5px 0 10px; }
+
+    #zoomHeader {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        background: #2b2b2b;
+        padding: 10px;
+        border-radius: 10px;
+        min-height: 60px;
+    }
+
+    .zoom-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #444;
+        padding: 5px;
+        border-radius: 6px;
+        border: 2px solid #555;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .zoom-box:active { background: #555; }
+    .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
+
+    .zoom-canvas {
+        width: 80px; height: 40px; background: black;
+        border: 1px solid #111; image-rendering: pixelated; 
+    }
+    .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
+    .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; }
+
+    #ui { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+    button {
+        padding: 12px 16px; border: none; border-radius: 8px;
+        background: #007bff; color: white; font-size: 14px; font-weight: bold;
+        cursor: pointer; touch-action: manipulation;
+    }
+    button:hover { background: #0060d1; }
+    #monitorBtn { background: #28a745; } 
+    #monitorBtn.off { background: #dc3545; } 
+    #resetBtn { background: #555; }
+    #activateStealthBtn { background: #6c757d; }
+
+    .controls {
+        width: 95%; max-width: 450px; background: #2b2b2b;
+        border-radius: 10px; padding: 12px; display: flex;
+        flex-direction: column; gap: 8px;
+    }
+
+    .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+    .slider-row label { width: 160px; text-align: left; font-size: 13px; }
+    .slider-row input, .slider-row select { 
+        flex-grow: 1; background: #444; color: white;
+        border: 1px solid #666; border-radius: 4px; padding: 5px;
+    }
+    
+    .camera-row {
+        background: #3a3a3a; padding: 8px; border-radius: 6px;
+        display: flex; flex-direction: column; gap: 5px; margin-bottom: 5px;
+    }
+
+    .dpad-container {
+        display: flex; flex-direction: column; align-items: center; gap: 5px;
+        background: #333; padding: 8px; border-radius: 8px;
+    }
+    .dpad-row { display: flex; gap: 15px; }
+    .dpad-btn { background: #555; font-size: 18px; padding: 10px 25px; }
+
+    #container { position: relative; margin-top: 10px; display: inline-block; max-width: 100%; }
+    canvas { width: 100%; max-width: 100%; height: auto; background: black; border: 2px solid #555; border-radius: 8px; touch-action: none; }
+    video { display: none; }
+</style>
+</head>
+<body>
+
+<div id="stealthOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 9999; justify-content: center; align-items: center; font-family: Arial, sans-serif; font-size: 22vw; font-weight: bold; color: white; gap: 3vw; box-sizing: border-box;">
+    <span id="hoursHTML">00</span>
+    <div style="display: flex; flex-direction: column; justify-content: space-between; height: 14vw; padding: 2.2vw 0; box-sizing: border-box;">
+        <div style="width: 3vw; height: 3vw; background: white; border-radius: 50%;"></div>
+        <div id="exitStealthBtn" style="width: 3vw; height: 3vw; background: white; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
+    </div>
+    <span id="minsHTML">00</span>
+</div>
+
+<div id="zoomHeader"></div>
+
+<div id="ui">
+    <div class="button-row">
+        <button id="startBtn">Kamera starten</button>
+        <button id="monitorBtn">Überwachung: AN</button>
+        <button id="toggleZoomTextBtn">Werte (Oben): AN</button>
+        <button id="resetBtn">Reset</button>
+    </div>
+    
+    <div class="button-row" style="margin-top: -2px;">
+        <button id="toggleCameraBtn" style="background: #17a2b8;">Hauptkamera: SICHTBAR</button>
+        <button id="activateStealthBtn">Tarnmodus aktivieren</button>
+    </div>
+
+    <div class="controls">
+        <div class="camera-row">
+            <div class="slider-row">
+                <label>Kamera:</label>
+                <select id="cameraSelect">
+                    <option value="default">Standard Rückkamera</option>
+                </select>
+            </div>
+            <div class="slider-row" id="zoomContainer">
+                <label>Kamera-Zoom: <span id="valCamZoom">1.0</span>x</label>
+                <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
+            </div>
+        </div>
+
+        <div class="slider-row">
+            <label>Anzahl Boxen:</label>
+            <select id="boxCountSelect">
+                <option value="1">1 Box</option>
+                <option value="2">2 Boxen</option>
+                <option value="3">3 Boxen</option>
+                <option value="4">4 Boxen</option>
+            </select>
+        </div>
+        
+        <div class="slider-row">
+            <label>Empfindlichkeit: <span id="valSens">15</span></label>
+            <input type="range" id="slideSens" min="2" max="100" value="15">
+        </div>
+        <div class="slider-row">
+            <label>Box Breite: <span id="valWidth">80</span></label>
+            <input type="range" id="slideWidth" min="20" max="100" value="80">
+        </div>
+        <div class="slider-row">
+            <label>Box Höhe: <span id="valHeight">30</span></label>
+            <input type="range" id="slideHeight" min="10" max="50" value="30">
+        </div>
+        <div class="slider-row">
+            <label>Min. Pulse: <span id="valPulse">4</span></label>
+            <input type="range" id="slidePulse" min="1" max="10" value="4">
+        </div>
+        <div class="slider-row">
+            <label>Alarmdauer: <span id="valHold">1.5</span>s</label>
+            <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="1.5">
+        </div>
+
+        <div class="dpad-container" id="dpadPanel">
+            <div style="font-size: 13px; margin-bottom: 5px; color: #00ff88;">
+                Feinjustierung Box <span id="selectedBoxId">1</span>
+            </div>
+            <div class="dpad-row">
+                <button class="dpad-btn" id="btnUp">🔼</button>
+            </div>
+            <div class="dpad-row">
+                <button class="dpad-btn" id="btnLeft">◀️</button>
+                <button class="dpad-btn" id="btnDown">🔽</button>
+                <button class="dpad-btn" id="btnRight">▶️</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="container">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const zoomHeader = document.getElementById('zoomHeader');
+
+const startBtn = document.getElementById('startBtn');
+const monitorBtn = document.getElementById('monitorBtn');
+const resetBtn = document.getElementById('resetBtn');
+const toggleZoomTextBtn = document.getElementById('toggleZoomTextBtn');
+const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+const activateStealthBtn = document.getElementById('activateStealthBtn');
+const stealthOverlay = document.getElementById('stealthOverlay');
+const exitStealthBtn = document.getElementById('exitStealthBtn');
+
+const cameraSelect = document.getElementById('cameraSelect');
+const slideCamZoom = document.getElementById('slideCamZoom');
+const valCamZoom = document.getElementById('valCamZoom');
+
+const slideSens = document.getElementById('slideSens');
+const slideWidth = document.getElementById('slideWidth');
+const slideHeight = document.getElementById('slideHeight');
+const slidePulse = document.getElementById('slidePulse');
+const slideHold = document.getElementById('slideHold');
+const boxCountSelect = document.getElementById('boxCountSelect');
+
+const valSens = document.getElementById('valSens');
+const valWidth = document.getElementById('valWidth');
+const valHeight = document.getElementById('valHeight');
+const valPulse = document.getElementById('valPulse');
+const valHold = document.getElementById('valHold');
+const selectedBoxIdLabel = document.getElementById('selectedBoxId');
+const hoursHTML = document.getElementById('hoursHTML');
+const minsHTML = document.getElementById('minsHTML');
+
+let isRunning = false;
+let isMonitoring = true; 
+let showZoomValues = true;
+let showCamera = true;
+let currentTrack = null; 
+
+let draggingBox = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let audioCtx = null;
+let wakeLock = null;
+let lastBeep = 0;
+
+// CPU Optimierung (FPS Begrenzer)
+let lastFrameTime = 0;
+const TARGET_FPS = 15; 
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+
+const HISTORY_MS = 5000; 
+const MIN_CROSS_TIME = 400; 
+const PIXEL_STEP = 4; 
+
+const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2 };
+
+let boxes = [
+    { id: 1, x: 60, y: 60, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null },
+    { id: 2, x: 60, y: 160, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null },
+    { id: 3, x: 60, y: 260, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null },
+    { id: 4, x: 60, y: 360, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null }
+];
+
+let activeBoxCount = 2;
+let selectedBox = boxes[0];
+
+// -- Kamera Auswahl Logik --
+async function loadCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        
+        if (videoDevices.length > 0) {
+            cameraSelect.innerHTML = '';
+            videoDevices.forEach((device, index) => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                // Wenn kein Name da ist (weil Rechte fehlen), nenne es Kamera 1, 2, etc.
+                option.text = device.label || `Kamera ${index + 1}`;
+                cameraSelect.appendChild(option);
+            });
+            // Lade letzte Kamera aus Speicher, falls vorhanden
+            const saved = localStorage.getItem('estw_settings_v20');
+            if (saved) {
+                const s = JSON.parse(saved);
+                if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
+                    cameraSelect.value = s.cameraId;
+                }
+            }
+        }
+    } catch (e) {
+        console.log("Kameras konnten nicht geladen werden", e);
+    }
+}
+
+cameraSelect.addEventListener('change', () => {
+    saveSettings();
+    if (isRunning) {
+        stopSystem();
+        setTimeout(startSystem, 500); // Kurz warten und mit neuer Kamera neu starten
+    }
+});
+
+slideCamZoom.addEventListener('input', (e) => {
+    valCamZoom.innerText = parseFloat(e.target.value).toFixed(1);
+    if (currentTrack) {
+        try {
+            currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] });
+        } catch(err) { console.log("Zoom nicht unterstützt."); }
+    }
+});
+
+function createZoomDisplays() {
+    zoomHeader.innerHTML = '';
+    for (let i = 0; i < activeBoxCount; i++) {
+        const div = document.createElement('div');
+        div.className = 'zoom-box';
+        div.onclick = () => { selectedBox = boxes[i]; updateZoomSelectionUI(); };
+
+        const c = document.createElement('canvas');
+        c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
+
+        const label = document.createElement('div');
+        label.className = 'zoom-label'; label.innerText = 'BOX ' + (i+1);
+
+        const stats = document.createElement('div');
+        stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Diff: 0<br>Puls: 0`;
+
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats);
+        zoomHeader.appendChild(div);
+
+        boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats;
+    }
+    updateZoomSelectionUI();
+}
+
+function updateZoomSelectionUI() {
+    const zBoxes = document.querySelectorAll('.zoom-box');
+    zBoxes.forEach((div, idx) => {
+        if (boxes[idx] === selectedBox) div.classList.add('active-zoom');
+        else div.classList.remove('active-zoom');
+    });
+    if (selectedBox) selectedBoxIdLabel.innerText = selectedBox.id;
+}
+
+function updateLabels() {
+    valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value;
+    valHeight.innerText = slideHeight.value; valPulse.innerText = slidePulse.value;
+    valHold.innerText = slideHold.value;
+}
+
+function saveSettings() {
+    const settings = {
+        sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
+        pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount,
+        showZoomValues: showZoomValues, showCamera: showCamera,
+        cameraId: cameraSelect.value, // Speichert die gewählte Kamera
+        positions: boxes.map(b => ({ x: b.x, y: b.y }))
+    };
+    localStorage.setItem('estw_settings_v20', JSON.stringify(settings));
+}
+
+function loadSettings() {
+    try {
+        const saved = localStorage.getItem('estw_settings_v20');
+        if (saved) {
+            const s = JSON.parse(saved);
+            if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
+            if (s.height) slideHeight.value = s.height; if (s.pulse) slidePulse.value = s.pulse;
+            if (s.hold) slideHold.value = s.hold;
+            if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
+            if (s.showZoomValues !== undefined) { showZoomValues = s.showZoomValues; }
+            if (s.showCamera !== undefined) { showCamera = s.showCamera; }
+            if (s.positions) {
+                s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } });
+            }
+        }
+    } catch(e) {}
+    
+    toggleZoomTextBtn.innerText = showZoomValues ? "Werte (Oben): AN" : "Werte (Oben): AUS";
+    toggleZoomTextBtn.style.background = showZoomValues ? "#007bff" : "#555";
+    toggleCameraBtn.innerText = showCamera ? "Hauptkamera: SICHTBAR" : "Hauptkamera: VERSTECKT";
+    toggleCameraBtn.style.background = showCamera ? "#17a2b8" : "#555";
+
+    createZoomDisplays(); updateLabels();
+    boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
+}
+
+loadSettings();
+
+function updateStealthClock() {
+    const d = new Date();
+    hoursHTML.innerText = String(d.getHours()).padStart(2, '0');
+    minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
+}
+setInterval(updateStealthClock, 1000);
+
+activateStealthBtn.addEventListener('click', () => {
+    stealthOverlay.style.display = 'flex';
+    updateStealthClock();
+});
+
+exitStealthBtn.addEventListener('click', () => {
+    stealthOverlay.style.display = 'none';
+});
+
+toggleZoomTextBtn.addEventListener('click', (e) => {
+    showZoomValues = !showZoomValues;
+    e.target.innerText = showZoomValues ? "Werte (Oben): AN" : "Werte (Oben): AUS";
+    e.target.style.background = showZoomValues ? "#007bff" : "#555";
+    for (let i = 0; i < activeBoxCount; i++) {
+        if (boxes[i].zoomStatsDiv) boxes[i].zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
+    }
+    saveSettings();
+});
+
+toggleCameraBtn.addEventListener('click', (e) => {
+    showCamera = !showCamera;
+    e.target.innerText = showCamera ? "Hauptkamera: SICHTBAR" : "Hauptkamera: VERSTECKT";
+    e.target.style.background = showCamera ? "#17a2b8" : "#555";
+    saveSettings();
+});
+
+slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+
+slideWidth.addEventListener('input', () => {
+    updateLabels(); saveSettings();
+    boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; });
+});
+
+slideHeight.addEventListener('input', () => {
+    updateLabels(); saveSettings();
+    boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; });
+});
+
+boxCountSelect.addEventListener('change', (e) => {
+    activeBoxCount = parseInt(e.target.value); createZoomDisplays();
+    if (selectedBox.id > activeBoxCount) { selectedBox = boxes[0]; updateZoomSelectionUI(); }
+    updateLabels(); saveSettings();
+});
+
+resetBtn.addEventListener('click', () => {
+    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width;
+    slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse;
+    slideHold.value = DEFAULTS.hold; activeBoxCount = DEFAULTS.count;
+    boxCountSelect.value = activeBoxCount; showZoomValues = true; showCamera = true;
+    toggleZoomTextBtn.innerText = "Werte (Oben): AN"; toggleZoomTextBtn.style.background = "#007bff";
+    toggleCameraBtn.innerText = "Hauptkamera: SICHTBAR"; toggleCameraBtn.style.background = "#17a2b8";
+    createZoomDisplays(); updateLabels(); saveSettings();
+    boxes.forEach((b, idx) => { 
+        b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; 
+    });
+});
+
+monitorBtn.addEventListener('click', () => {
+    isMonitoring = !isMonitoring;
+    if (isMonitoring) {
+        monitorBtn.innerText = "Überwachung: AN"; monitorBtn.classList.remove("off");
+    } else {
+        monitorBtn.innerText = "Überwachung: AUS"; monitorBtn.classList.add("off");
+        boxes.forEach(b => { b.isAlarm = false; });
+    }
+});
+
+const stepSize = 1; 
+document.getElementById('btnUp').onclick = () => { if(selectedBox) { selectedBox.y -= stepSize; saveSettings(); } };
+document.getElementById('btnDown').onclick = () => { if(selectedBox) { selectedBox.y += stepSize; saveSettings(); } };
+document.getElementById('btnLeft').onclick = () => { if(selectedBox) { selectedBox.x -= stepSize; saveSettings(); } };
+document.getElementById('btnRight').onclick = () => { if(selectedBox) { selectedBox.x += stepSize; saveSettings(); } };
+
+function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+}
+
+function startDrag(e) {
+    if (!isRunning || !showCamera) return; 
+    const pos = getPointerPos(e);
+    for (let i = activeBoxCount - 1; i >= 0; i--) {
+        const box = boxes[i];
+        if (pos.x >= box.x && pos.x <= box.x + box.w && pos.y >= box.y && pos.y <= box.y + box.h) {
+            draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
+            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; box.history = []; e.preventDefault(); break;
+        }
+    }
+}
+
+function moveDrag(e) {
+    if (!draggingBox || !showCamera) return;
+    const pos = getPointerPos(e);
+    draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
+    draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
+    draggingBox.history = []; e.preventDefault();
+}
+
+function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
+
+canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
+canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.addEventListener('touchmove', moveDrag, { passive: false }); window.addEventListener('touchend', endDrag);
+
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playBeep() {
+    const now = Date.now(); if (now - lastBeep < 1000) return; lastBeep = now;
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08;
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+}
+
+function adjustCanvas() {
+    if (!video.videoWidth) return;
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays();
+}
+
+async function startSystem() {
+    try {
+        let constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
+        
+        // Wenn der Nutzer schon eine bestimmte Kamera gewählt hat
+        if (cameraSelect.value && cameraSelect.value !== 'default') {
+            constraints.video = { deviceId: { exact: cameraSelect.value }, width: { ideal: 1280 }, height: { ideal: 720 } };
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream; 
+        
+        currentTrack = stream.getVideoTracks()[0];
+
+        // Zoom-Regler aktivieren falls vom Tablet unterstützt
+        setTimeout(() => {
+            try {
+                const capabilities = currentTrack.getCapabilities();
+                if (capabilities.zoom) {
+                    slideCamZoom.min = capabilities.zoom.min;
+                    slideCamZoom.max = capabilities.zoom.max;
+                    slideCamZoom.step = capabilities.zoom.step;
+                    slideCamZoom.value = currentTrack.getSettings().zoom || capabilities.zoom.min;
+                    valCamZoom.innerText = parseFloat(slideCamZoom.value).toFixed(1);
+                    document.getElementById('slideCamZoom').disabled = false;
+                }
+            } catch(e) {}
+            // Kameras laden (fragt beim ersten Mal Berechtigung an)
+            loadCameras();
+        }, 500);
+
+        video.onloadedmetadata = () => { adjustCanvas(); video.play(); };
+        if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
+        
+        isRunning = true; startBtn.innerText = 'Stoppen'; 
+        lastFrameTime = Date.now();
+        requestAnimationFrame(processFrame);
+    } catch (err) { alert('Kamerafehler: ' + err.message); }
+}
+
+function stopSystem() {
+    isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+    if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera starten';
+}
+startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else stopSystem(); });
+
+function processFrame() {
+    if (!isRunning) return;
+
+    requestAnimationFrame(processFrame); // Direkt nächsten Frame in die Warteschlange stellen
+
+    // FPS-Bremse: Schont den Akku und verhindert Überhitzung (15 Bilder pro Sekunde)
+    const now = Date.now();
+    const elapsed = now - lastFrameTime;
+    if (elapsed < FRAME_INTERVAL) return;
+    lastFrameTime = now - (elapsed % FRAME_INTERVAL);
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const threshold = parseInt(slideSens.value);
+    const minCrossings = parseInt(slidePulse.value);
+    const holdMs = parseFloat(slideHold.value) * 1000;
+    let anyAlarm = false; 
+
+    for (let i = 0; i < activeBoxCount; i++) {
+        const box = boxes[i]; let diff = 0; let crossings = 0; let frequency = 0;
+        const rx = Math.floor(box.x); const ry = Math.floor(box.y); const rw = Math.floor(box.w); const rh = Math.floor(box.h);
+
+        if (box.zoomCtx) {
+            box.zoomCtx.fillStyle = "black"; box.zoomCtx.fillRect(0, 0, 100, 50);
+            box.zoomCtx.drawImage(canvas, rx, ry, rw, rh, 0, 0, 100, 50);
+        }
+
+        const frame = ctx.getImageData(rx, ry, rw, rh); const data = frame.data;
+        let totalBrightness = 0; let pixelCount = 0;
+
+        for (let j = 0; j < data.length; j += PIXEL_STEP * 4) {
+            totalBrightness += data[j] * 0.299 + data[j + 1] * 0.587 + data[j + 2] * 0.114; pixelCount++;
+        }
+        const avgBrightness = totalBrightness / pixelCount;
+        box.history.push({ val: avgBrightness, time: now });
+        while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) { box.history.shift(); }
+
+        if (box.history.length > 5) {
+            const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
+            diff = Math.round(maxVal - minVal);
+            const hysteresis = Math.max(diff * 0.2, threshold * 0.25); const mid = minVal + diff / 2;
+            let state = 0; let lastCrossTime = 0;
+
+            for (const item of box.history) {
+                if (item.val > mid + hysteresis) {
+                    if (state === -1 && item.time - lastCrossTime > MIN_CROSS_TIME) { crossings++; lastCrossTime = item.time; }
+                    state = 1;
+                } else if (item.val < mid - hysteresis) {
+                    if (state === 1 && item.time - lastCrossTime > MIN_CROSS_TIME) { crossings++; lastCrossTime = item.time; }
+                    state = -1;
+                }
+            }
+            frequency = (crossings / (HISTORY_MS / 1000)).toFixed(1);
+            if (isMonitoring && diff >= threshold && crossings >= minCrossings) { box.lastAlarmTime = now; }
+        }
+
+        if (isMonitoring && now - box.lastAlarmTime < holdMs) { box.isAlarm = true; anyAlarm = true; } else { box.isAlarm = false; }
+        box.currentDiff = diff; box.currentCrossings = crossings; box.currentFrequency = frequency;
+
+        if (box.zoomStatsDiv && showZoomValues) {
+            let txt = `Diff: ${diff}<br>Puls: ${crossings}`;
+            if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`;
+            box.zoomStatsDiv.innerHTML = txt;
+        }
+    }
+
+    if (!showCamera) {
+        ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#333"; ctx.font = "20px Arial"; ctx.textAlign = "center";
+        ctx.fillText("Kamerabild ausgeblendet", canvas.width / 2, canvas.height / 2);
+        ctx.fillText("Die Analyse läuft weiter...", canvas.width / 2, canvas.height / 2 + 30);
+        ctx.textAlign = "left"; 
+    } else {
+        for (let i = 0; i < activeBoxCount; i++) {
+            const box = boxes[i]; let boxColor = '#00ff00'; let textColor = '#00ff88';
+            if (!isMonitoring) { boxColor = '#888888'; textColor = '#aaaaaa'; } 
+            else if (box.isAlarm) { boxColor = '#ff0000'; textColor = '#ff4040'; }
+
+            if (box === selectedBox) {
+                ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8);
+                ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+            }
+            ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = boxColor; ctx.stroke();
+            ctx.font = 'bold 18px Arial'; ctx.fillStyle = textColor; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+            let text = `Diff:${box.currentDiff} Puls:${box.currentCrossings} Hz:${box.currentFrequency}`;
+            if (!isMonitoring) text += " [PAUSE]";
+            ctx.strokeText(text, box.x, box.y - 8); ctx.fillText(text, box.x, box.y - 8);
+        }
+    }
+
+    if (anyAlarm) playBeep();
+}
+window.addEventListener('resize', adjustCanvas);
+</script>
+</body>
+</html>
