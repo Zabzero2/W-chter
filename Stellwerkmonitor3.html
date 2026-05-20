@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v27</title>
+<title>ESTW Wächter Pro v28</title>
 
 <style>
     body {
@@ -65,7 +65,6 @@
     .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
     .zoom-box.alarm-zoom { border-color: #ff0000 !important; background: #5a1010 !important; }
 
-    /* NEU: Eigener Style für die Anker-Box */
     .anchor-zoom { border-color: #17a2b8; background: #0f4c5c; }
     .anchor-zoom.alarm-zoom { border-color: #ffaa00 !important; background: #663300 !important; }
 
@@ -358,7 +357,7 @@ let boxes = [
     { id: 4, x: 60, y: 360, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null }
 ];
 
-// NEU: Das Gehirn des Wächter-Ankers
+// Der Anker nutzt jetzt eine Uint8ClampedArray als Pixel-Baseline anstatt eines simplen Mittelwerts
 let anchorBox = { 
     id: 'Anker', x: 200, y: 100, w: 50, h: 50, 
     active: false, baseline: null, alarmStart: 0, isAlarm: false, 
@@ -384,11 +383,11 @@ toggleDpadBtn.addEventListener('click', () => {
 
 anchorBtn.addEventListener('click', () => {
     anchorBox.active = !anchorBox.active;
-    anchorBox.baseline = null; // Reset
+    anchorBox.baseline = null; // Baseline resetten
     if (anchorBox.active) {
         anchorBtn.innerText = "Anker: AKTIV";
         anchorBtn.classList.remove("off");
-        selectedBox = anchorBox; // Sofort auswählen
+        selectedBox = anchorBox; 
     } else {
         anchorBtn.innerText = "Anker: AUS";
         anchorBtn.classList.add("off");
@@ -432,7 +431,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v27');
+            const saved = localStorage.getItem('estw_settings_v28');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -456,7 +455,6 @@ slideCamZoom.addEventListener('input', (e) => {
 function createZoomDisplays() {
     zoomHeader.innerHTML = '';
     
-    // 1. Die normalen Boxen
     for (let i = 0; i < activeBoxCount; i++) {
         const div = document.createElement('div');
         div.className = 'zoom-box';
@@ -473,10 +471,9 @@ function createZoomDisplays() {
         boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats; boxes[i].zoomBoxDiv = div;
     }
     
-    // 2. Die Anker-Box (falls aktiv)
     if (anchorBox.active) {
         const div = document.createElement('div');
-        div.className = 'zoom-box anchor-zoom'; // Blauer Style
+        div.className = 'zoom-box anchor-zoom'; 
         div.onclick = () => { selectedBox = anchorBox; updateZoomSelectionUI(); };
 
         const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
@@ -522,12 +519,12 @@ function saveSettings() {
         positions: boxes.map(b => ({ x: b.x, y: b.y })),
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active }
     };
-    localStorage.setItem('estw_settings_v27', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v28', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v27');
+        const saved = localStorage.getItem('estw_settings_v28');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -646,7 +643,7 @@ function startTurboAction(actionFn) {
 
     actionFn(1);
     
-    // WICHTIG: Wenn der Anker verschoben wird, Baseline resetten!
+    // WICHTIG: Wenn der Anker verschoben oder skaliert wird, Baseline resetten!
     if(selectedBox === anchorBox) anchorBox.baseline = null;
     saveSettings();
 
@@ -683,19 +680,19 @@ bindTurboButton('btnLeft', (s) => selectedBox.x -= s);
 bindTurboButton('btnRight', (s) => selectedBox.x += s);
 
 bindTurboButton('btnWMinus', (s) => {
-    if(selectedBox === anchorBox) anchorBox.w = Math.max(10, anchorBox.w - s);
+    if(selectedBox === anchorBox) { anchorBox.w = Math.max(10, anchorBox.w - s); anchorBox.baseline = null; }
     else { slideWidth.value = Math.max(parseInt(slideWidth.min), parseInt(slideWidth.value) - s); slideWidth.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnWPlus', (s) => {
-    if(selectedBox === anchorBox) anchorBox.w += s;
+    if(selectedBox === anchorBox) { anchorBox.w += s; anchorBox.baseline = null; }
     else { slideWidth.value = Math.min(parseInt(slideWidth.max), parseInt(slideWidth.value) + s); slideWidth.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnHMinus', (s) => {
-    if(selectedBox === anchorBox) anchorBox.h = Math.max(10, anchorBox.h - s);
+    if(selectedBox === anchorBox) { anchorBox.h = Math.max(10, anchorBox.h - s); anchorBox.baseline = null; }
     else { slideHeight.value = Math.max(parseInt(slideHeight.min), parseInt(slideHeight.value) - s); slideHeight.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnHPlus', (s) => {
-    if(selectedBox === anchorBox) anchorBox.h += s;
+    if(selectedBox === anchorBox) { anchorBox.h += s; anchorBox.baseline = null; }
     else { slideHeight.value = Math.min(parseInt(slideHeight.max), parseInt(slideHeight.value) + s); slideHeight.dispatchEvent(new Event('input')); }
 });
 
@@ -724,7 +721,7 @@ function startDrag(e) {
             draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; 
             if(box !== anchorBox) box.history = []; 
-            else anchorBox.baseline = null; // Baseline resetten!
+            else anchorBox.baseline = null; 
             e.preventDefault(); 
             break;
         }
@@ -758,7 +755,6 @@ function playBeep() {
     osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25);
 }
 
-// NEU: Tiefer Summton für den Verrutscht-Alarm
 function playAnchorBeep() {
     const now = Date.now(); if (now - lastAnchorBeep < 1500) return; lastAnchorBeep = now;
     initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -875,7 +871,7 @@ function processFrame() {
         }
     }
 
-    // 2. ANKER-BOX ANALYSIEREN
+    // 2. ANKER-BOX ANALYSIEREN (JETZT MIT ECHTEM PIXEL-VERGLEICH!)
     if (anchorBox.active) {
         const ax = Math.floor(anchorBox.x); const ay = Math.floor(anchorBox.y); const aw = Math.floor(anchorBox.w); const ah = Math.floor(anchorBox.h);
         
@@ -885,21 +881,29 @@ function processFrame() {
         }
 
         const aFrame = ctx.getImageData(ax, ay, aw, ah); const aData = aFrame.data;
-        let aTotal = 0; let aCount = 0;
-        for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
-            aTotal += aData[j] * 0.299 + aData[j + 1] * 0.587 + aData[j + 2] * 0.114; aCount++;
+        
+        // Speichere das erste Bild als Referenz-Foto ab
+        if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) {
+            anchorBox.baseline = new Uint8ClampedArray(aData);
         }
-        const aAvg = Math.round(aTotal / aCount);
 
-        // Basislinie setzen, wenn noch nicht vorhanden
-        if (anchorBox.baseline === null) anchorBox.baseline = aAvg;
+        // Vergleiche jeden Pixel mit dem Referenz-Foto
+        let totalDiff = 0; let pCount = 0;
+        for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
+            let currVal = aData[j] * 0.299 + aData[j + 1] * 0.587 + aData[j + 2] * 0.114;
+            let baseVal = anchorBox.baseline[j] * 0.299 + anchorBox.baseline[j + 1] * 0.587 + anchorBox.baseline[j + 2] * 0.114;
+            
+            totalDiff += Math.abs(currVal - baseVal); 
+            pCount++;
+        }
+        
+        // Das ist die durchschnittliche STRUKTUR-Abweichung, nicht die Helligkeits-Abweichung!
+        let structuralDiff = Math.round(totalDiff / pCount);
 
-        let aDiff = Math.abs(aAvg - anchorBox.baseline);
-
-        // Wenn die Verschiebung stark ist (> 15 Helligkeitspunkte)
-        if (isMonitoring && aDiff > 15) {
+        // Alarm auslösen, wenn sich die Pixel-Struktur drastisch ändert
+        if (isMonitoring && structuralDiff > 20) { // Toleranz von 20 gegen leichtes Bildrauschen
             if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now;
-            else if (now - anchorBox.alarmStart > 1000) anchorBox.isAlarm = true; // Alarm nach 1 Sekunde konstanter Verschiebung
+            else if (now - anchorBox.alarmStart > 1000) anchorBox.isAlarm = true; 
         } else {
             anchorBox.alarmStart = 0;
             anchorBox.isAlarm = false;
@@ -911,7 +915,7 @@ function processFrame() {
         }
 
         if (anchorBox.zoomStatsDiv && showZoomValues) {
-            let txt = `Basis: ${anchorBox.baseline}<br>Aktuell: ${aAvg}`;
+            let txt = `Abweichung:<br><span style="font-size:14px; color:#00ff88;">${structuralDiff}</span>`;
             if (anchorBox.isAlarm && isMonitoring) txt += `<br><b style="color:#ffaa00;">VERRUTSCHT!</b>`;
             anchorBox.zoomStatsDiv.innerHTML = txt;
         }
@@ -928,7 +932,6 @@ function processFrame() {
         ctx.fillText("Die Analyse läuft weiter...", canvas.width / 2, canvas.height / 2 + 30);
         ctx.textAlign = "left"; 
     } else {
-        // Zug-Boxen zeichnen
         for (let i = 0; i < activeBoxCount; i++) {
             const box = boxes[i]; 
             let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)';
@@ -945,7 +948,6 @@ function processFrame() {
             ctx.lineWidth = box.isAlarm ? 4 : 2; ctx.strokeStyle = borderColor; ctx.stroke();
         }
 
-        // Anker-Box zeichnen
         if (anchorBox.active) {
             let aFillColor = anchorBox.isAlarm ? 'rgba(255,170,0,0.3)' : 'rgba(0,170,255,0.15)';
             let aBorderColor = anchorBox.isAlarm ? '#ffaa00' : '#00aaff';
