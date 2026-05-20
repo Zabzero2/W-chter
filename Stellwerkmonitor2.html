@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v24</title>
+<title>ESTW Wächter Pro v25</title>
 
 <style>
     body {
@@ -19,17 +19,37 @@
 
     h2 { margin: 5px 0 10px; }
 
+    /* NEU: Integrierter Rahmen für Zoom-Boxen UND Ausblend-Button */
+    #topPanelContainer {
+        background: #2b2b2b;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        overflow: hidden;
+        width: 100%;
+    }
+
     #zoomHeader {
         display: flex;
         justify-content: center;
         gap: 8px;
-        margin-bottom: 5px;
         flex-wrap: wrap;
-        background: #2b2b2b;
         padding: 10px;
-        border-radius: 10px 10px 0 0;
         min-height: 60px;
     }
+
+    /* Der Button ist jetzt Teil des oberen Panels */
+    #toggleDpadBtn {
+        width: 100%;
+        background: #333;
+        border: none;
+        border-top: 1px solid #444;
+        padding: 12px;
+        color: #ccc;
+        font-size: 13px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    #toggleDpadBtn:active { background: #444; }
 
     .zoom-box {
         display: flex;
@@ -56,8 +76,8 @@
 
     .dpad-container {
         display: flex; flex-direction: column; align-items: center; gap: 5px;
-        background: #333; padding: 10px; border-radius: 0 0 10px 10px;
-        margin-bottom: 10px; border-top: 1px solid #444;
+        background: #333; padding: 15px 10px; border-radius: 10px;
+        margin-bottom: 10px;
     }
     .dpad-row { display: flex; gap: 15px; }
     .dpad-btn { 
@@ -84,7 +104,6 @@
         font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px;
     }
 
-    /* Einheitliches Design für Ausblend-Buttons */
     .toggle-btn {
         width: 100%; max-width: 450px; background: #333; border: 1px solid #555;
         margin-bottom: 5px; font-size: 13px; color: #ccc;
@@ -132,16 +151,18 @@
 </div>
 
 <div style="width: 100%; max-width: 474px; margin: 0 auto;">
-    <div id="zoomHeader"></div>
     
-    <button id="toggleDpadBtn" class="toggle-btn">🎯 Feinjustierung ausblenden</button>
+    <div id="topPanelContainer">
+        <div id="zoomHeader"></div>
+        <button id="toggleDpadBtn">🎯 Feinjustierung ausblenden</button>
+    </div>
 
     <div class="dpad-container" id="dpadPanel">
         <div style="font-size: 13px; margin-bottom: 5px; color: #00ff88;">
             Ausgewählte Box <span id="selectedBoxId">1</span>
         </div>
         
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; max-width: 320px; margin-bottom: -5px; padding: 0 10px; box-sizing: border-box;">
+        <div style="display: flex; justify-content: center; align-items: flex-end; gap: 30px; width: 100%; margin-bottom: -5px;">
             <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
                 <span style="font-size: 10px; color:#aaa;">Rahmen-Breite</span>
                 <div style="display:flex; gap:2px;">
@@ -374,7 +395,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v24');
+            const saved = localStorage.getItem('estw_settings_v25');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -446,12 +467,12 @@ function saveSettings() {
         settingsVisible: settingsVisible, dpadVisible: dpadVisible, cameraId: cameraSelect.value,
         positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v24', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v25', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v24');
+        const saved = localStorage.getItem('estw_settings_v25');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -483,7 +504,6 @@ function loadSettings() {
 
     createZoomDisplays(); updateLabels();
     
-    // Globale Größe immer auf alle Boxen anwenden beim Start
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
 }
 
@@ -518,7 +538,6 @@ slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 
-// Globale Steuerung der Box-Größen
 slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
 slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
 
@@ -558,8 +577,10 @@ function startTurboAction(actionFn) {
         actionFn(moveSpeed);
         saveSettings();
         moveTick++;
-        if (moveTick > 8) moveSpeed = 3;  
-        if (moveTick > 20) moveSpeed = 8; 
+        
+        // NEU: Turbo zündet deutlich später!
+        if (moveTick > 15) moveSpeed = 3;  // Nach ca. 0.75 Sekunden
+        if (moveTick > 35) moveSpeed = 8;  // Nach ca. 1.75 Sekunden
     };
     step(); 
     moveInterval = setInterval(step, 50); 
@@ -575,13 +596,11 @@ function bindTurboButton(btnId, actionFn) {
     btn.addEventListener('touchend', stopTurboAction); btn.addEventListener('touchcancel', stopTurboAction);
 }
 
-// Position (nur ausgewählte Box)
 bindTurboButton('btnUp', (s) => selectedBox.y -= s);
 bindTurboButton('btnDown', (s) => selectedBox.y += s);
 bindTurboButton('btnLeft', (s) => selectedBox.x -= s);
 bindTurboButton('btnRight', (s) => selectedBox.x += s);
 
-// NEU: Globale Größe über das D-Pad steuern!
 bindTurboButton('btnWMinus', (s) => {
     slideWidth.value = Math.max(parseInt(slideWidth.min), parseInt(slideWidth.value) - s);
     slideWidth.dispatchEvent(new Event('input'));
