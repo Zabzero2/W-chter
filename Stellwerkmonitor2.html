@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v23</title>
+<title>ESTW Wächter Pro v24</title>
 
 <style>
     body {
@@ -44,7 +44,6 @@
     }
     .zoom-box:active { background: #555; }
     
-    /* Dynamische Zoom-Box Zustände */
     .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
     .zoom-box.alarm-zoom { border-color: #ff0000 !important; background: #5a1010 !important; }
 
@@ -85,11 +84,12 @@
         font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px;
     }
 
-    #toggleSettingsBtn {
+    /* Einheitliches Design für Ausblend-Buttons */
+    .toggle-btn {
         width: 100%; max-width: 450px; background: #333; border: 1px solid #555;
         margin-bottom: 5px; font-size: 13px; color: #ccc;
     }
-    #toggleSettingsBtn:active { background: #444; }
+    .toggle-btn:active { background: #444; }
 
     .controls {
         width: 95%; max-width: 450px; background: #2b2b2b;
@@ -116,8 +116,6 @@
     }
 
     #container { position: relative; margin-top: 10px; display: inline-block; max-width: 100%; }
-    
-    /* WICHTIG: touch-action: none; wurde hier entfernt, damit das Scrollen wieder klappt! */
     canvas { width: 100%; max-width: 100%; height: auto; background: black; border: 2px solid #555; border-radius: 8px; }
     video { display: none; }
 </style>
@@ -135,33 +133,38 @@
 
 <div style="width: 100%; max-width: 474px; margin: 0 auto;">
     <div id="zoomHeader"></div>
+    
+    <button id="toggleDpadBtn" class="toggle-btn">🎯 Feinjustierung ausblenden</button>
+
     <div class="dpad-container" id="dpadPanel">
         <div style="font-size: 13px; margin-bottom: 5px; color: #00ff88;">
-            Feinjustierung Box <span id="selectedBoxId">1</span>
+            Ausgewählte Box <span id="selectedBoxId">1</span>
         </div>
-        <div class="dpad-row">
-            <button class="dpad-btn" id="btnUp">🔼</button>
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%; max-width: 320px; margin-bottom: -5px; padding: 0 10px; box-sizing: border-box;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                <span style="font-size: 10px; color:#aaa;">Rahmen-Breite</span>
+                <div style="display:flex; gap:2px;">
+                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnWMinus">-</button>
+                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnWPlus">+</button>
+                </div>
+            </div>
+            
+            <button class="dpad-btn" id="btnUp" style="margin-bottom: 5px;">🔼</button>
+            
+            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                <span style="font-size: 10px; color:#aaa;">Rahmen-Höhe</span>
+                <div style="display:flex; gap:2px;">
+                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnHMinus">-</button>
+                    <button class="dpad-btn" style="padding: 8px 16px; font-size: 15px;" id="btnHPlus">+</button>
+                </div>
+            </div>
         </div>
+
         <div class="dpad-row">
             <button class="dpad-btn" id="btnLeft">◀️</button>
             <button class="dpad-btn" id="btnDown">🔽</button>
             <button class="dpad-btn" id="btnRight">▶️</button>
-        </div>
-        <div style="display:flex; gap: 20px; margin-top: 10px;">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
-                <span style="font-size: 11px; color:#aaa;">Breite</span>
-                <div style="display:flex; gap:5px;">
-                    <button class="dpad-btn" style="padding: 8px 15px;" id="btnWMinus">-</button>
-                    <button class="dpad-btn" style="padding: 8px 15px;" id="btnWPlus">+</button>
-                </div>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
-                <span style="font-size: 11px; color:#aaa;">Höhe</span>
-                <div style="display:flex; gap:5px;">
-                    <button class="dpad-btn" style="padding: 8px 15px;" id="btnHMinus">-</button>
-                    <button class="dpad-btn" style="padding: 8px 15px;" id="btnHPlus">+</button>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -175,7 +178,7 @@
     
     <div class="stealth-hint">Tipp: Tarnmodus beenden durch Tippen auf den unteren Uhr-Punkt.</div>
 
-    <button id="toggleSettingsBtn">⚙️ Einstellungen einblenden</button>
+    <button id="toggleSettingsBtn" class="toggle-btn">⚙️ Einstellungen einblenden</button>
 
     <div class="controls" id="settingsPanel" style="display: none;">
         <div class="button-row" style="margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px;">
@@ -215,14 +218,14 @@
             <input type="range" id="slideSens" min="2" max="100" value="15">
             <button class="adj-btn" id="sensPlus">+</button>
         </div>
-        <div class="slider-row" title="Setzt die Breite aller Boxen zurück">
-            <label>Breite (Alle): <span id="valWidth">80</span></label>
+        <div class="slider-row">
+            <label>Rahmen-Breite: <span id="valWidth">80</span></label>
             <button class="adj-btn" id="widthMinus">-</button>
             <input type="range" id="slideWidth" min="20" max="100" value="80">
             <button class="adj-btn" id="widthPlus">+</button>
         </div>
-        <div class="slider-row" title="Setzt die Höhe aller Boxen zurück">
-            <label>Höhe (Alle): <span id="valHeight">30</span></label>
+        <div class="slider-row">
+            <label>Rahmen-Höhe: <span id="valHeight">30</span></label>
             <button class="adj-btn" id="heightMinus">-</button>
             <input type="range" id="slideHeight" min="10" max="50" value="30">
             <button class="adj-btn" id="heightPlus">+</button>
@@ -264,6 +267,8 @@ const exitStealthBtn = document.getElementById('exitStealthBtn');
 
 const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
+const toggleDpadBtn = document.getElementById('toggleDpadBtn');
+const dpadPanel = document.getElementById('dpadPanel');
 
 const cameraSelect = document.getElementById('cameraSelect');
 const slideCamZoom = document.getElementById('slideCamZoom');
@@ -289,7 +294,8 @@ let isRunning = false;
 let isMonitoring = true; 
 let showZoomValues = true;
 let showCamera = true;
-let settingsVisible = false; // Startet jetzt ausgeblendet für mehr Übersicht!
+let settingsVisible = false; 
+let dpadVisible = true;
 let currentTrack = null; 
 
 let draggingBox = null;
@@ -327,6 +333,13 @@ toggleSettingsBtn.addEventListener('click', () => {
     saveSettings();
 });
 
+toggleDpadBtn.addEventListener('click', () => {
+    dpadVisible = !dpadVisible;
+    dpadPanel.style.display = dpadVisible ? 'flex' : 'none';
+    toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung ausblenden' : '🎯 Feinjustierung einblenden';
+    saveSettings();
+});
+
 function setupAdjBtn(minusId, plusId, sliderId) {
     const slider = document.getElementById(sliderId);
     document.getElementById(minusId).addEventListener('click', (e) => {
@@ -361,7 +374,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v23');
+            const saved = localStorage.getItem('estw_settings_v24');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -430,16 +443,15 @@ function saveSettings() {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount,
         showZoomValues: showZoomValues, showCamera: showCamera,
-        settingsVisible: settingsVisible, cameraId: cameraSelect.value,
-        // Speichere jetzt auch die individuelle Breite und Höhe jeder Box!
-        positions: boxes.map(b => ({ x: b.x, y: b.y, w: b.w, h: b.h }))
+        settingsVisible: settingsVisible, dpadVisible: dpadVisible, cameraId: cameraSelect.value,
+        positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v23', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v24', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v23');
+        const saved = localStorage.getItem('estw_settings_v24');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -453,14 +465,14 @@ function loadSettings() {
                 settingsPanel.style.display = settingsVisible ? 'flex' : 'none';
                 toggleSettingsBtn.innerText = settingsVisible ? '⚙️ Einstellungen ausblenden' : '⚙️ Einstellungen einblenden';
             }
+            if (s.dpadVisible !== undefined) {
+                dpadVisible = s.dpadVisible;
+                dpadPanel.style.display = dpadVisible ? 'flex' : 'none';
+                toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung ausblenden' : '🎯 Feinjustierung einblenden';
+            }
             if (s.positions) {
                 s.positions.forEach((pos, idx) => { 
-                    if (boxes[idx]) { 
-                        boxes[idx].x = pos.x; 
-                        boxes[idx].y = pos.y; 
-                        if (pos.w) boxes[idx].w = pos.w;
-                        if (pos.h) boxes[idx].h = pos.h;
-                    } 
+                    if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } 
                 });
             }
         }
@@ -471,10 +483,8 @@ function loadSettings() {
 
     createZoomDisplays(); updateLabels();
     
-    // Falls keine individuellen Positionen geladen wurden, wende die Slider an
-    if (!localStorage.getItem('estw_settings_v23')) {
-        boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
-    }
+    // Globale Größe immer auf alle Boxen anwenden beim Start
+    boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
 }
 
 loadSettings();
@@ -508,7 +518,7 @@ slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 
-// Wenn der globale Schieberegler benutzt wird, überschreibt er alle Boxen!
+// Globale Steuerung der Box-Größen
 slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
 slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
 
@@ -539,7 +549,6 @@ monitorBtn.addEventListener('click', () => {
 });
 
 
-// -- Verallgemeinerte Turbo-Funktion für X, Y, Breite, Höhe --
 let moveInterval = null; let moveTick = 0; let moveSpeed = 1;
 
 function startTurboAction(actionFn) {
@@ -566,17 +575,29 @@ function bindTurboButton(btnId, actionFn) {
     btn.addEventListener('touchend', stopTurboAction); btn.addEventListener('touchcancel', stopTurboAction);
 }
 
-// D-Pad Steuerung
+// Position (nur ausgewählte Box)
 bindTurboButton('btnUp', (s) => selectedBox.y -= s);
 bindTurboButton('btnDown', (s) => selectedBox.y += s);
 bindTurboButton('btnLeft', (s) => selectedBox.x -= s);
 bindTurboButton('btnRight', (s) => selectedBox.x += s);
 
-// Breite und Höhe Steuerung (Begrenzt auf minimal 10 Pixel, damit Boxen nicht implodieren)
-bindTurboButton('btnWMinus', (s) => selectedBox.w = Math.max(10, selectedBox.w - s));
-bindTurboButton('btnWPlus', (s) => selectedBox.w += s);
-bindTurboButton('btnHMinus', (s) => selectedBox.h = Math.max(10, selectedBox.h - s));
-bindTurboButton('btnHPlus', (s) => selectedBox.h += s);
+// NEU: Globale Größe über das D-Pad steuern!
+bindTurboButton('btnWMinus', (s) => {
+    slideWidth.value = Math.max(parseInt(slideWidth.min), parseInt(slideWidth.value) - s);
+    slideWidth.dispatchEvent(new Event('input'));
+});
+bindTurboButton('btnWPlus', (s) => {
+    slideWidth.value = Math.min(parseInt(slideWidth.max), parseInt(slideWidth.value) + s);
+    slideWidth.dispatchEvent(new Event('input'));
+});
+bindTurboButton('btnHMinus', (s) => {
+    slideHeight.value = Math.max(parseInt(slideHeight.min), parseInt(slideHeight.value) - s);
+    slideHeight.dispatchEvent(new Event('input'));
+});
+bindTurboButton('btnHPlus', (s) => {
+    slideHeight.value = Math.min(parseInt(slideHeight.max), parseInt(slideHeight.value) + s);
+    slideHeight.dispatchEvent(new Event('input'));
+});
 
 
 function getPointerPos(e) {
@@ -592,7 +613,6 @@ function getPointerPos(e) {
 function startDrag(e) {
     if (!isRunning || !showCamera) return; 
     const pos = getPointerPos(e);
-    let hitBox = false;
 
     for (let i = activeBoxCount - 1; i >= 0; i--) {
         const box = boxes[i];
@@ -600,13 +620,10 @@ function startDrag(e) {
             pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
             draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; box.history = []; 
-            hitBox = true;
-            e.preventDefault(); // Blockiert Scrollen NUR, wenn Box getroffen wurde
+            e.preventDefault(); 
             break;
         }
     }
-    // Wenn KEINE Box getroffen wurde, wird e.preventDefault() NICHT aufgerufen.
-    // Das Tablet kann den Wisch jetzt ganz normal zum Scrollen der Seite nutzen!
 }
 
 function moveDrag(e) {
@@ -615,13 +632,12 @@ function moveDrag(e) {
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
     draggingBox.history = []; 
-    e.preventDefault(); // Verhindert Scrollen WÄHREND eine Box verschoben wird
+    e.preventDefault(); 
 }
 
 function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
 
 canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
-// passive: false muss bleiben, damit e.preventDefault() bei Bedarf funktioniert
 canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.addEventListener('touchmove', moveDrag, { passive: false }); window.addEventListener('touchend', endDrag);
 
 function initAudio() {
@@ -732,7 +748,6 @@ function processFrame() {
         if (isMonitoring && now - box.lastAlarmTime < holdMs) { box.isAlarm = true; anyAlarm = true; } else { box.isAlarm = false; }
         box.currentDiff = diff; box.currentCrossings = crossings; box.currentFrequency = frequency;
 
-        // ZOOM BOX VISUELLER ALARM
         if (box.zoomBoxDiv) {
             if (box.isAlarm && isMonitoring) {
                 box.zoomBoxDiv.classList.add('alarm-zoom');
