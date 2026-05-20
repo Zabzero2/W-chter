@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v20</title>
+<title>ESTW Wächter Pro v21</title>
 
 <style>
     body {
@@ -23,11 +23,11 @@
         display: flex;
         justify-content: center;
         gap: 8px;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
         flex-wrap: wrap;
         background: #2b2b2b;
         padding: 10px;
-        border-radius: 10px;
+        border-radius: 10px 10px 0 0;
         min-height: 60px;
     }
 
@@ -52,6 +52,20 @@
     .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
     .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; }
 
+    /* NEU: Steuerkreuz direkt unter dem Header */
+    .dpad-container {
+        display: flex; flex-direction: column; align-items: center; gap: 5px;
+        background: #333; padding: 10px; border-radius: 0 0 10px 10px;
+        margin-bottom: 10px; border-top: 1px solid #444;
+    }
+    .dpad-row { display: flex; gap: 15px; }
+    .dpad-btn { 
+        background: #555; font-size: 18px; padding: 12px 25px; 
+        border-radius: 6px; border: none; color: white; cursor: pointer;
+        touch-action: manipulation;
+    }
+    .dpad-btn:active { background: #777; }
+
     #ui { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
     .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
@@ -70,27 +84,27 @@
     .controls {
         width: 95%; max-width: 450px; background: #2b2b2b;
         border-radius: 10px; padding: 12px; display: flex;
-        flex-direction: column; gap: 8px;
+        flex-direction: column; gap: 10px;
     }
 
-    .slider-row { display: flex; align-items: center; gap: 10px; width: 100%; }
-    .slider-row label { width: 160px; text-align: left; font-size: 13px; }
-    .slider-row input, .slider-row select { 
+    .slider-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .slider-row label { width: 150px; text-align: left; font-size: 13px; }
+    .slider-row input[type="range"] { flex-grow: 1; }
+    .slider-row select { 
         flex-grow: 1; background: #444; color: white;
         border: 1px solid #666; border-radius: 4px; padding: 5px;
     }
     
+    /* NEU: +/- Buttons für die Regler */
+    .adj-btn {
+        width: 32px; height: 32px; padding: 0; background: #555;
+        font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center;
+    }
+    
     .camera-row {
         background: #3a3a3a; padding: 8px; border-radius: 6px;
-        display: flex; flex-direction: column; gap: 5px; margin-bottom: 5px;
+        display: flex; flex-direction: column; gap: 8px; margin-bottom: 5px;
     }
-
-    .dpad-container {
-        display: flex; flex-direction: column; align-items: center; gap: 5px;
-        background: #333; padding: 8px; border-radius: 8px;
-    }
-    .dpad-row { display: flex; gap: 15px; }
-    .dpad-btn { background: #555; font-size: 18px; padding: 10px 25px; }
 
     #container { position: relative; margin-top: 10px; display: inline-block; max-width: 100%; }
     canvas { width: 100%; max-width: 100%; height: auto; background: black; border: 2px solid #555; border-radius: 8px; touch-action: none; }
@@ -108,7 +122,22 @@
     <span id="minsHTML">00</span>
 </div>
 
-<div id="zoomHeader"></div>
+<div style="width: 100%; max-width: 474px; margin: 0 auto;">
+    <div id="zoomHeader"></div>
+    <div class="dpad-container" id="dpadPanel">
+        <div style="font-size: 13px; margin-bottom: 5px; color: #00ff88;">
+            Feinjustierung Box <span id="selectedBoxId">1</span>
+        </div>
+        <div class="dpad-row">
+            <button class="dpad-btn" id="btnUp">🔼</button>
+        </div>
+        <div class="dpad-row">
+            <button class="dpad-btn" id="btnLeft">◀️</button>
+            <button class="dpad-btn" id="btnDown">🔽</button>
+            <button class="dpad-btn" id="btnRight">▶️</button>
+        </div>
+    </div>
+</div>
 
 <div id="ui">
     <div class="button-row">
@@ -133,7 +162,9 @@
             </div>
             <div class="slider-row" id="zoomContainer">
                 <label>Kamera-Zoom: <span id="valCamZoom">1.0</span>x</label>
+                <button class="adj-btn" id="zoomMinus">-</button>
                 <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
+                <button class="adj-btn" id="zoomPlus">+</button>
             </div>
         </div>
 
@@ -149,37 +180,33 @@
         
         <div class="slider-row">
             <label>Empfindlichkeit: <span id="valSens">15</span></label>
+            <button class="adj-btn" id="sensMinus">-</button>
             <input type="range" id="slideSens" min="2" max="100" value="15">
+            <button class="adj-btn" id="sensPlus">+</button>
         </div>
         <div class="slider-row">
             <label>Box Breite: <span id="valWidth">80</span></label>
+            <button class="adj-btn" id="widthMinus">-</button>
             <input type="range" id="slideWidth" min="20" max="100" value="80">
+            <button class="adj-btn" id="widthPlus">+</button>
         </div>
         <div class="slider-row">
             <label>Box Höhe: <span id="valHeight">30</span></label>
+            <button class="adj-btn" id="heightMinus">-</button>
             <input type="range" id="slideHeight" min="10" max="50" value="30">
+            <button class="adj-btn" id="heightPlus">+</button>
         </div>
         <div class="slider-row">
             <label>Min. Pulse: <span id="valPulse">4</span></label>
+            <button class="adj-btn" id="pulseMinus">-</button>
             <input type="range" id="slidePulse" min="1" max="10" value="4">
+            <button class="adj-btn" id="pulsePlus">+</button>
         </div>
         <div class="slider-row">
             <label>Alarmdauer: <span id="valHold">1.5</span>s</label>
+            <button class="adj-btn" id="holdMinus">-</button>
             <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="1.5">
-        </div>
-
-        <div class="dpad-container" id="dpadPanel">
-            <div style="font-size: 13px; margin-bottom: 5px; color: #00ff88;">
-                Feinjustierung Box <span id="selectedBoxId">1</span>
-            </div>
-            <div class="dpad-row">
-                <button class="dpad-btn" id="btnUp">🔼</button>
-            </div>
-            <div class="dpad-row">
-                <button class="dpad-btn" id="btnLeft">◀️</button>
-                <button class="dpad-btn" id="btnDown">🔽</button>
-                <button class="dpad-btn" id="btnRight">▶️</button>
-            </div>
+            <button class="adj-btn" id="holdPlus">+</button>
         </div>
     </div>
 </div>
@@ -237,7 +264,6 @@ let audioCtx = null;
 let wakeLock = null;
 let lastBeep = 0;
 
-// CPU Optimierung (FPS Begrenzer)
 let lastFrameTime = 0;
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
@@ -258,7 +284,31 @@ let boxes = [
 let activeBoxCount = 2;
 let selectedBox = boxes[0];
 
-// -- Kamera Auswahl Logik --
+// -- Hilfsfunktion für die Plus/Minus Buttons --
+function setupAdjBtn(minusId, plusId, sliderId) {
+    const slider = document.getElementById(sliderId);
+    document.getElementById(minusId).addEventListener('click', (e) => {
+        e.preventDefault();
+        let step = parseFloat(slider.step) || 1;
+        slider.value = parseFloat(slider.value) - step;
+        slider.dispatchEvent(new Event('input')); 
+    });
+    document.getElementById(plusId).addEventListener('click', (e) => {
+        e.preventDefault();
+        let step = parseFloat(slider.step) || 1;
+        slider.value = parseFloat(slider.value) + step;
+        slider.dispatchEvent(new Event('input'));
+    });
+}
+
+setupAdjBtn('sensMinus', 'sensPlus', 'slideSens');
+setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth');
+setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
+setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse');
+setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
+setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom');
+
+
 async function loadCameras() {
     try {
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -269,12 +319,10 @@ async function loadCameras() {
             videoDevices.forEach((device, index) => {
                 const option = document.createElement('option');
                 option.value = device.deviceId;
-                // Wenn kein Name da ist (weil Rechte fehlen), nenne es Kamera 1, 2, etc.
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            // Lade letzte Kamera aus Speicher, falls vorhanden
-            const saved = localStorage.getItem('estw_settings_v20');
+            const saved = localStorage.getItem('estw_settings_v21');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -289,18 +337,13 @@ async function loadCameras() {
 
 cameraSelect.addEventListener('change', () => {
     saveSettings();
-    if (isRunning) {
-        stopSystem();
-        setTimeout(startSystem, 500); // Kurz warten und mit neuer Kamera neu starten
-    }
+    if (isRunning) { stopSystem(); setTimeout(startSystem, 500); }
 });
 
 slideCamZoom.addEventListener('input', (e) => {
     valCamZoom.innerText = parseFloat(e.target.value).toFixed(1);
     if (currentTrack) {
-        try {
-            currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] });
-        } catch(err) { console.log("Zoom nicht unterstützt."); }
+        try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {}
     }
 });
 
@@ -349,15 +392,15 @@ function saveSettings() {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount,
         showZoomValues: showZoomValues, showCamera: showCamera,
-        cameraId: cameraSelect.value, // Speichert die gewählte Kamera
+        cameraId: cameraSelect.value,
         positions: boxes.map(b => ({ x: b.x, y: b.y }))
     };
-    localStorage.setItem('estw_settings_v20', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v21', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v20');
+        const saved = localStorage.getItem('estw_settings_v21');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -395,9 +438,7 @@ activateStealthBtn.addEventListener('click', () => {
     updateStealthClock();
 });
 
-exitStealthBtn.addEventListener('click', () => {
-    stealthOverlay.style.display = 'none';
-});
+exitStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'none'; });
 
 toggleZoomTextBtn.addEventListener('click', (e) => {
     showZoomValues = !showZoomValues;
@@ -459,11 +500,52 @@ monitorBtn.addEventListener('click', () => {
     }
 });
 
-const stepSize = 1; 
-document.getElementById('btnUp').onclick = () => { if(selectedBox) { selectedBox.y -= stepSize; saveSettings(); } };
-document.getElementById('btnDown').onclick = () => { if(selectedBox) { selectedBox.y += stepSize; saveSettings(); } };
-document.getElementById('btnLeft').onclick = () => { if(selectedBox) { selectedBox.x -= stepSize; saveSettings(); } };
-document.getElementById('btnRight').onclick = () => { if(selectedBox) { selectedBox.x += stepSize; saveSettings(); } };
+
+// -- NEU: Turbo-D-Pad (Gedrückthalten zum schnelleren Verschieben) --
+let moveInterval = null;
+let moveTick = 0;
+let moveSpeed = 1;
+
+function startDpadMove(dx, dy) {
+    if (!selectedBox) return;
+    moveTick = 0;
+    moveSpeed = 1;
+    
+    const move = () => {
+        selectedBox.x += dx * moveSpeed;
+        selectedBox.y += dy * moveSpeed;
+        saveSettings();
+        
+        moveTick++;
+        if (moveTick > 8) moveSpeed = 3;  // Nach ca. 0.4 Sekunden wird es schneller
+        if (moveTick > 20) moveSpeed = 8; // Nach ca. 1.0 Sekunden wird es richtig schnell (Turbo)
+    };
+    
+    move(); // Einmaliger Schritt sofort beim ersten Tippen
+    moveInterval = setInterval(move, 50); // Wiederhole alle 50 Millisekunden
+}
+
+function stopDpadMove() {
+    if (moveInterval) clearInterval(moveInterval);
+    moveInterval = null;
+}
+
+function bindDpadButton(btnId, dx, dy) {
+    const btn = document.getElementById(btnId);
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); startDpadMove(dx, dy); });
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startDpadMove(dx, dy); });
+    
+    btn.addEventListener('mouseup', stopDpadMove);
+    btn.addEventListener('mouseleave', stopDpadMove);
+    btn.addEventListener('touchend', stopDpadMove);
+    btn.addEventListener('touchcancel', stopDpadMove);
+}
+
+bindDpadButton('btnUp', 0, -1);
+bindDpadButton('btnDown', 0, 1);
+bindDpadButton('btnLeft', -1, 0);
+bindDpadButton('btnRight', 1, 0);
+
 
 function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
@@ -521,17 +603,14 @@ async function startSystem() {
     try {
         let constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
         
-        // Wenn der Nutzer schon eine bestimmte Kamera gewählt hat
         if (cameraSelect.value && cameraSelect.value !== 'default') {
             constraints.video = { deviceId: { exact: cameraSelect.value }, width: { ideal: 1280 }, height: { ideal: 720 } };
         }
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream; 
-        
         currentTrack = stream.getVideoTracks()[0];
 
-        // Zoom-Regler aktivieren falls vom Tablet unterstützt
         setTimeout(() => {
             try {
                 const capabilities = currentTrack.getCapabilities();
@@ -544,7 +623,6 @@ async function startSystem() {
                     document.getElementById('slideCamZoom').disabled = false;
                 }
             } catch(e) {}
-            // Kameras laden (fragt beim ersten Mal Berechtigung an)
             loadCameras();
         }, 500);
 
@@ -566,9 +644,8 @@ startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else s
 function processFrame() {
     if (!isRunning) return;
 
-    requestAnimationFrame(processFrame); // Direkt nächsten Frame in die Warteschlange stellen
+    requestAnimationFrame(processFrame);
 
-    // FPS-Bremse: Schont den Akku und verhindert Überhitzung (15 Bilder pro Sekunde)
     const now = Date.now();
     const elapsed = now - lastFrameTime;
     if (elapsed < FRAME_INTERVAL) return;
