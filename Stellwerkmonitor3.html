@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v28</title>
+<title>ESTW Wächter Pro v30</title>
 
 <style>
     body {
@@ -36,19 +36,6 @@
         min-height: 60px;
     }
 
-    #toggleDpadBtn {
-        width: 100%;
-        background: #333;
-        border: none;
-        border-top: 1px solid #444;
-        padding: 12px;
-        color: #ccc;
-        font-size: 13px;
-        cursor: pointer;
-        transition: 0.2s;
-    }
-    #toggleDpadBtn:active { background: #444; }
-
     .zoom-box {
         display: flex;
         flex-direction: column;
@@ -65,13 +52,14 @@
     .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
     .zoom-box.alarm-zoom { border-color: #ff0000 !important; background: #5a1010 !important; }
 
-    .anchor-zoom { border-color: #17a2b8; background: #0f4c5c; }
+    .anchor-zoom { border-color: #17a2b8; background: #0f4c5c; padding: 5px 10px; }
     .anchor-zoom.alarm-zoom { border-color: #ffaa00 !important; background: #663300 !important; }
 
     .zoom-canvas {
         width: 80px; height: 40px; background: black;
         border: 1px solid #111; image-rendering: pixelated; 
     }
+    
     .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
     .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; }
 
@@ -165,7 +153,6 @@
     
     <div id="topPanelContainer">
         <div id="zoomHeader"></div>
-        <button id="toggleDpadBtn">🎯 Feinjustierung ausblenden</button>
     </div>
 
     <div class="dpad-container" id="dpadPanel">
@@ -216,6 +203,7 @@
         <div class="button-row" style="margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px;">
             <button id="toggleZoomTextBtn">Werte: EIN</button>
             <button id="toggleCameraBtn">Live-Bild: SICHTBAR</button>
+            <button id="toggleDpadBtn" style="background: #444; border: 1px solid #777;">🎯 Feinjustierung: EIN</button>
             <button id="resetBtn">Reset</button>
         </div>
 
@@ -244,6 +232,13 @@
             </select>
         </div>
         
+        <div class="slider-row" style="background:#202020; padding:8px; border-radius:6px;">
+            <label style="color:#00aaff;">Anker-Toleranz: <span id="valAnchorSens">20</span></label>
+            <button class="adj-btn" id="anchorSensMinus">-</button>
+            <input type="range" id="slideAnchorSens" min="5" max="100" value="20">
+            <button class="adj-btn" id="anchorSensPlus">+</button>
+        </div>
+
         <div class="slider-row">
             <label>Empfindlichkeit: <span id="valSens">15</span></label>
             <button class="adj-btn" id="sensMinus">-</button>
@@ -307,6 +302,9 @@ const cameraSelect = document.getElementById('cameraSelect');
 const slideCamZoom = document.getElementById('slideCamZoom');
 const valCamZoom = document.getElementById('valCamZoom');
 
+const slideAnchorSens = document.getElementById('slideAnchorSens');
+const valAnchorSens = document.getElementById('valAnchorSens');
+
 const slideSens = document.getElementById('slideSens');
 const slideWidth = document.getElementById('slideWidth');
 const slideHeight = document.getElementById('slideHeight');
@@ -348,7 +346,7 @@ const HISTORY_MS = 5000;
 const MIN_CROSS_TIME = 400; 
 const PIXEL_STEP = 4; 
 
-const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2 };
+const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2, anchorSens: 20 };
 
 let boxes = [
     { id: 1, x: 60, y: 60, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null },
@@ -357,11 +355,10 @@ let boxes = [
     { id: 4, x: 60, y: 360, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null }
 ];
 
-// Der Anker nutzt jetzt eine Uint8ClampedArray als Pixel-Baseline anstatt eines simplen Mittelwerts
 let anchorBox = { 
     id: 'Anker', x: 200, y: 100, w: 50, h: 50, 
     active: false, baseline: null, alarmStart: 0, isAlarm: false, 
-    zoomCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
+    zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
 };
 
 let activeBoxCount = 2;
@@ -377,7 +374,7 @@ toggleSettingsBtn.addEventListener('click', () => {
 toggleDpadBtn.addEventListener('click', () => {
     dpadVisible = !dpadVisible;
     dpadPanel.style.display = dpadVisible ? 'flex' : 'none';
-    toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung ausblenden' : '🎯 Feinjustierung einblenden';
+    toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung: AUS' : '🎯 Feinjustierung: EIN';
     saveSettings();
 });
 
@@ -418,6 +415,7 @@ setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
 setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse');
 setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
 setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom');
+setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
 
 async function loadCameras() {
     try {
@@ -431,7 +429,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v28');
+            const saved = localStorage.getItem('estw_settings_v30');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -455,6 +453,7 @@ slideCamZoom.addEventListener('input', (e) => {
 function createZoomDisplays() {
     zoomHeader.innerHTML = '';
     
+    // 1. ZUG BOXEN
     for (let i = 0; i < activeBoxCount; i++) {
         const div = document.createElement('div');
         div.className = 'zoom-box';
@@ -471,20 +470,58 @@ function createZoomDisplays() {
         boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats; boxes[i].zoomBoxDiv = div;
     }
     
+    // 2. ANKER BOX (NEU: Mit Side-by-Side Canvas für Live und Referenz)
     if (anchorBox.active) {
         const div = document.createElement('div');
         div.className = 'zoom-box anchor-zoom'; 
         div.onclick = () => { selectedBox = anchorBox; updateZoomSelectionUI(); };
 
-        const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
         const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'ANKER';
+        
+        // Container für Live und Referenz nebeneinander
+        const canvasContainer = document.createElement('div');
+        canvasContainer.style.display = "flex";
+        canvasContainer.style.gap = "5px";
+        canvasContainer.style.marginTop = "4px";
+
+        // Live Canvas
+        const liveWrap = document.createElement('div');
+        const liveLabel = document.createElement('div'); liveLabel.style.fontSize="9px"; liveLabel.innerText="LIVE"; liveLabel.style.color="#ccc";
+        const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 80; cLive.height = 40;
+        liveWrap.appendChild(liveLabel); liveWrap.appendChild(cLive);
+
+        // Referenz Canvas
+        const refWrap = document.createElement('div');
+        const refLabel = document.createElement('div'); refLabel.style.fontSize="9px"; refLabel.innerText="REFERENZ"; refLabel.style.color="#00aaff";
+        const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 80; cRef.height = 40;
+        refWrap.appendChild(refLabel); refWrap.appendChild(cRef);
+
+        canvasContainer.appendChild(liveWrap);
+        canvasContainer.appendChild(refWrap);
+
         const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
         stats.innerHTML = `Lade...`;
 
-        div.appendChild(c); div.appendChild(label); div.appendChild(stats);
+        // Manueller Reset Button
+        const resetBtn = document.createElement('button');
+        resetBtn.innerText = "🔄 Neu setzen";
+        resetBtn.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#17a2b8; border-radius:4px;";
+        resetBtn.onclick = (e) => { 
+            e.stopPropagation(); // Verhindert dass die Box deselektiert wird
+            anchorBox.baseline = null; 
+            playBeep(); // Kurzes Feedback
+        };
+
+        div.appendChild(label); 
+        div.appendChild(canvasContainer); 
+        div.appendChild(stats);
+        div.appendChild(resetBtn);
         zoomHeader.appendChild(div);
 
-        anchorBox.zoomCtx = c.getContext('2d'); anchorBox.zoomStatsDiv = stats; anchorBox.zoomBoxDiv = div;
+        anchorBox.zoomCtx = cLive.getContext('2d'); 
+        anchorBox.refCtx = cRef.getContext('2d');
+        anchorBox.zoomStatsDiv = stats; 
+        anchorBox.zoomBoxDiv = div;
     }
     
     updateZoomSelectionUI();
@@ -508,28 +545,31 @@ function updateLabels() {
     valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value;
     valHeight.innerText = slideHeight.value; valPulse.innerText = slidePulse.value;
     valHold.innerText = slideHold.value;
+    valAnchorSens.innerText = slideAnchorSens.value;
 }
 
 function saveSettings() {
     const settings = {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount,
+        anchorSens: slideAnchorSens.value,
         showZoomValues: showZoomValues, showCamera: showCamera,
         settingsVisible: settingsVisible, dpadVisible: dpadVisible, cameraId: cameraSelect.value,
         positions: boxes.map(b => ({ x: b.x, y: b.y })),
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active }
     };
-    localStorage.setItem('estw_settings_v28', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v30', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v28');
+        const saved = localStorage.getItem('estw_settings_v30');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
             if (s.height) slideHeight.value = s.height; if (s.pulse) slidePulse.value = s.pulse;
             if (s.hold) slideHold.value = s.hold;
+            if (s.anchorSens) slideAnchorSens.value = s.anchorSens;
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
             if (s.showZoomValues !== undefined) showZoomValues = s.showZoomValues; 
             if (s.showCamera !== undefined) showCamera = s.showCamera; 
@@ -541,7 +581,7 @@ function loadSettings() {
             if (s.dpadVisible !== undefined) {
                 dpadVisible = s.dpadVisible;
                 dpadPanel.style.display = dpadVisible ? 'flex' : 'none';
-                toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung ausblenden' : '🎯 Feinjustierung einblenden';
+                toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung: AUS' : '🎯 Feinjustierung: EIN';
             }
             if (s.positions) {
                 s.positions.forEach((pos, idx) => { 
@@ -599,6 +639,7 @@ toggleCameraBtn.addEventListener('click', (e) => {
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 
 slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
 slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
@@ -613,7 +654,9 @@ resetBtn.addEventListener('click', () => {
     slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width;
     slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse;
     slideHold.value = DEFAULTS.hold; activeBoxCount = DEFAULTS.count;
+    slideAnchorSens.value = DEFAULTS.anchorSens;
     boxCountSelect.value = activeBoxCount; showZoomValues = true; showCamera = true;
+    
     toggleZoomTextBtn.innerText = "Werte: EIN"; toggleCameraBtn.innerText = "Live-Bild: SICHTBAR";
     
     anchorBox.active = false; anchorBox.baseline = null;
@@ -642,8 +685,6 @@ function startTurboAction(actionFn) {
     if (!selectedBox) return; 
 
     actionFn(1);
-    
-    // WICHTIG: Wenn der Anker verschoben oder skaliert wird, Baseline resetten!
     if(selectedBox === anchorBox) anchorBox.baseline = null;
     saveSettings();
 
@@ -871,23 +912,34 @@ function processFrame() {
         }
     }
 
-    // 2. ANKER-BOX ANALYSIEREN (JETZT MIT ECHTEM PIXEL-VERGLEICH!)
+    // 2. ANKER-BOX ANALYSIEREN
     if (anchorBox.active) {
         const ax = Math.floor(anchorBox.x); const ay = Math.floor(anchorBox.y); const aw = Math.floor(anchorBox.w); const ah = Math.floor(anchorBox.h);
         
         if (anchorBox.zoomCtx) {
-            anchorBox.zoomCtx.fillStyle = "black"; anchorBox.zoomCtx.fillRect(0, 0, 100, 50);
-            anchorBox.zoomCtx.drawImage(canvas, ax, ay, aw, ah, 0, 0, 100, 50);
+            anchorBox.zoomCtx.fillStyle = "black"; anchorBox.zoomCtx.fillRect(0, 0, 80, 40);
+            anchorBox.zoomCtx.drawImage(canvas, ax, ay, aw, ah, 0, 0, 80, 40);
         }
 
-        const aFrame = ctx.getImageData(ax, ay, aw, ah); const aData = aFrame.data;
+        // Es ist wichtig, die vollen Daten zu holen, um sie korrekt mit der Baseline vergleichen zu können
+        const aFrame = ctx.getImageData(ax, ay, aw, ah); 
+        const aData = aFrame.data;
         
-        // Speichere das erste Bild als Referenz-Foto ab
+        // Referenz speichern & zeichnen falls nicht vorhanden
         if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) {
             anchorBox.baseline = new Uint8ClampedArray(aData);
+            
+            // Zeichne das Bild sofort in den Referenz-Canvas!
+            if (anchorBox.refCtx) {
+                let imgData = new ImageData(anchorBox.baseline, aw, ah);
+                let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah;
+                tmpC.getContext('2d').putImageData(imgData, 0, 0);
+                
+                anchorBox.refCtx.fillStyle = "black"; anchorBox.refCtx.fillRect(0, 0, 80, 40);
+                anchorBox.refCtx.drawImage(tmpC, 0, 0, aw, ah, 0, 0, 80, 40);
+            }
         }
 
-        // Vergleiche jeden Pixel mit dem Referenz-Foto
         let totalDiff = 0; let pCount = 0;
         for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
             let currVal = aData[j] * 0.299 + aData[j + 1] * 0.587 + aData[j + 2] * 0.114;
@@ -897,11 +949,10 @@ function processFrame() {
             pCount++;
         }
         
-        // Das ist die durchschnittliche STRUKTUR-Abweichung, nicht die Helligkeits-Abweichung!
         let structuralDiff = Math.round(totalDiff / pCount);
+        let anchorThreshold = parseInt(slideAnchorSens.value);
 
-        // Alarm auslösen, wenn sich die Pixel-Struktur drastisch ändert
-        if (isMonitoring && structuralDiff > 20) { // Toleranz von 20 gegen leichtes Bildrauschen
+        if (isMonitoring && structuralDiff > anchorThreshold) { 
             if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now;
             else if (now - anchorBox.alarmStart > 1000) anchorBox.isAlarm = true; 
         } else {
@@ -915,7 +966,7 @@ function processFrame() {
         }
 
         if (anchorBox.zoomStatsDiv && showZoomValues) {
-            let txt = `Abweichung:<br><span style="font-size:14px; color:#00ff88;">${structuralDiff}</span>`;
+            let txt = `Abweichung:<br><span style="font-size:14px; color:#00ff88;">${structuralDiff}</span> / Max: ${anchorThreshold}`;
             if (anchorBox.isAlarm && isMonitoring) txt += `<br><b style="color:#ffaa00;">VERRUTSCHT!</b>`;
             anchorBox.zoomStatsDiv.innerHTML = txt;
         }
