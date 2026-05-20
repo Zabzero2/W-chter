@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v30</title>
+<title>ESTW Wächter Pro v31</title>
 
 <style>
     body {
@@ -355,10 +355,12 @@ let boxes = [
     { id: 4, x: 60, y: 360, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null }
 ];
 
+// refNeedsDraw repariert den schwarzen Canvas beim Scrollen!
 let anchorBox = { 
     id: 'Anker', x: 200, y: 100, w: 50, h: 50, 
     active: false, baseline: null, alarmStart: 0, isAlarm: false, 
-    zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
+    zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null,
+    refNeedsDraw: false 
 };
 
 let activeBoxCount = 2;
@@ -429,7 +431,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v30');
+            const saved = localStorage.getItem('estw_settings_v31');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -470,7 +472,7 @@ function createZoomDisplays() {
         boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats; boxes[i].zoomBoxDiv = div;
     }
     
-    // 2. ANKER BOX (NEU: Mit Side-by-Side Canvas für Live und Referenz)
+    // 2. ANKER BOX 
     if (anchorBox.active) {
         const div = document.createElement('div');
         div.className = 'zoom-box anchor-zoom'; 
@@ -478,19 +480,16 @@ function createZoomDisplays() {
 
         const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'ANKER';
         
-        // Container für Live und Referenz nebeneinander
         const canvasContainer = document.createElement('div');
         canvasContainer.style.display = "flex";
         canvasContainer.style.gap = "5px";
         canvasContainer.style.marginTop = "4px";
 
-        // Live Canvas
         const liveWrap = document.createElement('div');
         const liveLabel = document.createElement('div'); liveLabel.style.fontSize="9px"; liveLabel.innerText="LIVE"; liveLabel.style.color="#ccc";
         const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 80; cLive.height = 40;
         liveWrap.appendChild(liveLabel); liveWrap.appendChild(cLive);
 
-        // Referenz Canvas
         const refWrap = document.createElement('div');
         const refLabel = document.createElement('div'); refLabel.style.fontSize="9px"; refLabel.innerText="REFERENZ"; refLabel.style.color="#00aaff";
         const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 80; cRef.height = 40;
@@ -502,14 +501,13 @@ function createZoomDisplays() {
         const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
         stats.innerHTML = `Lade...`;
 
-        // Manueller Reset Button
         const resetBtn = document.createElement('button');
         resetBtn.innerText = "🔄 Neu setzen";
         resetBtn.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#17a2b8; border-radius:4px;";
         resetBtn.onclick = (e) => { 
-            e.stopPropagation(); // Verhindert dass die Box deselektiert wird
+            e.stopPropagation(); 
             anchorBox.baseline = null; 
-            playBeep(); // Kurzes Feedback
+            playBeep(); 
         };
 
         div.appendChild(label); 
@@ -522,6 +520,11 @@ function createZoomDisplays() {
         anchorBox.refCtx = cRef.getContext('2d');
         anchorBox.zoomStatsDiv = stats; 
         anchorBox.zoomBoxDiv = div;
+
+        // WICHTIG: Sagt processFrame, dass es das Bild neu in den neu generierten Kasten malen soll!
+        if (anchorBox.baseline) {
+            anchorBox.refNeedsDraw = true;
+        }
     }
     
     updateZoomSelectionUI();
@@ -558,12 +561,12 @@ function saveSettings() {
         positions: boxes.map(b => ({ x: b.x, y: b.y })),
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active }
     };
-    localStorage.setItem('estw_settings_v30', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v31', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v30');
+        const saved = localStorage.getItem('estw_settings_v31');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -921,22 +924,28 @@ function processFrame() {
             anchorBox.zoomCtx.drawImage(canvas, ax, ay, aw, ah, 0, 0, 80, 40);
         }
 
-        // Es ist wichtig, die vollen Daten zu holen, um sie korrekt mit der Baseline vergleichen zu können
         const aFrame = ctx.getImageData(ax, ay, aw, ah); 
         const aData = aFrame.data;
         
-        // Referenz speichern & zeichnen falls nicht vorhanden
+        // Speichere die Baseline und setze das Flag für das Zeichnen
         if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) {
             anchorBox.baseline = new Uint8ClampedArray(aData);
-            
-            // Zeichne das Bild sofort in den Referenz-Canvas!
-            if (anchorBox.refCtx) {
+            anchorBox.refNeedsDraw = true; 
+        }
+
+        // LÖSUNG FÜR DEN SCROLL-BUG: Bild wird neu gezeichnet, wenn das Flag gesetzt ist!
+        if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
+            try {
                 let imgData = new ImageData(anchorBox.baseline, aw, ah);
                 let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah;
                 tmpC.getContext('2d').putImageData(imgData, 0, 0);
                 
                 anchorBox.refCtx.fillStyle = "black"; anchorBox.refCtx.fillRect(0, 0, 80, 40);
                 anchorBox.refCtx.drawImage(tmpC, 0, 0, aw, ah, 0, 0, 80, 40);
+                
+                anchorBox.refNeedsDraw = false; // Zeichnen beendet, Flag zurücksetzen
+            } catch(e) {
+                anchorBox.baseline = null; // Fallback, falls Kasten gerade die Größe ändert
             }
         }
 
@@ -973,7 +982,6 @@ function processFrame() {
 
         if (anchorBox.isAlarm && isMonitoring) playAnchorBeep();
     }
-
 
     // 3. ALLES ZEICHNEN
     if (!showCamera) {
