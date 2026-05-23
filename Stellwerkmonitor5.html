@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v35</title>
+<title>ESTW Wächter Pro v36</title>
 
 <style>
     body {
@@ -249,9 +249,9 @@
         </div>
         
         <div class="slider-row" style="background:#2a2a2a; padding:8px; border-radius:6px; border-left: 3px solid #00ff88;">
-            <label>Ziel-Zyklus: <span id="valTakt">1000</span>ms</label>
+            <label>Ziel-Zyklus: <span id="valTakt">2000</span>ms</label>
             <button class="adj-btn" id="taktMinus">-</button>
-            <input type="range" id="slideTakt" min="200" max="2500" step="100" value="1000">
+            <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
             <button class="adj-btn" id="taktPlus">+</button>
         </div>
 
@@ -360,8 +360,8 @@ const HIT_PAD = 20;
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
-// Neue kompaktere Default-Größen
-const DEFAULTS = { sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, takt: 1000 };
+// Angepasste Default-Größen und Takt-Standard
+const DEFAULTS = { sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, takt: 2000 };
 
 let boxes = [
     { id: 1, x: 60, y: 60, w: 30, h: 12, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
@@ -454,7 +454,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v35');
+            const saved = localStorage.getItem('estw_settings_v36');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -559,12 +559,12 @@ function saveSettings() {
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, w: muteBox.w, h: muteBox.h, active: muteBox.active }
     };
-    localStorage.setItem('estw_settings_v35', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v36', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v35');
+        const saved = localStorage.getItem('estw_settings_v36');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -647,7 +647,6 @@ resetBtn.addEventListener('click', () => {
     boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count; showZoomValues = true; showCamera = true;
     toggleZoomTextBtn.innerText = "Werte: EIN"; toggleCameraBtn.innerText = "Live-Bild: SICHTBAR";
     
-    // Anker und Mutebox auch bei Reset wieder auf kleine Defaultwerte
     anchorBox.active = false; anchorBox.baseline = null; anchorBox.w = 15; anchorBox.h = 15; anchorBtn.innerText = "Anker: AUS"; anchorBtn.classList.add("off");
     muteBox.active = false; muteBox.baseline = null; muteBox.isMuted = false; muteBox.w = 15; muteBox.h = 15; muteBoxBtn.innerText = "Mutebox: AUS"; muteBoxBtn.classList.add("off");
     
@@ -828,19 +827,22 @@ function processFrame() {
             if (avgBrightness > mid + hysteresis) currentInstantState = 1;
             else if (avgBrightness < mid - hysteresis) currentInstantState = -1;
             
+            let targetTakt = parseInt(slideTakt.value);
+            let minAllowed = targetTakt * 0.5;
+            let maxAllowed = targetTakt * 1.5;
+
             if (currentInstantState === 1 && box.lastState === -1) {
                 if (box.lastRisingEdge > 0) {
                     let cycleDuration = now - box.lastRisingEdge;
                     box.lastMeasuredCycle = cycleDuration; 
-                    
-                    let targetTakt = parseInt(slideTakt.value);
-                    let minAllowed = targetTakt * 0.5;
-                    let maxAllowed = targetTakt * 1.5;
 
                     if (cycleDuration >= minAllowed && cycleDuration <= maxAllowed) {
                         box.validCrossings++; box.lastValidTime = now;
                     } else {
-                        box.validCrossings = Math.max(0, box.validCrossings - 1);
+                        // NEU in v36: Ignoriere Glitches (Mauswischer). Setze nur zurück, wenn die Pause enorm lang ist
+                        if (cycleDuration > maxAllowed) {
+                            box.validCrossings = 0;
+                        }
                     }
                 }
                 box.lastRisingEdge = now;
@@ -848,7 +850,10 @@ function processFrame() {
             
             if (currentInstantState !== 0) { box.lastState = currentInstantState; }
             
-            if (box.validCrossings > 0 && now - box.lastValidTime > 2500) { box.validCrossings = 0; }
+            // Flexibler Timeout: Erst nach dem 2.5-fachen Zyklus Inaktivität wird genullt
+            if (box.validCrossings > 0 && now - box.lastValidTime > (targetTakt * 2.5)) { 
+                box.validCrossings = 0; 
+            }
             
             if (isMonitoring && diff >= threshold && box.validCrossings >= minCrossings) { box.lastAlarmTime = now; }
         }
@@ -927,9 +932,9 @@ function processFrame() {
             let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)'; 
             let borderColor = box.isAlarm ? '#ff0000' : '#00ff00';
             
-            // NEU: Deutliche Sichtbarkeit bei "Pause"
+            // Extrem hohe Sichtbarkeit, wenn auf PAUSE
             if (!isMonitoring) { 
-                fillColor = 'rgba(255,255,255,0.05)'; 
+                fillColor = 'rgba(255,255,255,0.2)'; 
                 borderColor = '#ffffff'; 
             }
             
@@ -939,10 +944,7 @@ function processFrame() {
             ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); 
             ctx.lineWidth = box.isAlarm ? 4 : 2; 
             
-            // Pausierte Rahmen gestrichelt und gut sichtbar zeichnen
-            if (!isMonitoring) {
-                ctx.setLineDash([4, 4]);
-            }
+            if (!isMonitoring) ctx.setLineDash([4, 4]);
             ctx.strokeStyle = borderColor; ctx.stroke(); ctx.setLineDash([]);
         }
 
@@ -952,7 +954,7 @@ function processFrame() {
             let aBorderColor = anchorBox.isAlarm ? '#ffaa00' : '#00aaff';
             
             if (!isMonitoring) { 
-                aFillColor = 'rgba(255,255,255,0.05)'; 
+                aFillColor = 'rgba(255,255,255,0.2)'; 
                 aBorderColor = '#ffffff'; 
             }
             
@@ -967,11 +969,11 @@ function processFrame() {
 
         // MUTE BOX
         if (muteBox.active) {
-            let mFillColor = muteBox.isMuted ? 'rgba(40,167,69,0.35)' : 'rgba(40,167,69,0.1)';
+            let mFillColor = muteBox.isMuted ? 'rgba(40,167,69,0.5)' : 'rgba(40,167,69,0.2)';
             let mBorderColor = '#28a745'; 
             
             if (!isMonitoring) { 
-                mFillColor = 'rgba(255,255,255,0.05)'; 
+                mFillColor = 'rgba(255,255,255,0.2)'; 
                 mBorderColor = '#ffffff'; 
             }
             
