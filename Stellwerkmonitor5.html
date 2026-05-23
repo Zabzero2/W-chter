@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v38</title>
+<title>ESTW Wächter Pro v39</title>
 
 <style>
     body {
@@ -43,6 +43,8 @@
         border-radius: 6px;
         border: 2px solid #555;
         cursor: pointer;
+        width: 110px; /* Feste Breite verhindert das Wackeln des Menüs */
+        flex-shrink: 0;
         transition: border-color 0.1s, background 0.1s;
     }
     .zoom-box:active { background: #555; }
@@ -50,10 +52,10 @@
     .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
     .zoom-box.alarm-zoom { border-color: #ff0000 !important; background: #5a1010 !important; }
 
-    .anchor-zoom { border-color: #17a2b8; background: #0f4c5c; padding: 5px 10px; }
+    .anchor-zoom { width: auto; border-color: #17a2b8; background: #0f4c5c; padding: 5px 10px; }
     .anchor-zoom.alarm-zoom { border-color: #ffaa00 !important; background: #663300 !important; }
     
-    .mute-zoom { border-color: #28a745; background: #14441e; padding: 5px 10px; }
+    .mute-zoom { width: 110px; border-color: #ffcc00; background: #4a3a00; padding: 5px 10px; }
 
     .zoom-canvas {
         width: 80px; height: 40px; background: black;
@@ -61,7 +63,7 @@
     }
     
     .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
-    .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; }
+    .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; width: 100%; word-wrap: break-word; }
 
     .dpad-container {
         display: flex; flex-direction: column; align-items: center; gap: 15px;
@@ -98,8 +100,8 @@
     #monitorBtn.off { background: #dc3545; } 
     #anchorBtn.off { background: #555; }
     #anchorBtn { background: #17a2b8; }
-    #muteBoxBtn.off { background: #555; }
-    #muteBoxBtn { background: #28a745; }
+    #muteBoxBtn.off { background: #555; color: white;}
+    #muteBoxBtn { background: #ffcc00; color: #000; } /* Gelber Button, schwarze Schrift */
 
     .stealth-hint {
         font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px;
@@ -231,8 +233,7 @@
             <label>Anzahl Boxen:</label>
             <select id="boxCountSelect">
                 <option value="1">1 Box</option>
-                <option value="2">2 Boxen</option>
-                <option value="3">3 Boxen</option>
+                <option value="2" selected>2 Boxen</option> <option value="3">3 Boxen</option>
                 <option value="4">4 Boxen</option>
             </select>
         </div>
@@ -245,7 +246,7 @@
         </div>
         
         <div class="slider-row" style="background:#202020; padding:8px; border-radius:6px;">
-            <label style="color:#28a745;">Mute-Toleranz: <span id="valMuteSens">40</span></label>
+            <label style="color:#ffcc00;">Mute-Toleranz: <span id="valMuteSens">40</span></label>
             <button class="adj-btn" id="muteSensMinus">-</button>
             <input type="range" id="slideMuteSens" min="5" max="100" value="40">
             <button class="adj-btn" id="muteSensPlus">+</button>
@@ -395,6 +396,22 @@ let muteBox = {
 let activeBoxCount = 2;
 let selectedBox = boxes[0];
 
+// NEU: Diese Funktion zeichnet das Bild physikalisch korrekt ins Zoom-Fenster (ohne Quetschen!)
+function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, targetW, targetH);
+    
+    let scale = Math.min(targetW / sw, targetH / sh);
+    let drawW = sw * scale;
+    let drawH = sh * scale;
+    
+    // Zentrieren in der Box (Letterboxing)
+    let dx = (targetW - drawW) / 2;
+    let dy = (targetH - drawH) / 2;
+    
+    ctx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, drawW, drawH);
+}
+
 toggleSettingsBtn.addEventListener('click', () => {
     settingsVisible = !settingsVisible;
     settingsPanel.style.display = settingsVisible ? 'flex' : 'none';
@@ -465,7 +482,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v38');
+            const saved = localStorage.getItem('estw_settings_v39');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -570,12 +587,12 @@ function saveSettings() {
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, w: muteBox.w, h: muteBox.h, active: muteBox.active }
     };
-    localStorage.setItem('estw_settings_v38', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v39', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v38');
+        const saved = localStorage.getItem('estw_settings_v39');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -604,6 +621,9 @@ function loadSettings() {
             }
         }
     } catch(e) {}
+    
+    boxCountSelect.value = activeBoxCount; // Hardcode Fix für den 1-Boxen Anzeigefehler
+
     toggleZoomTextBtn.innerText = showZoomValues ? "Werte: EIN" : "Werte: AUS";
     toggleCameraBtn.innerText = showCamera ? "Live-Bild: SICHTBAR" : "Live-Bild: VERSTECKT";
     createZoomDisplays(); updateLabels();
@@ -783,7 +803,7 @@ function processFrame() {
     // --- 1. MUTE-BOX ANALYSIEREN ---
     if (muteBox.active) {
         const mx = Math.floor(muteBox.x); const my = Math.floor(muteBox.y); const mw = Math.floor(muteBox.w); const mh = Math.floor(muteBox.h);
-        if (muteBox.zoomCtx) { muteBox.zoomCtx.fillStyle = "black"; muteBox.zoomCtx.fillRect(0, 0, 100, 50); muteBox.zoomCtx.drawImage(canvas, mx, my, mw, mh, 0, 0, 100, 50); }
+        if (muteBox.zoomCtx) { drawProportional(muteBox.zoomCtx, canvas, mx, my, mw, mh, 100, 50); }
         
         const mFrame = ctx.getImageData(mx, my, mw, mh); const mData = mFrame.data;
         let mTotal = 0; let mCount = 0;
@@ -810,7 +830,7 @@ function processFrame() {
         if (muteBox.zoomStatsDiv && showZoomValues) {
             if (muteBox.isMuted) {
                 let rest = muteBox.lastLeftTime > 0 ? Math.ceil((30000 - (now - muteBox.lastLeftTime)) / 1000) + "s" : "Dauerhaft";
-                muteBox.zoomStatsDiv.innerHTML = `<b style="color:#28a745;">STUMM</b><br>Nachlauf: ${rest}`;
+                muteBox.zoomStatsDiv.innerHTML = `<b style="color:#ffcc00;">STUMM</b><br>Nachlauf: ${rest}`;
             } else { muteBox.zoomStatsDiv.innerHTML = `Diff: ${Math.round(mDiff)} / Max: ${muteThreshold}<br>Inaktiv`; }
         }
     } else { muteBox.isMuted = false; }
@@ -821,7 +841,7 @@ function processFrame() {
     for (let i = 0; i < activeBoxCount; i++) {
         const box = boxes[i]; let diff = 0;
         const rx = Math.floor(box.x); const ry = Math.floor(box.y); const rw = Math.floor(box.w); const rh = Math.floor(box.h);
-        if (box.zoomCtx) { box.zoomCtx.fillStyle = "black"; box.zoomCtx.fillRect(0, 0, 100, 50); box.zoomCtx.drawImage(canvas, rx, ry, rw, rh, 0, 0, 100, 50); }
+        if (box.zoomCtx) { drawProportional(box.zoomCtx, canvas, rx, ry, rw, rh, 100, 50); }
 
         const frame = ctx.getImageData(rx, ry, rw, rh); const data = frame.data;
         let totalBrightness = 0; let pixelCount = 0;
@@ -892,7 +912,7 @@ function processFrame() {
     // --- 3. ANKER-BOX ANALYSIEREN ---
     if (anchorBox.active) {
         const ax = Math.floor(anchorBox.x); const ay = Math.floor(anchorBox.y); const aw = Math.floor(anchorBox.w); const ah = Math.floor(anchorBox.h);
-        if (anchorBox.zoomCtx) { anchorBox.zoomCtx.fillStyle = "black"; anchorBox.zoomCtx.fillRect(0, 0, 80, 40); anchorBox.zoomCtx.drawImage(canvas, ax, ay, aw, ah, 0, 0, 80, 40); }
+        if (anchorBox.zoomCtx) { drawProportional(anchorBox.zoomCtx, canvas, ax, ay, aw, ah, 80, 40); }
 
         const aFrame = ctx.getImageData(ax, ay, aw, ah); const aData = aFrame.data;
         if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) { anchorBox.baseline = new Uint8ClampedArray(aData); anchorBox.refNeedsDraw = true; }
@@ -900,7 +920,7 @@ function processFrame() {
         if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
             try {
                 let imgData = new ImageData(anchorBox.baseline, aw, ah); let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah; tmpC.getContext('2d').putImageData(imgData, 0, 0);
-                anchorBox.refCtx.fillStyle = "black"; anchorBox.refCtx.fillRect(0, 0, 80, 40); anchorBox.refCtx.drawImage(tmpC, 0, 0, 80, 40);
+                drawProportional(anchorBox.refCtx, tmpC, 0, 0, aw, ah, 80, 40);
                 anchorBox.refNeedsDraw = false;
             } catch(e) { anchorBox.baseline = null; }
         }
@@ -954,7 +974,7 @@ function processFrame() {
             ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); 
             ctx.lineWidth = box.isAlarm ? 4 : 2; 
             
-            if (!isMonitoring) ctx.setLineDash([4, 4]);
+            if (!isMonitoring) ctx.setLineDash([4, 4]); // Nur noch sticheln, KEIN Ausgrauen mehr!
             ctx.strokeStyle = borderColor; ctx.stroke(); ctx.setLineDash([]);
         }
 
@@ -972,10 +992,10 @@ function processFrame() {
             ctx.strokeStyle = aBorderColor; ctx.stroke(); ctx.setLineDash([]);
         }
 
-        // MUTE BOX
+        // MUTE BOX (Jetzt in edlem Gelb)
         if (muteBox.active) {
-            let mFillColor = muteBox.isMuted ? 'rgba(40,167,69,0.5)' : 'rgba(40,167,69,0.2)';
-            let mBorderColor = '#28a745'; 
+            let mFillColor = muteBox.isMuted ? 'rgba(255,204,0,0.5)' : 'rgba(255,204,0,0.15)';
+            let mBorderColor = '#ffcc00'; 
             
             ctx.fillStyle = mFillColor; ctx.fillRect(muteBox.x, muteBox.y, muteBox.w, muteBox.h);
             if (muteBox === selectedBox) { ctx.beginPath(); ctx.rect(muteBox.x - 4, muteBox.y - 4, muteBox.w + 8, muteBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
