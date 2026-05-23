@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v33</title>
+<title>ESTW Wächter Pro v34</title>
 
 <style>
     body {
@@ -247,6 +247,14 @@
             <input type="range" id="slideSens" min="2" max="100" value="15">
             <button class="adj-btn" id="sensPlus">+</button>
         </div>
+        
+        <div class="slider-row" style="background:#2a2a2a; padding:8px; border-radius:6px; border-left: 3px solid #00ff88;">
+            <label>Ziel-Zyklus: <span id="valTakt">1000</span>ms</label>
+            <button class="adj-btn" id="taktMinus">-</button>
+            <input type="range" id="slideTakt" min="200" max="2500" step="100" value="1000">
+            <button class="adj-btn" id="taktPlus">+</button>
+        </div>
+
         <div class="slider-row">
             <label>Rahmen-Breite: <span id="valWidth">80</span></label>
             <button class="adj-btn" id="widthMinus">-</button>
@@ -309,6 +317,7 @@ const slideAnchorSens = document.getElementById('slideAnchorSens');
 const valAnchorSens = document.getElementById('valAnchorSens');
 
 const slideSens = document.getElementById('slideSens');
+const slideTakt = document.getElementById('slideTakt'); // NEU
 const slideWidth = document.getElementById('slideWidth');
 const slideHeight = document.getElementById('slideHeight');
 const slidePulse = document.getElementById('slidePulse');
@@ -316,6 +325,7 @@ const slideHold = document.getElementById('slideHold');
 const boxCountSelect = document.getElementById('boxCountSelect');
 
 const valSens = document.getElementById('valSens');
+const valTakt = document.getElementById('valTakt'); // NEU
 const valWidth = document.getElementById('valWidth');
 const valHeight = document.getElementById('valHeight');
 const valPulse = document.getElementById('valPulse');
@@ -350,14 +360,14 @@ const HIT_PAD = 20;
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
-const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2, anchorSens: 20 };
+const DEFAULTS = { sens: 15, width: 80, height: 30, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, takt: 1000 };
 
-// Neue Intervall-Struktur für Boxen (v33): history wurde durch präzise Zeitstempel-Zählung ersetzt
+// Angepasste Logik-Variablen für die Zyklus-Erfassung (v34)
 let boxes = [
-    { id: 1, x: 60, y: 60, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, stateChangeTime: 0, validCrossings: 0, lastCrossTime: 0 },
-    { id: 2, x: 60, y: 160, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, stateChangeTime: 0, validCrossings: 0, lastCrossTime: 0 },
-    { id: 3, x: 60, y: 260, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, stateChangeTime: 0, validCrossings: 0, lastCrossTime: 0 },
-    { id: 4, x: 60, y: 360, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, stateChangeTime: 0, validCrossings: 0, lastCrossTime: 0 }
+    { id: 1, x: 60, y: 60, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 2, x: 60, y: 160, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 3, x: 60, y: 260, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 4, x: 60, y: 360, w: 80, h: 30, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 }
 ];
 
 let anchorBox = { 
@@ -366,10 +376,10 @@ let anchorBox = {
     zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false 
 };
 
-// NEU: Mutebox Struktur
+// Mutebox hat jetzt auch eine Baseline (wie der Anker) für die Anwesenheitserkennung
 let muteBox = {
     id: 'Mute', x: 200, y: 200, w: 60, h: 40,
-    active: false, history: [], isMuted: false, insideStartTime: 0, lastLeftTime: 0,
+    active: false, baseline: null, isMuted: false, insideStartTime: 0, lastLeftTime: 0,
     zoomCtx: null, zoomBoxDiv: null, zoomStatsDiv: null
 };
 
@@ -403,6 +413,7 @@ anchorBtn.addEventListener('click', () => {
 
 muteBoxBtn.addEventListener('click', () => {
     muteBox.active = !muteBox.active;
+    muteBox.baseline = null; // WICHTIG: Referenzbild beim Aktivieren zurücksetzen
     muteBox.isMuted = false; muteBox.insideStartTime = 0; muteBox.lastLeftTime = 0;
     if (muteBox.active) {
         muteBoxBtn.innerText = "Mutebox: AKTIV"; muteBoxBtn.classList.remove("off"); selectedBox = muteBox;
@@ -410,6 +421,58 @@ muteBoxBtn.addEventListener('click', () => {
         muteBoxBtn.innerText = "Mutebox: AUS"; muteBoxBtn.classList.add("off"); if(selectedBox === muteBox) selectedBox = boxes[0];
     }
     saveSettings(); createZoomDisplays();
+});
+
+function setupAdjBtn(minusId, plusId, sliderId) {
+    const slider = document.getElementById(sliderId);
+    document.getElementById(minusId).addEventListener('click', (e) => {
+        e.preventDefault(); let step = parseFloat(slider.step) || 1;
+        slider.value = parseFloat(slider.value) - step; slider.dispatchEvent(new Event('input')); 
+    });
+    document.getElementById(plusId).addEventListener('click', (e) => {
+        e.preventDefault(); let step = parseFloat(slider.step) || 1;
+        slider.value = parseFloat(slider.value) + step; slider.dispatchEvent(new Event('input'));
+    });
+}
+setupAdjBtn('sensMinus', 'sensPlus', 'slideSens');
+setupAdjBtn('taktMinus', 'taktPlus', 'slideTakt'); // NEU
+setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth');
+setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
+setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse');
+setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
+setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom');
+setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
+
+async function loadCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        if (videoDevices.length > 0) {
+            cameraSelect.innerHTML = '';
+            videoDevices.forEach((device, index) => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.text = device.label || `Kamera ${index + 1}`;
+                cameraSelect.appendChild(option);
+            });
+            const saved = localStorage.getItem('estw_settings_v34');
+            if (saved) {
+                const s = JSON.parse(saved);
+                if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
+                    cameraSelect.value = s.cameraId;
+                }
+            }
+        }
+    } catch (e) {}
+}
+
+cameraSelect.addEventListener('change', () => {
+    saveSettings(); if (isRunning) { stopSystem(); setTimeout(startSystem, 500); }
+});
+
+slideCamZoom.addEventListener('input', (e) => {
+    valCamZoom.innerText = parseFloat(e.target.value).toFixed(1);
+    if (currentTrack) { try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {} }
 });
 
 function createZoomDisplays() {
@@ -451,15 +514,20 @@ function createZoomDisplays() {
         if (anchorBox.baseline) anchorBox.refNeedsDraw = true;
     }
 
-    // MUTE BOX
+    // MUTE BOX (Jetzt mit "Neu setzen" Button für die Baseline!)
     if (muteBox.active) {
         const div = document.createElement('div'); div.className = 'zoom-box mute-zoom';
         div.onclick = () => { selectedBox = muteBox; updateZoomSelectionUI(); };
         const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
         const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'MUTE-BOX';
         const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
-        stats.innerHTML = `Inaktiv`;
-        div.appendChild(c); div.appendChild(label); div.appendChild(stats); zoomHeader.appendChild(div);
+        stats.innerHTML = `Lade...`;
+        
+        // NEU: Reset-Button für die Mutebox-Referenz
+        const rst = document.createElement('button'); rst.innerText = "🔄 Leer setzen"; rst.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#28a745; border-radius:4px;";
+        rst.onclick = (e) => { e.stopPropagation(); muteBox.baseline = null; playBeep(); };
+        
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats); div.appendChild(rst); zoomHeader.appendChild(div);
         muteBox.zoomCtx = c.getContext('2d'); muteBox.zoomStatsDiv = stats; muteBox.zoomBoxDiv = div;
     }
     
@@ -481,28 +549,30 @@ function updateLabels() {
     valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value;
     valHeight.innerText = slideHeight.value; valPulse.innerText = slidePulse.value;
     valHold.innerText = slideHold.value; valAnchorSens.innerText = slideAnchorSens.value;
+    valTakt.innerText = slideTakt.value; // NEU
 }
 
 function saveSettings() {
     const settings = {
-        sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, 
+        sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value,
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, anchorSens: slideAnchorSens.value,
         showZoomValues: showZoomValues, showCamera: showCamera, settingsVisible: settingsVisible, dpadVisible: dpadVisible, cameraId: cameraSelect.value,
         positions: boxes.map(b => ({ x: b.x, y: b.y })),
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, w: muteBox.w, h: muteBox.h, active: muteBox.active }
     };
-    localStorage.setItem('estw_settings_v33', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v34', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v33');
+        const saved = localStorage.getItem('estw_settings_v34');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
             if (s.height) slideHeight.value = s.height; if (s.pulse) slidePulse.value = s.pulse;
             if (s.hold) slideHold.value = s.hold; if (s.anchorSens) slideAnchorSens.value = s.anchorSens;
+            if (s.takt) slideTakt.value = s.takt; // NEU
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
             if (s.showZoomValues !== undefined) showZoomValues = s.showZoomValues; 
             if (s.showCamera !== undefined) showCamera = s.showCamera; 
@@ -533,19 +603,17 @@ function loadSettings() {
 
 loadSettings();
 
-// NEU: Steuert die Uhr und das rhythmische Blinken des Doppelpunkts im Mute-Zustand
 function updateStealthClock() {
     const d = new Date();
     hoursHTML.innerText = String(d.getHours()).padStart(2, '0');
     minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
     
-    // Wenn Mute aktiv ist, blinken die Punkte rhythmisch im Sekundentakt
     const dots = document.querySelectorAll('#stealthOverlay div div');
     if (isStealthActive && muteBox.active && muteBox.isMuted) {
         const visible = d.getSeconds() % 2 === 0;
         dots.forEach(dot => dot.style.opacity = visible ? "1" : "0");
     } else {
-        dots.forEach(dot => dot.style.opacity = "1"); // Sonst dauerhaft an
+        dots.forEach(dot => dot.style.opacity = "1"); 
     }
 }
 setInterval(updateStealthClock, 500);
@@ -563,6 +631,7 @@ toggleZoomTextBtn.addEventListener('click', (e) => {
 
 toggleCameraBtn.addEventListener('click', (e) => { showCamera = !showCamera; e.target.innerText = showCamera ? "Live-Bild: SICHTBAR" : "Live-Bild: VERSTECKT"; saveSettings(); });
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); }); // NEU
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
@@ -576,13 +645,13 @@ boxCountSelect.addEventListener('change', (e) => {
 });
 
 resetBtn.addEventListener('click', () => {
-    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideAnchorSens.value = DEFAULTS.anchorSens;
+    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideAnchorSens.value = DEFAULTS.anchorSens; slideTakt.value = DEFAULTS.takt;
     boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count; showZoomValues = true; showCamera = true;
     toggleZoomTextBtn.innerText = "Werte: EIN"; toggleCameraBtn.innerText = "Live-Bild: SICHTBAR";
     anchorBox.active = false; anchorBox.baseline = null; anchorBtn.innerText = "Anker: AUS"; anchorBtn.classList.add("off");
-    muteBox.active = false; muteBox.isMuted = false; muteBoxBtn.innerText = "Mutebox: AUS"; muteBoxBtn.classList.add("off");
+    muteBox.active = false; muteBox.baseline = null; muteBox.isMuted = false; muteBoxBtn.innerText = "Mutebox: AUS"; muteBoxBtn.classList.add("off");
     selectedBox = boxes[0]; createZoomDisplays(); updateLabels(); saveSettings();
-    boxes.forEach((b, idx) => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; b.validCrossings=0; b.lastState=0; });
+    boxes.forEach((b, idx) => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; b.validCrossings=0; b.lastState=0; b.lastMeasuredCycle=0; });
 });
 
 monitorBtn.addEventListener('click', () => {
@@ -594,12 +663,16 @@ monitorBtn.addEventListener('click', () => {
 let turboTimeout = null; let turboInterval = null;
 function startTurboAction(actionFn) {
     if (!selectedBox) return; actionFn(1);
-    if(selectedBox === anchorBox) anchorBox.baseline = null; saveSettings();
+    if(selectedBox === anchorBox) anchorBox.baseline = null;
+    if(selectedBox === muteBox) muteBox.baseline = null; // Mutebox Reset bei Bewegung
+    saveSettings();
     turboTimeout = setTimeout(() => {
         let speed = 1; let tick = 0;
         turboInterval = setInterval(() => {
             tick++; if (tick > 15) speed = 3; if (tick > 35) speed = 8; actionFn(speed);
-            if(selectedBox === anchorBox) anchorBox.baseline = null; saveSettings();
+            if(selectedBox === anchorBox) anchorBox.baseline = null;
+            if(selectedBox === muteBox) muteBox.baseline = null;
+            saveSettings();
         }, 50);
     }, 600); 
 }
@@ -616,19 +689,19 @@ function bindTurboButton(btnId, actionFn) {
 bindTurboButton('btnUp', (s) => selectedBox.y -= s); bindTurboButton('btnDown', (s) => selectedBox.y += s);
 bindTurboButton('btnLeft', (s) => selectedBox.x -= s); bindTurboButton('btnRight', (s) => selectedBox.x += s);
 bindTurboButton('btnWMinus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.w = Math.max(10, selectedBox.w - s); if(selectedBox===anchorBox) anchorBox.baseline = null; }
+    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.w = Math.max(10, selectedBox.w - s); if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
     else { slideWidth.value = Math.max(parseInt(slideWidth.min), parseInt(slideWidth.value) - s); slideWidth.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnWPlus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.w += s; if(selectedBox===anchorBox) anchorBox.baseline = null; }
+    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.w += s; if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
     else { slideWidth.value = Math.min(parseInt(slideWidth.max), parseInt(slideWidth.value) + s); slideWidth.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnHMinus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.h = Math.max(10, selectedBox.h - s); if(selectedBox===anchorBox) anchorBox.baseline = null; }
+    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.h = Math.max(10, selectedBox.h - s); if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
     else { slideHeight.value = Math.max(parseInt(slideHeight.min), parseInt(slideHeight.value) - s); slideHeight.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnHPlus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.h += s; if(selectedBox===anchorBox) anchorBox.baseline = null; }
+    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.h += s; if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
     else { slideHeight.value = Math.min(parseInt(slideHeight.max), parseInt(slideHeight.value) + s); slideHeight.dispatchEvent(new Event('input')); }
 });
 
@@ -641,7 +714,9 @@ function startDrag(e) {
         if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
             draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; 
-            if(box !== anchorBox && box !== muteBox) box.history = []; else if(box===anchorBox) anchorBox.baseline = null;
+            if(box !== anchorBox && box !== muteBox) box.history = []; 
+            else if(box===anchorBox) anchorBox.baseline = null;
+            else if(box===muteBox) muteBox.baseline = null;
             e.preventDefault(); break;
         }
     }
@@ -650,7 +725,9 @@ function moveDrag(e) {
     if (!draggingBox || !showCamera) return; const pos = getPointerPos(e);
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
-    if(draggingBox !== anchorBox && draggingBox !== muteBox) draggingBox.history = []; else if(draggingBox===anchorBox) anchorBox.baseline = null;
+    if(draggingBox !== anchorBox && draggingBox !== muteBox) draggingBox.history = []; 
+    else if(draggingBox===anchorBox) anchorBox.baseline = null;
+    else if(draggingBox===muteBox) muteBox.baseline = null;
     e.preventDefault(); 
 }
 function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
@@ -660,8 +737,6 @@ canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.add
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 function playBeep() { const now = Date.now(); if (now - lastBeep < 1000 || (muteBox.active && muteBox.isMuted)) return; lastBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25); }
 function playAnchorBeep() { const now = Date.now(); if (now - lastAnchorBeep < 1500 || (muteBox.active && muteBox.isMuted)) return; lastAnchorBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
-
-// NEU: Diskreter Beep für das Überschreiten des 2-Minuten-Limits in der Mutebox
 function playQuietBeep() { const now = Date.now(); if (now - lastQuietBeep < 58000) return; lastQuietBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 600; gain.gain.value = 0.03; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
 
 function adjustCanvas() { if (!video.videoWidth) return; canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays(); }
@@ -693,7 +768,7 @@ function processFrame() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const threshold = parseInt(slideSens.value); const minCrossings = parseInt(slidePulse.value); const holdMs = parseFloat(slideHold.value) * 1000;
     
-    // --- 1. MUTE-BOX ANALYSIEREN (Muss zuerst passieren!) ---
+    // --- 1. MUTE-BOX ANALYSIEREN (PRÄSENZ-LOGIK v34) ---
     if (muteBox.active) {
         const mx = Math.floor(muteBox.x); const my = Math.floor(muteBox.y); const mw = Math.floor(muteBox.w); const mh = Math.floor(muteBox.h);
         if (muteBox.zoomCtx) { muteBox.zoomCtx.fillStyle = "black"; muteBox.zoomCtx.fillRect(0, 0, 100, 50); muteBox.zoomCtx.drawImage(canvas, mx, my, mw, mh, 0, 0, 100, 50); }
@@ -703,25 +778,19 @@ function processFrame() {
         for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) { mTotal += mData[j]*0.299 + mData[j+1]*0.587 + mData[j+2]*0.114; mCount++; }
         const mAvg = mTotal / mCount;
         
-        muteBox.history.push({ val: mAvg, time: now });
-        while (muteBox.history.length > 0 && now - muteBox.history[0].time > 3000) { muteBox.history.shift(); }
+        // Speichere die Helligkeit des leeren Kastens beim ersten Mal
+        if (muteBox.baseline === null) muteBox.baseline = mAvg;
         
-        let isMausDrinnen = false;
-        if (muteBox.history.length > 3) {
-            const mVals = muteBox.history.map(h => h.val);
-            let mDiff = Math.max(...mVals) - Math.min(...mVals);
-            if (mDiff >= threshold) { isMausDrinnen = true; }
-        }
+        // Reine Präsenz-Abfrage: Ist die aktuelle Helligkeit deutlich anders als der leere Kasten?
+        let mDiff = Math.abs(mAvg - muteBox.baseline);
+        let isMausDrinnen = (mDiff >= threshold);
         
         if (isMausDrinnen) {
             if (!muteBox.isMuted) { muteBox.isMuted = true; muteBox.insideStartTime = now; }
             muteBox.lastLeftTime = 0;
-            
-            // Logik: Nach mehr als 2 Minuten (120000ms) jede Minute kurz piepen
             if (now - muteBox.insideStartTime > 120000) { playQuietBeep(); }
         } else {
             if (muteBox.isMuted && muteBox.lastLeftTime === 0) { muteBox.lastLeftTime = now; }
-            // 30 Sekunden Nachlaufzeit abgelaufen?
             if (muteBox.lastLeftTime > 0 && now - muteBox.lastLeftTime > 30000) {
                 muteBox.isMuted = false; muteBox.insideStartTime = 0; muteBox.lastLeftTime = 0;
             }
@@ -731,13 +800,13 @@ function processFrame() {
             if (muteBox.isMuted) {
                 let rest = muteBox.lastLeftTime > 0 ? Math.ceil((30000 - (now - muteBox.lastLeftTime)) / 1000) + "s" : "Dauerhaft";
                 muteBox.zoomStatsDiv.innerHTML = `<b style="color:#28a745;">STUMM</b><br>Nachlauf: ${rest}`;
-            } else { muteBox.zoomStatsDiv.innerHTML = `Bereit (Inaktiv)`; }
+            } else { muteBox.zoomStatsDiv.innerHTML = `Diff: ${Math.round(mDiff)}<br>Inaktiv`; }
         }
     } else { muteBox.isMuted = false; }
 
     let anyAlarm = false; 
 
-    // --- 2. ZUG-BOXEN ANALYSIEREN (Mit Takt-Intervall Validierung) ---
+    // --- 2. ZUG-BOXEN ANALYSIEREN (Voller-Zyklus Messung v34) ---
     for (let i = 0; i < activeBoxCount; i++) {
         const box = boxes[i]; let diff = 0;
         const rx = Math.floor(box.x); const ry = Math.floor(box.y); const rw = Math.floor(box.w); const rh = Math.floor(box.h);
@@ -756,27 +825,37 @@ function processFrame() {
             diff = Math.round(maxVal - minVal);
             const hysteresis = Math.max(diff * 0.2, threshold * 0.25); const mid = minVal + diff / 2;
             
-            let currentInstantState = 0; // 1 = Hell, -1 = Dunkel
+            let currentInstantState = 0; // 1 = Hell (Über Linie), -1 = Dunkel (Unter Linie)
             if (avgBrightness > mid + hysteresis) currentInstantState = 1;
             else if (avgBrightness < mid - hysteresis) currentInstantState = -1;
             
-            // RHYTHMUS INTERVALL VALIDIERUNG (NEU v33):
-            if (currentInstantState !== 0 && currentInstantState !== box.lastState) {
-                if (box.stateChangeTime > 0) {
-                    let intervalDuration = now - box.stateChangeTime;
-                    // Ist die verbrachte Zeit im sauberen ESTW-Fenster (300ms bis 700ms)?
-                    if (intervalDuration >= 300 && intervalDuration <= 700) {
-                        box.validCrossings++; box.lastCrossTime = now;
-                    } else if (intervalDuration > 700 || intervalDuration < 100) {
-                        // Bei brutaler Abweichung (z.B. Dauerlicht oder schnelles Flimmern) Zähler strafen
+            // Wenn die Welle von Unten nach Oben geht (Start eines neuen Blinkens)
+            if (currentInstantState === 1 && box.lastState === -1) {
+                if (box.lastRisingEdge > 0) {
+                    let cycleDuration = now - box.lastRisingEdge;
+                    box.lastMeasuredCycle = cycleDuration; // Speichern für die Anzeige
+                    
+                    let targetTakt = parseInt(slideTakt.value);
+                    // Toleranzfenster: +/- 50% vom Ziel-Takt (z.B. Ziel 1000 = Fenster 500 bis 1500)
+                    let minAllowed = targetTakt * 0.5;
+                    let maxAllowed = targetTakt * 1.5;
+
+                    if (cycleDuration >= minAllowed && cycleDuration <= maxAllowed) {
+                        box.validCrossings++; box.lastValidTime = now;
+                    } else {
+                        // Fehlrhythmus (Dauerleuchten oder Störflackern)
                         box.validCrossings = Math.max(0, box.validCrossings - 1);
                     }
                 }
-                box.lastState = currentInstantState; box.stateChangeTime = now;
+                box.lastRisingEdge = now;
             }
             
-            // Timeout-Schutz: Wenn seit 1.5 Sekunden kein gültiger Takt kam, den Zähler nullen
-            if (box.validCrossings > 0 && now - box.lastCrossTime > 1500) { box.validCrossings = 0; }
+            // WICHTIG: Status nur aktualisieren, wenn Hysteresis-Grenze sauber durchbrochen wurde
+            if (currentInstantState !== 0) { box.lastState = currentInstantState; }
+            
+            // Timeout: Nach 2.5 Sekunden Inaktivität den Zähler nullen
+            if (box.validCrossings > 0 && now - box.lastValidTime > 2500) { box.validCrossings = 0; }
+            
             if (isMonitoring && diff >= threshold && box.validCrossings >= minCrossings) { box.lastAlarmTime = now; }
         }
 
@@ -787,13 +866,15 @@ function processFrame() {
             if (box.isAlarm && isMonitoring) box.zoomBoxDiv.classList.add('alarm-zoom'); else box.zoomBoxDiv.classList.remove('alarm-zoom');
         }
         if (box.zoomStatsDiv && showZoomValues) {
-            let txt = `Diff: ${diff}<br>Takt-Pkt: ${box.validCrossings}`;
+            let txt = `Diff: ${diff} | Pkt: ${box.validCrossings}`;
+            if (box.lastMeasuredCycle > 0) txt += `<br>Letzter: <span style="color:#00ff88;">${box.lastMeasuredCycle} ms</span>`;
+            else txt += `<br>Letzter: --- ms`;
             if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`;
             box.zoomStatsDiv.innerHTML = txt;
         }
     }
 
-    // --- 3. ANKER-BOX ANALYSIEREN (Mit relativem Helligkeits-Offset) ---
+    // --- 3. ANKER-BOX ANALYSIEREN ---
     if (anchorBox.active) {
         const ax = Math.floor(anchorBox.x); const ay = Math.floor(anchorBox.y); const aw = Math.floor(anchorBox.w); const ah = Math.floor(anchorBox.h);
         if (anchorBox.zoomCtx) { anchorBox.zoomCtx.fillStyle = "black"; anchorBox.zoomCtx.fillRect(0, 0, 80, 40); anchorBox.zoomCtx.drawImage(canvas, ax, ay, aw, ah, 0, 0, 80, 40); }
@@ -804,7 +885,7 @@ function processFrame() {
         if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
             try {
                 let imgData = new ImageData(anchorBox.baseline, aw, ah); let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah; tmpC.getContext('2d').putImageData(imgData, 0, 0);
-                anchorBox.refCtx.fillStyle = "black"; anchorBox.refCtx.fillRect(0, 0, 80, 40); anchorBox.refCtx.drawImage(tmpC, 0, 0, aw, ah, 0, 0, 80, 40);
+                anchorBox.refCtx.fillStyle = "black"; anchorBox.refCtx.fillRect(0, 0, 80, 40); anchorBox.refCtx.drawImage(tmpC, 0, 0, 80, 40);
                 anchorBox.refNeedsDraw = false;
             } catch(e) { anchorBox.baseline = null; }
         }
