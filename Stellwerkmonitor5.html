@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v36</title>
+<title>ESTW Wächter Pro v37</title>
 
 <style>
     body {
@@ -248,7 +248,7 @@
             <button class="adj-btn" id="sensPlus">+</button>
         </div>
         
-        <div class="slider-row" style="background:#2a2a2a; padding:8px; border-radius:6px; border-left: 3px solid #00ff88;">
+        <div class="slider-row">
             <label>Ziel-Zyklus: <span id="valTakt">2000</span>ms</label>
             <button class="adj-btn" id="taktMinus">-</button>
             <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
@@ -360,7 +360,6 @@ const HIT_PAD = 20;
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
-// Angepasste Default-Größen und Takt-Standard
 const DEFAULTS = { sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, takt: 2000 };
 
 let boxes = [
@@ -454,7 +453,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v36');
+            const saved = localStorage.getItem('estw_settings_v37');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -559,12 +558,12 @@ function saveSettings() {
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, w: muteBox.w, h: muteBox.h, active: muteBox.active }
     };
-    localStorage.setItem('estw_settings_v36', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v37', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v36');
+        const saved = localStorage.getItem('estw_settings_v37');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
@@ -736,7 +735,10 @@ canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.add
 
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 function playBeep() { const now = Date.now(); if (now - lastBeep < 1000 || (muteBox.active && muteBox.isMuted)) return; lastBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25); }
-function playAnchorBeep() { const now = Date.now(); if (now - lastAnchorBeep < 1500 || (muteBox.active && muteBox.isMuted)) return; lastAnchorBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
+
+// WICHTIG (Fix): Anchor Beep fragt NICHT mehr ab, ob die Mutebox aktiv ist!
+function playAnchorBeep() { const now = Date.now(); if (now - lastAnchorBeep < 1500) return; lastAnchorBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
+
 function playQuietBeep() { const now = Date.now(); if (now - lastQuietBeep < 58000) return; lastQuietBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 600; gain.gain.value = 0.03; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
 
 function adjustCanvas() { if (!video.videoWidth) return; canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays(); }
@@ -821,6 +823,12 @@ function processFrame() {
         if (box.history.length > 5) {
             const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
             diff = Math.round(maxVal - minVal);
+            
+            // WICHTIG FIX (Das Diff-Gate): Zähler zwangsweise nullen, wenn nichts Signifikantes blinkt.
+            if (diff < threshold) {
+                box.validCrossings = 0;
+            }
+
             const hysteresis = Math.max(diff * 0.2, threshold * 0.25); const mid = minVal + diff / 2;
             
             let currentInstantState = 0; 
@@ -839,7 +847,6 @@ function processFrame() {
                     if (cycleDuration >= minAllowed && cycleDuration <= maxAllowed) {
                         box.validCrossings++; box.lastValidTime = now;
                     } else {
-                        // NEU in v36: Ignoriere Glitches (Mauswischer). Setze nur zurück, wenn die Pause enorm lang ist
                         if (cycleDuration > maxAllowed) {
                             box.validCrossings = 0;
                         }
@@ -850,7 +857,6 @@ function processFrame() {
             
             if (currentInstantState !== 0) { box.lastState = currentInstantState; }
             
-            // Flexibler Timeout: Erst nach dem 2.5-fachen Zyklus Inaktivität wird genullt
             if (box.validCrossings > 0 && now - box.lastValidTime > (targetTakt * 2.5)) { 
                 box.validCrossings = 0; 
             }
@@ -918,7 +924,8 @@ function processFrame() {
             anchorBox.zoomStatsDiv.innerHTML = txt;
         }
 
-        if (anchorBox.isAlarm && isMonitoring && !muteBox.isMuted) playAnchorBeep();
+        // WICHTIG FIX (Master Alarm): Anker bimmelt auch, wenn die Mutebox an ist!
+        if (anchorBox.isAlarm && isMonitoring) playAnchorBeep();
     }
 
     // --- 4. GRAPHIK ZEICHNEN ---
@@ -932,11 +939,7 @@ function processFrame() {
             let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)'; 
             let borderColor = box.isAlarm ? '#ff0000' : '#00ff00';
             
-            // Extrem hohe Sichtbarkeit, wenn auf PAUSE
-            if (!isMonitoring) { 
-                fillColor = 'rgba(255,255,255,0.2)'; 
-                borderColor = '#ffffff'; 
-            }
+            if (!isMonitoring) { fillColor = 'rgba(255,255,255,0.2)'; borderColor = '#ffffff'; }
             
             ctx.fillStyle = fillColor; ctx.fillRect(box.x, box.y, box.w, box.h);
             if (box === selectedBox) { ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
@@ -953,10 +956,7 @@ function processFrame() {
             let aFillColor = anchorBox.isAlarm ? 'rgba(255,170,0,0.3)' : 'rgba(0,170,255,0.15)'; 
             let aBorderColor = anchorBox.isAlarm ? '#ffaa00' : '#00aaff';
             
-            if (!isMonitoring) { 
-                aFillColor = 'rgba(255,255,255,0.2)'; 
-                aBorderColor = '#ffffff'; 
-            }
+            if (!isMonitoring) { aFillColor = 'rgba(255,255,255,0.2)'; aBorderColor = '#ffffff'; }
             
             ctx.fillStyle = aFillColor; ctx.fillRect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h);
             if (anchorBox === selectedBox) { ctx.beginPath(); ctx.rect(anchorBox.x - 4, anchorBox.y - 4, anchorBox.w + 8, anchorBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
@@ -972,10 +972,7 @@ function processFrame() {
             let mFillColor = muteBox.isMuted ? 'rgba(40,167,69,0.5)' : 'rgba(40,167,69,0.2)';
             let mBorderColor = '#28a745'; 
             
-            if (!isMonitoring) { 
-                mFillColor = 'rgba(255,255,255,0.2)'; 
-                mBorderColor = '#ffffff'; 
-            }
+            if (!isMonitoring) { mFillColor = 'rgba(255,255,255,0.2)'; mBorderColor = '#ffffff'; }
             
             ctx.fillStyle = mFillColor; ctx.fillRect(muteBox.x, muteBox.y, muteBox.w, muteBox.h);
             if (muteBox === selectedBox) { ctx.beginPath(); ctx.rect(muteBox.x - 4, muteBox.y - 4, muteBox.w + 8, muteBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
