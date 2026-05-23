@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v37</title>
+<title>ESTW Wächter Pro v38</title>
 
 <style>
     body {
@@ -191,8 +191,6 @@
     <div class="button-row">
         <button id="startBtn">Kamera Start</button>
         <button id="monitorBtn">Überwachung: AKTIV</button>
-        <button id="anchorBtn" class="off">Anker: AUS</button>
-        <button id="muteBoxBtn" class="off">Mutebox: AUS</button>
         <button id="activateStealthBtn">Tarnmodus</button>
     </div>
     
@@ -202,11 +200,16 @@
 
     <div class="controls" id="settingsPanel" style="display: none;">
         
-        <div class="button-row" style="margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px;">
+        <div class="button-row" style="margin-bottom: 10px;">
             <button id="toggleZoomTextBtn">Werte: EIN</button>
             <button id="toggleCameraBtn">Live-Bild: SICHTBAR</button>
             <button id="toggleDpadBtn" style="background: #444; border: 1px solid #777;">🎯 Feinjustierung: EIN</button>
             <button id="resetBtn">Reset</button>
+        </div>
+        
+        <div class="button-row" style="margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px;">
+            <button id="anchorBtn" class="off">Anker: AUS</button>
+            <button id="muteBoxBtn" class="off">Mutebox: AUS</button>
         </div>
 
         <div class="camera-row">
@@ -234,14 +237,21 @@
             </select>
         </div>
         
-        <div class="slider-row" style="background:#202020; padding:8px; border-radius:6px;">
+        <div class="slider-row" style="background:#202020; padding:8px; border-radius:6px; margin-top:5px;">
             <label style="color:#00aaff;">Anker-Toleranz: <span id="valAnchorSens">20</span></label>
             <button class="adj-btn" id="anchorSensMinus">-</button>
             <input type="range" id="slideAnchorSens" min="5" max="100" value="20">
             <button class="adj-btn" id="anchorSensPlus">+</button>
         </div>
+        
+        <div class="slider-row" style="background:#202020; padding:8px; border-radius:6px;">
+            <label style="color:#28a745;">Mute-Toleranz: <span id="valMuteSens">40</span></label>
+            <button class="adj-btn" id="muteSensMinus">-</button>
+            <input type="range" id="slideMuteSens" min="5" max="100" value="40">
+            <button class="adj-btn" id="muteSensPlus">+</button>
+        </div>
 
-        <div class="slider-row">
+        <div class="slider-row" style="margin-top: 5px;">
             <label>Empfindlichkeit: <span id="valSens">15</span></label>
             <button class="adj-btn" id="sensMinus">-</button>
             <input type="range" id="slideSens" min="2" max="100" value="15">
@@ -315,6 +325,8 @@ const valCamZoom = document.getElementById('valCamZoom');
 
 const slideAnchorSens = document.getElementById('slideAnchorSens');
 const valAnchorSens = document.getElementById('valAnchorSens');
+const slideMuteSens = document.getElementById('slideMuteSens');
+const valMuteSens = document.getElementById('valMuteSens');
 
 const slideSens = document.getElementById('slideSens');
 const slideTakt = document.getElementById('slideTakt');
@@ -356,11 +368,10 @@ let lastFrameTime = 0;
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
 const HIT_PAD = 20; 
-
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
-const DEFAULTS = { sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, takt: 2000 };
+const DEFAULTS = { sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, muteSens: 40, takt: 2000 };
 
 let boxes = [
     { id: 1, x: 60, y: 60, w: 30, h: 12, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
@@ -440,6 +451,7 @@ setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse');
 setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
 setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom');
 setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
+setupAdjBtn('muteSensMinus', 'muteSensPlus', 'slideMuteSens');
 
 async function loadCameras() {
     try {
@@ -453,7 +465,7 @@ async function loadCameras() {
                 option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v37');
+            const saved = localStorage.getItem('estw_settings_v38');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
@@ -546,30 +558,30 @@ function updateLabels() {
     valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value;
     valHeight.innerText = slideHeight.value; valPulse.innerText = slidePulse.value;
     valHold.innerText = slideHold.value; valAnchorSens.innerText = slideAnchorSens.value;
-    valTakt.innerText = slideTakt.value; 
+    valTakt.innerText = slideTakt.value; valMuteSens.innerText = slideMuteSens.value;
 }
 
 function saveSettings() {
     const settings = {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value,
-        pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, anchorSens: slideAnchorSens.value,
+        pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, anchorSens: slideAnchorSens.value, muteSens: slideMuteSens.value,
         showZoomValues: showZoomValues, showCamera: showCamera, settingsVisible: settingsVisible, dpadVisible: dpadVisible, cameraId: cameraSelect.value,
         positions: boxes.map(b => ({ x: b.x, y: b.y })),
         anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, w: muteBox.w, h: muteBox.h, active: muteBox.active }
     };
-    localStorage.setItem('estw_settings_v37', JSON.stringify(settings));
+    localStorage.setItem('estw_settings_v38', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v37');
+        const saved = localStorage.getItem('estw_settings_v38');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
             if (s.height) slideHeight.value = s.height; if (s.pulse) slidePulse.value = s.pulse;
             if (s.hold) slideHold.value = s.hold; if (s.anchorSens) slideAnchorSens.value = s.anchorSens;
-            if (s.takt) slideTakt.value = s.takt; 
+            if (s.muteSens) slideMuteSens.value = s.muteSens; if (s.takt) slideTakt.value = s.takt; 
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
             if (s.showZoomValues !== undefined) showZoomValues = s.showZoomValues; 
             if (s.showCamera !== undefined) showCamera = s.showCamera; 
@@ -632,6 +644,7 @@ slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideMuteSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
 slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
 
@@ -642,7 +655,7 @@ boxCountSelect.addEventListener('change', (e) => {
 });
 
 resetBtn.addEventListener('click', () => {
-    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideAnchorSens.value = DEFAULTS.anchorSens; slideTakt.value = DEFAULTS.takt;
+    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideAnchorSens.value = DEFAULTS.anchorSens; slideTakt.value = DEFAULTS.takt; slideMuteSens.value = DEFAULTS.muteSens;
     boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count; showZoomValues = true; showCamera = true;
     toggleZoomTextBtn.innerText = "Werte: EIN"; toggleCameraBtn.innerText = "Live-Bild: SICHTBAR";
     
@@ -735,10 +748,7 @@ canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.add
 
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 function playBeep() { const now = Date.now(); if (now - lastBeep < 1000 || (muteBox.active && muteBox.isMuted)) return; lastBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25); }
-
-// WICHTIG (Fix): Anchor Beep fragt NICHT mehr ab, ob die Mutebox aktiv ist!
 function playAnchorBeep() { const now = Date.now(); if (now - lastAnchorBeep < 1500) return; lastAnchorBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
-
 function playQuietBeep() { const now = Date.now(); if (now - lastQuietBeep < 58000) return; lastQuietBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 600; gain.gain.value = 0.03; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
 
 function adjustCanvas() { if (!video.videoWidth) return; canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays(); }
@@ -783,7 +793,8 @@ function processFrame() {
         if (muteBox.baseline === null) muteBox.baseline = mAvg;
         
         let mDiff = Math.abs(mAvg - muteBox.baseline);
-        let isMausDrinnen = (mDiff >= threshold);
+        let muteThreshold = parseInt(slideMuteSens.value);
+        let isMausDrinnen = (mDiff >= muteThreshold);
         
         if (isMausDrinnen) {
             if (!muteBox.isMuted) { muteBox.isMuted = true; muteBox.insideStartTime = now; }
@@ -800,7 +811,7 @@ function processFrame() {
             if (muteBox.isMuted) {
                 let rest = muteBox.lastLeftTime > 0 ? Math.ceil((30000 - (now - muteBox.lastLeftTime)) / 1000) + "s" : "Dauerhaft";
                 muteBox.zoomStatsDiv.innerHTML = `<b style="color:#28a745;">STUMM</b><br>Nachlauf: ${rest}`;
-            } else { muteBox.zoomStatsDiv.innerHTML = `Diff: ${Math.round(mDiff)}<br>Inaktiv`; }
+            } else { muteBox.zoomStatsDiv.innerHTML = `Diff: ${Math.round(mDiff)} / Max: ${muteThreshold}<br>Inaktiv`; }
         }
     } else { muteBox.isMuted = false; }
 
@@ -824,7 +835,6 @@ function processFrame() {
             const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
             diff = Math.round(maxVal - minVal);
             
-            // WICHTIG FIX (Das Diff-Gate): Zähler zwangsweise nullen, wenn nichts Signifikantes blinkt.
             if (diff < threshold) {
                 box.validCrossings = 0;
             }
@@ -924,7 +934,6 @@ function processFrame() {
             anchorBox.zoomStatsDiv.innerHTML = txt;
         }
 
-        // WICHTIG FIX (Master Alarm): Anker bimmelt auch, wenn die Mutebox an ist!
         if (anchorBox.isAlarm && isMonitoring) playAnchorBeep();
     }
 
@@ -938,8 +947,6 @@ function processFrame() {
             const box = boxes[i]; 
             let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)'; 
             let borderColor = box.isAlarm ? '#ff0000' : '#00ff00';
-            
-            if (!isMonitoring) { fillColor = 'rgba(255,255,255,0.2)'; borderColor = '#ffffff'; }
             
             ctx.fillStyle = fillColor; ctx.fillRect(box.x, box.y, box.w, box.h);
             if (box === selectedBox) { ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
@@ -956,8 +963,6 @@ function processFrame() {
             let aFillColor = anchorBox.isAlarm ? 'rgba(255,170,0,0.3)' : 'rgba(0,170,255,0.15)'; 
             let aBorderColor = anchorBox.isAlarm ? '#ffaa00' : '#00aaff';
             
-            if (!isMonitoring) { aFillColor = 'rgba(255,255,255,0.2)'; aBorderColor = '#ffffff'; }
-            
             ctx.fillStyle = aFillColor; ctx.fillRect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h);
             if (anchorBox === selectedBox) { ctx.beginPath(); ctx.rect(anchorBox.x - 4, anchorBox.y - 4, anchorBox.w + 8, anchorBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
             
@@ -971,8 +976,6 @@ function processFrame() {
         if (muteBox.active) {
             let mFillColor = muteBox.isMuted ? 'rgba(40,167,69,0.5)' : 'rgba(40,167,69,0.2)';
             let mBorderColor = '#28a745'; 
-            
-            if (!isMonitoring) { mFillColor = 'rgba(255,255,255,0.2)'; mBorderColor = '#ffffff'; }
             
             ctx.fillStyle = mFillColor; ctx.fillRect(muteBox.x, muteBox.y, muteBox.w, muteBox.h);
             if (muteBox === selectedBox) { ctx.beginPath(); ctx.rect(muteBox.x - 4, muteBox.y - 4, muteBox.w + 8, muteBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
