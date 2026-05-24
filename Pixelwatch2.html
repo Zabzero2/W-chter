@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel-Wächter Pro v45</title>
+<title>Pixel-Wächter Pro v46</title>
 
 <style>
     body {
@@ -86,11 +86,10 @@
 
     #container { position: relative; margin-top: 10px; display: flex; justify-content: center; width: 100%; }
     
-    /* TOUCH-ACTION NONE FIxt den Drag-Bug auf dem Tablet! */
+    /* CSS Fix: Keine touch-Einschränkungen hier. Die Scroll/Drag Logik passiert jetzt rein über JavaScript. */
     canvas { 
         width: 100%; max-width: 100%; height: auto; background: black; 
         border: 2px solid #555; border-radius: 8px; 
-        touch-action: none; 
     }
     video { display: none; }
 
@@ -131,7 +130,7 @@
         </ol>
         
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smarte Auto-Korrektur</h3>
-        <p>Der Anker und die Mute-Zone verfügen über eine zuschaltbare intelligente <b>Drift-Kompensation</b>. Verändert sich das Tageslicht langsam, passen sich die Mess-Baselines automatisch an, ohne versehentlich einen Alarm auszulösen. Du musst die Referenzen bei Wetterwechseln nicht mehr manuell zurücksetzen. Die Funktion kann in den jeweiligen Modul-Einstellungen de-/aktiviert werden.</p>
+        <p>Der Anker und die Mute-Zone verfügen über eine intelligente <b>Drift-Kompensation</b>. Verändert sich das Tageslicht langsam, passen sich die Mess-Baselines automatisch an, ohne versehentlich einen Alarm auszulösen. Die Funktion kann in den jeweiligen Modul-Einstellungen de-/aktiviert werden.</p>
 
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
@@ -368,11 +367,11 @@ const chkMainSettings = document.getElementById('chkMainSettings');
 
 const chkAnchorActive = document.getElementById('chkAnchorActive');
 const chkAnchorSettings = document.getElementById('chkAnchorSettings');
-const chkAnchorDrift = document.getElementById('chkAnchorDrift'); // NEU
+const chkAnchorDrift = document.getElementById('chkAnchorDrift'); 
 
 const chkMuteActive = document.getElementById('chkMuteActive');
 const chkMuteSettings = document.getElementById('chkMuteSettings');
-const chkMuteDrift = document.getElementById('chkMuteDrift'); // NEU
+const chkMuteDrift = document.getElementById('chkMuteDrift'); 
 
 const panelMainSettings = document.getElementById('panelMainSettings');
 const panelAnchorSettings = document.getElementById('panelAnchorSettings');
@@ -439,7 +438,7 @@ let lastLoudBeep = 0;
 let lastFrameTime = 0;
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 40; // VERDOPPELT FÜR BESSERES GREIFEN AUF TOUCHSCREENS
+const HIT_PAD = 60; // Wurde auf 60 erhöht, um mit den Fingern die kleinen Boxen besser zu treffen
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
@@ -493,7 +492,6 @@ chkMainSettings.addEventListener('change', (e) => { panelMainSettings.style.disp
 chkAnchorSettings.addEventListener('change', (e) => { panelAnchorSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 chkMuteSettings.addEventListener('change', (e) => { panelMuteSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 
-// Checkbox Events für Auto-Drift
 chkAnchorDrift.addEventListener('change', () => saveSettings());
 chkMuteDrift.addEventListener('change', () => saveSettings());
 
@@ -536,7 +534,7 @@ async function loadCameras() {
                 option.value = device.deviceId; option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('pixel_settings_v45');
+            const saved = localStorage.getItem('pixel_settings_v46');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) { cameraSelect.value = s.cameraId; }
@@ -627,12 +625,12 @@ function saveSettings() {
         anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active }
     };
-    localStorage.setItem('pixel_settings_v45', JSON.stringify(settings));
+    localStorage.setItem('pixel_settings_v46', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('pixel_settings_v45') || localStorage.getItem('pixel_settings_v44');
+        const saved = localStorage.getItem('pixel_settings_v46') || localStorage.getItem('pixel_settings_v45');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
@@ -776,30 +774,60 @@ bindTurboButton('btnHPlus', (s) => {
     if(selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; slideAnchorH.dispatchEvent(new Event('input')); } else if(selectedBox === muteBox) { slideMuteH.value = selectedBox.h; slideMuteH.dispatchEvent(new Event('input')); } else { slideHeight.value = selectedBox.h; slideHeight.dispatchEvent(new Event('input')); }
 });
 
+// --- DIE SAUBERE TOUCH- & SCROLL-LOGIK ---
+function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.type.includes('touch')) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+}
+
 function startDrag(e) {
     if (!isRunning || !showCamera) return; 
     const pos = getPointerPos(e);
     let checkBoxes = boxes.slice(0, activeBoxCount); 
-    if (anchorBox.active) checkBoxes.push(anchorBox); if (muteBox.active) checkBoxes.push(muteBox);
+    if (anchorBox.active) checkBoxes.push(anchorBox); 
+    if (muteBox.active) checkBoxes.push(muteBox);
     
+    let boxHit = false;
     for (let i = checkBoxes.length - 1; i >= 0; i--) {
         const box = checkBoxes[i];
         if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
             draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; 
             if(box !== anchorBox && box !== muteBox) box.history = []; else if(box===anchorBox) anchorBox.baseline = null; else if(box===muteBox) muteBox.baseline = null;
-            e.preventDefault(); 
+            boxHit = true;
             break;
         }
     }
+
+    // Wenn eine Box getroffen wurde, blockieren wir das native Scrollen des Tablets.
+    // Wenn nicht, lassen wir den Browser ganz normal scrollen.
+    if (boxHit && e.cancelable) {
+        e.preventDefault(); 
+    }
 }
+
 function moveDrag(e) {
     if (!draggingBox || !showCamera) return; 
     const pos = getPointerPos(e);
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
     if(draggingBox !== anchorBox && draggingBox !== muteBox) draggingBox.history = []; else if(draggingBox===anchorBox) anchorBox.baseline = null; else if(draggingBox===muteBox) muteBox.baseline = null;
-    e.preventDefault(); 
+    
+    // Während wir aktiv eine Box ziehen, darf das Tablet auf keinen Fall scrollen.
+    if (e.cancelable) {
+        e.preventDefault(); 
+    }
 }
 function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
 canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
