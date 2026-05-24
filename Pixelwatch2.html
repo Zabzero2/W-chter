@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel-Wächter Pro v44</title>
+<title>Pixel-Wächter Pro v45</title>
 
 <style>
     body {
@@ -85,7 +85,13 @@
     .reset-btn-small:hover { background: #7a1010; }
 
     #container { position: relative; margin-top: 10px; display: flex; justify-content: center; width: 100%; }
-    canvas { width: 100%; max-width: 100%; height: auto; background: black; border: 2px solid #555; border-radius: 8px; }
+    
+    /* TOUCH-ACTION NONE FIxt den Drag-Bug auf dem Tablet! */
+    canvas { 
+        width: 100%; max-width: 100%; height: auto; background: black; 
+        border: 2px solid #555; border-radius: 8px; 
+        touch-action: none; 
+    }
     video { display: none; }
 
     .overlay {
@@ -124,8 +130,8 @@
             <li><b>Überwachen:</b> Sobald das Feld im eingestellten <i>Ziel-Zyklus</i> wechselt, sammelt es Punkte.</li>
         </ol>
         
-        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smarte Auto-Korrektur (Neu)</h3>
-        <p>Der Anker und die Mute-Zone verfügen über eine intelligente <b>Drift-Kompensation</b>. Verändert sich das Tageslicht langsam, passen sich die Mess-Baselines automatisch an, ohne versehentlich einen Alarm auszulösen. Du musst die Referenzen bei Wetterwechseln nicht mehr manuell zurücksetzen.</p>
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smarte Auto-Korrektur</h3>
+        <p>Der Anker und die Mute-Zone verfügen über eine zuschaltbare intelligente <b>Drift-Kompensation</b>. Verändert sich das Tageslicht langsam, passen sich die Mess-Baselines automatisch an, ohne versehentlich einen Alarm auszulösen. Du musst die Referenzen bei Wetterwechseln nicht mehr manuell zurücksetzen. Die Funktion kann in den jeweiligen Modul-Einstellungen de-/aktiviert werden.</p>
 
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
@@ -181,11 +187,11 @@
                     <label><input type="checkbox" id="chkShowDpad" checked> D-Pad</label>
                 </div>
             </div>
-            <div class="module-body" style="border:none; padding-top: 5px; margin-top: 5px; flex-direction: row; flex-wrap: wrap;">
+            <div class="module-body" style="border:none; padding-top: 5px; margin-top: 5px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <select id="cameraSelect" style="background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; flex-grow: 1; max-width: 250px;">
                     <option value="default">Standard Kamera</option>
                 </select>
-                <button id="btnResetAll" style="background: #dc3545; font-size: 12px; padding: 8px 12px;">⚠ Alles Zurücksetzen</button>
+                <button id="btnResetAll" style="background: #dc3545; font-size: 12px; padding: 8px 12px; margin-left: auto;">⚠ Alles Zurücksetzen</button>
             </div>
             <div class="slider-row" style="margin-top: 10px;">
                 <label>Live-Zoom: <span id="valCamZoom">1.0</span>x</label>
@@ -261,6 +267,11 @@
                 </div>
             </div>
             <div class="module-body" id="panelAnchorSettings" style="display: none;">
+                <div style="text-align: left; margin-bottom: 10px;">
+                    <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkAnchorDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
+                    </label>
+                </div>
                 <div class="slider-row">
                     <label>Toleranz: <span id="valAnchorSens">20</span></label>
                     <button class="adj-btn" id="anchorSensMinus">-</button>
@@ -292,6 +303,11 @@
                 </div>
             </div>
             <div class="module-body" id="panelMuteSettings" style="display: none;">
+                <div style="text-align: left; margin-bottom: 10px;">
+                    <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkMuteDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
+                    </label>
+                </div>
                 <div class="slider-row">
                     <label>Toleranz: <span id="valMuteSens">40</span></label>
                     <button class="adj-btn" id="muteSensMinus">-</button>
@@ -349,10 +365,14 @@ const chkShowZoom = document.getElementById('chkShowZoom');
 const chkShowCam = document.getElementById('chkShowCam');
 const chkShowDpad = document.getElementById('chkShowDpad');
 const chkMainSettings = document.getElementById('chkMainSettings');
+
 const chkAnchorActive = document.getElementById('chkAnchorActive');
 const chkAnchorSettings = document.getElementById('chkAnchorSettings');
+const chkAnchorDrift = document.getElementById('chkAnchorDrift'); // NEU
+
 const chkMuteActive = document.getElementById('chkMuteActive');
 const chkMuteSettings = document.getElementById('chkMuteSettings');
+const chkMuteDrift = document.getElementById('chkMuteDrift'); // NEU
 
 const panelMainSettings = document.getElementById('panelMainSettings');
 const panelAnchorSettings = document.getElementById('panelAnchorSettings');
@@ -419,14 +439,14 @@ let lastLoudBeep = 0;
 let lastFrameTime = 0;
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 20; 
+const HIT_PAD = 40; // VERDOPPELT FÜR BESSERES GREIFEN AUF TOUCHSCREENS
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
 const DEFAULTS = { 
     sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, takt: 2000,
-    anchorSens: 20, anchorW: 15, anchorH: 15, 
-    muteSens: 40, muteHold: 40, muteW: 15, muteH: 15 
+    anchorSens: 20, anchorW: 15, anchorH: 15, anchorDrift: true,
+    muteSens: 40, muteHold: 40, muteW: 15, muteH: 15, muteDrift: true
 };
 
 let boxes = [
@@ -473,6 +493,10 @@ chkMainSettings.addEventListener('change', (e) => { panelMainSettings.style.disp
 chkAnchorSettings.addEventListener('change', (e) => { panelAnchorSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 chkMuteSettings.addEventListener('change', (e) => { panelMuteSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 
+// Checkbox Events für Auto-Drift
+chkAnchorDrift.addEventListener('change', () => saveSettings());
+chkMuteDrift.addEventListener('change', () => saveSettings());
+
 chkAnchorActive.addEventListener('change', (e) => {
     anchorBox.active = e.target.checked; anchorBox.baseline = null; 
     if (anchorBox.active) selectedBox = anchorBox; else if(selectedBox === anchorBox) selectedBox = boxes[0];
@@ -512,7 +536,7 @@ async function loadCameras() {
                 option.value = device.deviceId; option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('pixel_settings_v44');
+            const saved = localStorage.getItem('pixel_settings_v45');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) { cameraSelect.value = s.cameraId; }
@@ -595,27 +619,32 @@ function saveSettings() {
     const settings = {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value,
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
-        anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value,
-        muteSens: slideMuteSens.value, muteHold: slideMuteHold.value, muteW: slideMuteW.value, muteH: slideMuteH.value,
+        anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value, anchorDrift: chkAnchorDrift.checked,
+        muteSens: slideMuteSens.value, muteHold: slideMuteHold.value, muteW: slideMuteW.value, muteH: slideMuteH.value, muteDrift: chkMuteDrift.checked,
         showZoomValues: showZoomValues, showCamera: showCamera, dpadVisible: chkShowDpad.checked, 
         settingsVisible: settingsVisible, mainSett: chkMainSettings.checked, anchSett: chkAnchorSettings.checked, muteSett: chkMuteSettings.checked,
         cameraId: cameraSelect.value, positions: boxes.map(b => ({ x: b.x, y: b.y })),
         anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active }
     };
-    localStorage.setItem('pixel_settings_v44', JSON.stringify(settings));
+    localStorage.setItem('pixel_settings_v45', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('pixel_settings_v44');
+        const saved = localStorage.getItem('pixel_settings_v45') || localStorage.getItem('pixel_settings_v44');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
             if (s.pulse) slidePulse.value = s.pulse; if (s.hold) slideHold.value = s.hold; if (s.takt) slideTakt.value = s.takt; 
+            
             if (s.anchorSens) slideAnchorSens.value = s.anchorSens; if (s.anchorW) slideAnchorW.value = s.anchorW; if (s.anchorH) slideAnchorH.value = s.anchorH;
+            if (s.anchorDrift !== undefined) chkAnchorDrift.checked = s.anchorDrift;
+            
             if (s.muteSens) slideMuteSens.value = s.muteSens; if (s.muteHold) slideMuteHold.value = s.muteHold; 
             if (s.muteW) slideMuteW.value = s.muteW; if (s.muteH) slideMuteH.value = s.muteH;
+            if (s.muteDrift !== undefined) chkMuteDrift.checked = s.muteDrift;
+            
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
             
             if (s.showZoomValues !== undefined) { showZoomValues = s.showZoomValues; chkShowZoom.checked = s.showZoomValues; }
@@ -682,13 +711,13 @@ document.getElementById('btnResetMain').addEventListener('click', () => {
 });
 
 document.getElementById('btnResetAnchor').addEventListener('click', () => {
-    slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH;
+    slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH; chkAnchorDrift.checked = DEFAULTS.anchorDrift;
     anchorBox.w = DEFAULTS.anchorW; anchorBox.h = DEFAULTS.anchorH; anchorBox.baseline = null; anchorBox.x = 200; anchorBox.y = 100;
     updateLabels(); saveSettings();
 });
 
 document.getElementById('btnResetMute').addEventListener('click', () => {
-    slideMuteSens.value = DEFAULTS.muteSens; slideMuteHold.value = DEFAULTS.muteHold; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH;
+    slideMuteSens.value = DEFAULTS.muteSens; slideMuteHold.value = DEFAULTS.muteHold; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH; chkMuteDrift.checked = DEFAULTS.muteDrift;
     muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null; muteBox.x = 200; muteBox.y = 200; muteBox.isMuted = false;
     updateLabels(); saveSettings();
 });
@@ -748,21 +777,25 @@ bindTurboButton('btnHPlus', (s) => {
 });
 
 function startDrag(e) {
-    if (!isRunning || !showCamera) return; const pos = getPointerPos(e);
+    if (!isRunning || !showCamera) return; 
+    const pos = getPointerPos(e);
     let checkBoxes = boxes.slice(0, activeBoxCount); 
     if (anchorBox.active) checkBoxes.push(anchorBox); if (muteBox.active) checkBoxes.push(muteBox);
+    
     for (let i = checkBoxes.length - 1; i >= 0; i--) {
         const box = checkBoxes[i];
         if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
             draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; 
             if(box !== anchorBox && box !== muteBox) box.history = []; else if(box===anchorBox) anchorBox.baseline = null; else if(box===muteBox) muteBox.baseline = null;
-            e.preventDefault(); break;
+            e.preventDefault(); 
+            break;
         }
     }
 }
 function moveDrag(e) {
-    if (!draggingBox || !showCamera) return; const pos = getPointerPos(e);
+    if (!draggingBox || !showCamera) return; 
+    const pos = getPointerPos(e);
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
     if(draggingBox !== anchorBox && draggingBox !== muteBox) draggingBox.history = []; else if(draggingBox===anchorBox) anchorBox.baseline = null; else if(draggingBox===muteBox) muteBox.baseline = null;
@@ -804,9 +837,6 @@ async function startSystem() {
 function stopSystem() { isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop()); if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera Start'; }
 startBtn.addEventListener('click', () => { if (!isRunning) startSystem(); else stopSystem(); });
 
-
-// --- MODULARE BILDANALYSE ---
-
 function analyzeMute(now) {
     if (!muteBox.active) { muteBox.isMuted = false; return; }
     const mx = Math.floor(muteBox.x); const my = Math.floor(muteBox.y); const mw = Math.floor(muteBox.w); const mh = Math.floor(muteBox.h);
@@ -822,7 +852,7 @@ function analyzeMute(now) {
     let mDiff = Math.abs(mAvg - muteBox.baseline);
     let muteThreshold = parseInt(slideMuteSens.value);
     let muteHoldMs = parseInt(slideMuteHold.value) * 1000;
-    let isTracking = false; // Für die Anzeige
+    let isTracking = false; 
 
     if (mDiff >= muteThreshold) {
         if (!muteBox.isMuted) { muteBox.isMuted = true; muteBox.insideStartTime = now; }
@@ -835,10 +865,8 @@ function analyzeMute(now) {
             muteBox.isMuted = false; muteBox.insideStartTime = 0; muteBox.lastLeftTime = 0;
         }
 
-        // NEU: Auto-Drift-Kompensation (Anpassung an sich veränderndes Umgebungslicht)
-        // Wenn die Mute-Zone inaktiv ist und sich das Licht nur leicht verändert hat (< 50% der Schwelle)
-        if (!muteBox.isMuted && mDiff > 0 && mDiff < muteThreshold * 0.5) {
-            muteBox.baseline = (muteBox.baseline * 0.95) + (mAvg * 0.05); // Gleitet langsam zum neuen Wert
+        if (chkMuteDrift.checked && !muteBox.isMuted && mDiff > 0 && mDiff < muteThreshold * 0.5) {
+            muteBox.baseline = (muteBox.baseline * 0.95) + (mAvg * 0.05); 
             isTracking = true;
         }
     }
@@ -960,15 +988,11 @@ function analyzeAnchor(now) {
     } else { 
         anchorBox.alarmStart = 0; anchorBox.isAlarm = false; 
 
-        // NEU: Auto-Drift-Kompensation (Anpassung an sich veränderndes Umgebungslicht)
-        // Wenn die Struktur-Abweichung klein ist (< 50% vom Schwellenwert), driftet das Referenzbild sanft mit
-        if (isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold * 0.5) {
+        if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold * 0.5) {
             for (let j = 0; j < aData.length; j++) {
-                // Verschmilzt das Live-Pixel ganz leicht in die Baseline (2% Live, 98% Alt)
                 anchorBox.baseline[j] = Math.round(anchorBox.baseline[j] * 0.98 + aData[j] * 0.02);
             }
             isTracking = true;
-            // Um CPU zu sparen, wird das winzige Referenz-Vorschaubild nur ab und zu neu gezeichnet
             if (Math.random() < 0.05) anchorBox.refNeedsDraw = true;
         }
     }
