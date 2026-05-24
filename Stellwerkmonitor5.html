@@ -3,52 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESTW Wächter Pro v40</title>
+<title>Pixel-Wächter Pro v41</title>
 
 <style>
     body {
-        margin: 0;
-        padding: 10px;
-        background: #1e1e1e;
-        color: white;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        overflow-x: hidden;
-        user-select: none;
+        margin: 0; padding: 10px; background: #1e1e1e; color: white;
+        font-family: Arial, sans-serif; text-align: center;
+        overflow-x: hidden; user-select: none;
     }
 
-    #topPanelContainer {
-        background: #2b2b2b;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        overflow: hidden;
-        width: 100%;
-    }
-
-    #zoomHeader {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding: 10px;
-        min-height: 60px;
-    }
+    #topPanelContainer { background: #2b2b2b; border-radius: 10px; margin-bottom: 10px; overflow: hidden; width: 100%; }
+    #zoomHeader { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 10px; min-height: 60px; }
 
     .zoom-box {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        background: #444;
-        padding: 5px;
-        border-radius: 6px;
-        border: 2px solid #555;
-        cursor: pointer;
-        width: 110px; 
-        flex-shrink: 0;
-        transition: border-color 0.1s, background 0.1s;
+        display: flex; flex-direction: column; align-items: center;
+        background: #444; padding: 5px; border-radius: 6px;
+        border: 2px solid #555; cursor: pointer; width: 110px; 
+        flex-shrink: 0; transition: border-color 0.1s, background 0.1s;
     }
     .zoom-box:active { background: #555; }
-    
     .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
     .zoom-box.alarm-zoom { border-color: #ff0000 !important; background: #5a1010 !important; }
 
@@ -57,38 +30,24 @@
     
     .mute-zoom { width: 125px; border-color: #ffcc00; background: #4a3a00; padding: 5px 10px; }
 
-    .zoom-canvas {
-        width: 80px; height: 40px; background: black;
-        border: 1px solid #111; image-rendering: pixelated; 
-    }
+    .zoom-canvas { width: 80px; height: 40px; background: black; border: 1px solid #111; image-rendering: pixelated; }
     
     .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
     .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; width: 100%; word-wrap: break-word; }
 
     .dpad-container {
         display: flex; flex-direction: column; align-items: center; gap: 15px;
-        background: #333; padding: 15px 10px; border-radius: 10px;
-        margin-bottom: 10px;
+        background: #333; padding: 15px 10px; border-radius: 10px; margin-bottom: 10px;
     }
-    
-    .dpad-grid {
-        display: grid;
-        grid-template-columns: auto auto auto;
-        gap: 15px 25px;
-        justify-content: center;
-        align-items: end;
-    }
+    .dpad-grid { display: grid; grid-template-columns: auto auto auto; gap: 15px 25px; justify-content: center; align-items: end; }
     
     .dpad-btn { 
         background: #555; font-size: 18px; padding: 12px 25px; 
-        border-radius: 6px; border: none; color: white; cursor: pointer;
-        touch-action: manipulation;
+        border-radius: 6px; border: none; color: white; cursor: pointer; touch-action: manipulation;
     }
     .dpad-btn:active { background: #777; }
 
     #ui { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-
-    /* Maximale Breite für Tablet-Layout stark erweitert */
     .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 900px;}
 
     button {
@@ -99,48 +58,49 @@
     button:hover { background: #666; }
     
     #monitorBtn.off { background: #dc3545; } 
-    #anchorBtn.off { background: #555; }
-    #anchorBtn { background: #17a2b8; }
-    #muteBoxBtn.off { background: #555; color: white;}
-    #muteBoxBtn { background: #ffcc00; color: #000; } 
 
-    .stealth-hint {
-        font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px;
-    }
+    .stealth-hint { font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px; }
 
-    .toggle-btn {
-        width: 100%; max-width: 900px; background: #333; border: 1px solid #555;
-        margin-bottom: 5px; font-size: 13px; color: #ccc;
+    .module-section {
+        width: 95%; max-width: 900px; background: #2b2b2b; border-radius: 8px; 
+        padding: 10px; margin-bottom: 5px; text-align: left; border-left: 4px solid #555;
     }
-    .toggle-btn:active { background: #444; }
+    .module-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; }
+    .module-body { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; }
 
-    .controls {
-        width: 95%; max-width: 900px; background: #2b2b2b;
-        border-radius: 10px; padding: 12px; display: flex;
-        flex-direction: column; gap: 10px;
-    }
+    /* Farben für die Sektionen */
+    .sec-main { border-left-color: #00ff88; }
+    .sec-anchor { border-left-color: #17a2b8; }
+    .sec-mute { border-left-color: #ffcc00; }
 
     .slider-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .slider-row label { width: 150px; text-align: left; font-size: 13px; }
+    .slider-row label { width: 140px; text-align: left; font-size: 13px; }
     .slider-row input[type="range"] { flex-grow: 1; }
-    .slider-row select { 
-        flex-grow: 1; background: #444; color: white;
-        border: 1px solid #666; border-radius: 4px; padding: 5px;
-    }
+    .slider-row select { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; }
     
-    .adj-btn {
-        width: 32px; height: 32px; padding: 0; background: #555;
-        font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center;
-    }
-    
-    .camera-row {
-        background: #3a3a3a; padding: 8px; border-radius: 6px;
-        display: flex; flex-direction: column; gap: 8px; margin-bottom: 5px;
-    }
+    .adj-btn { width: 32px; height: 32px; padding: 0; background: #555; font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center; }
 
-    #container { position: relative; margin-top: 10px; display: inline-block; max-width: 100%; }
+    .checkbox-group { display: flex; gap: 15px; font-size: 13px; font-weight: normal; }
+    .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+
+    .reset-btn-small { background: #5a1010; font-size: 12px; padding: 8px 12px; margin-top: 5px; align-self: flex-start; }
+    .reset-btn-small:hover { background: #7a1010; }
+
+    #container { position: relative; margin-top: 10px; display: flex; justify-content: center; width: 100%; }
     canvas { width: 100%; max-width: 100%; height: auto; background: black; border: 2px solid #555; border-radius: 8px; }
     video { display: none; }
+
+    .overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: rgba(0,0,0,0.9); display: none; z-index: 9999; 
+        justify-content: center; align-items: center; flex-direction: column;
+        font-family: Arial, sans-serif; color: white; padding: 20px; box-sizing: border-box;
+    }
+    .help-content { background: #222; padding: 25px; border-radius: 12px; max-width: 600px; text-align: left; border: 1px solid #444; }
+    .help-content h2 { margin-top: 0; color: #00aaff; }
+    .help-content p, .help-content li { font-size: 14px; line-height: 1.5; color: #ccc; }
+    .help-content ul { padding-left: 20px; }
 </style>
 </head>
 <body>
@@ -154,6 +114,21 @@
     <span id="minsHTML">00</span>
 </div>
 
+<div id="helpOverlay" class="overlay">
+    <div class="help-content">
+        <h2>Hilfe & Anleitung</h2>
+        <p>Der <b>Pixel-Wächter Pro</b> ist ein optisches Analysewerkzeug zur Überwachung von Helligkeitsschwankungen und Rhythmen in definierten Bildbereichen.</p>
+        <ul>
+            <li><b>Mess-Felder (Boxen):</b> Analysieren Rhythmen. Stelle den Ziel-Zyklus so ein, dass er der Dauer eines kompletten Blink-Intervalls entspricht.</li>
+            <li><b>Empfindlichkeit (Diff):</b> Bestimmt, ab welcher Helligkeitsdifferenz ein Blinken als solches erkannt wird.</li>
+            <li><b>Min. Takt-Punkte:</b> Wie oft das Signal sauber blinken muss, bevor der Alarm auslöst.</li>
+            <li><b>Anker (Verrutsch-Schutz):</b> Vergleicht ein Referenzbild pixelgenau. Bei Bewegung der Kamera wird Alarm geschlagen.</li>
+            <li><b>Mute-Zone:</b> Unterdrückt Alarme temporär, wenn eine starke Helligkeitsänderung (z.B. Mauszeiger) in diesem Feld erkannt wird. Löst nach 5 Minuten einen Daueralarm aus.</li>
+        </ul>
+        <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff;">Schließen</button>
+    </div>
+</div>
+
 <div style="width: 100%; max-width: 1000px; margin: 0 auto;">
     <div id="topPanelContainer">
         <div id="zoomHeader"></div>
@@ -163,7 +138,6 @@
         <div style="font-size: 13px; color: #00ff88; margin-bottom: 5px;">
             Ausgewählte Box <span id="selectedBoxId">1</span>
         </div>
-        
         <div class="dpad-grid">
             <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
                 <span style="font-size: 11px; color:#aaa;">Rahmen-Breite</span>
@@ -172,9 +146,7 @@
                     <button class="dpad-btn" style="padding: 10px 15px;" id="btnWPlus">+</button>
                 </div>
             </div>
-            
             <button class="dpad-btn" id="btnUp" style="padding: 15px 25px;">🔼</button>
-            
             <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
                 <span style="font-size: 11px; color:#aaa;">Rahmen-Höhe</span>
                 <div style="display:flex; gap:5px;">
@@ -182,7 +154,6 @@
                     <button class="dpad-btn" style="padding: 10px 15px;" id="btnHPlus">+</button>
                 </div>
             </div>
-
             <button class="dpad-btn" id="btnLeft" style="padding: 15px 25px;">◀️</button>
             <button class="dpad-btn" id="btnDown" style="padding: 15px 25px;">🔽</button>
             <button class="dpad-btn" id="btnRight" style="padding: 15px 25px;">▶️</button>
@@ -195,102 +166,150 @@
         <button id="startBtn">Kamera Start</button>
         <button id="monitorBtn">Überwachung: AKTIV</button>
         <button id="activateStealthBtn">Tarnmodus</button>
+        <button id="helpBtn" style="background: #17a2b8; padding: 12px 18px;">?</button>
     </div>
     
     <div class="stealth-hint">Tipp: Tarnmodus beenden durch Tippen auf den unteren Uhr-Punkt.</div>
 
-    <button id="toggleSettingsBtn" class="toggle-btn">⚙️ Einstellungen einblenden</button>
-
-    <div class="controls" id="settingsPanel" style="display: none;">
-        
-        <div class="button-row" style="margin-bottom: 10px;">
-            <button id="toggleZoomTextBtn">Werte: EIN</button>
-            <button id="toggleCameraBtn">Live-Bild: SICHTBAR</button>
-            <button id="toggleDpadBtn" style="background: #444; border: 1px solid #777;">🎯 Feinjustierung: EIN</button>
-            <button id="resetBtn">Reset</button>
+    <div class="module-section">
+        <div class="module-header">
+            <span>Anzeige & Justierung</span>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkShowZoom" checked> Werte</label>
+                <label><input type="checkbox" id="chkShowCam" checked> Live-Bild</label>
+                <label><input type="checkbox" id="chkShowDpad" checked> D-Pad</label>
+            </div>
         </div>
-        
-        <div class="button-row" style="margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 10px;">
-            <button id="anchorBtn" class="off">Anker: AUS</button>
-            <button id="muteBoxBtn" class="off">Mutebox: AUS</button>
+        <div class="module-body" style="border:none; padding-top: 5px; margin-top: 5px; flex-direction: row; flex-wrap: wrap;">
+            <select id="cameraSelect" style="background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; flex-grow: 1; max-width: 250px;">
+                <option value="default">Standard Kamera</option>
+            </select>
+            <button id="btnResetAll" style="background: #dc3545; font-size: 12px; padding: 8px 12px;">⚠ Alles Zurücksetzen</button>
         </div>
+        <div class="slider-row" style="margin-top: 10px;">
+            <label>Live-Zoom: <span id="valCamZoom">1.0</span>x</label>
+            <button class="adj-btn" id="zoomMinus">-</button>
+            <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
+            <button class="adj-btn" id="zoomPlus">+</button>
+        </div>
+    </div>
 
-        <div class="camera-row">
+    <div class="module-section sec-main">
+        <div class="module-header">
+            <span>Mess-Felder (Rhythmus)</span>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkMainSettings"> Konfigurieren</label>
+            </div>
+        </div>
+        <div class="module-body" id="panelMainSettings" style="display: none;">
             <div class="slider-row">
-                <label>Kamera:</label>
-                <select id="cameraSelect">
-                    <option value="default">Standard Rückkamera</option>
+                <label>Anzahl Felder:</label>
+                <select id="boxCountSelect">
+                    <option value="1">1 Feld</option>
+                    <option value="2" selected>2 Felder</option> 
+                    <option value="3">3 Felder</option>
+                    <option value="4">4 Felder</option>
                 </select>
             </div>
-            <div class="slider-row" id="zoomContainer">
-                <label>Kamera-Zoom: <span id="valCamZoom">1.0</span>x</label>
-                <button class="adj-btn" id="zoomMinus">-</button>
-                <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
-                <button class="adj-btn" id="zoomPlus">+</button>
+            <div class="slider-row">
+                <label>Empfindlichkeit: <span id="valSens">15</span></label>
+                <button class="adj-btn" id="sensMinus">-</button>
+                <input type="range" id="slideSens" min="2" max="100" value="15">
+                <button class="adj-btn" id="sensPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Ziel-Zyklus: <span id="valTakt">2000</span>ms</label>
+                <button class="adj-btn" id="taktMinus">-</button>
+                <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
+                <button class="adj-btn" id="taktPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Rahmen-Breite: <span id="valWidth">30</span></label>
+                <button class="adj-btn" id="widthMinus">-</button>
+                <input type="range" id="slideWidth" min="5" max="100" value="30">
+                <button class="adj-btn" id="widthPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Rahmen-Höhe: <span id="valHeight">12</span></label>
+                <button class="adj-btn" id="heightMinus">-</button>
+                <input type="range" id="slideHeight" min="5" max="50" value="12">
+                <button class="adj-btn" id="heightPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Min. Takt-Punkte: <span id="valPulse">4</span></label>
+                <button class="adj-btn" id="pulseMinus">-</button>
+                <input type="range" id="slidePulse" min="1" max="10" value="4">
+                <button class="adj-btn" id="pulsePlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Alarmdauer: <span id="valHold">1.5</span>s</label>
+                <button class="adj-btn" id="holdMinus">-</button>
+                <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="1.5">
+                <button class="adj-btn" id="holdPlus">+</button>
+            </div>
+            <button id="btnResetMain" class="reset-btn-small">Modul Reset</button>
+        </div>
+    </div>
+
+    <div class="module-section sec-anchor">
+        <div class="module-header">
+            <span>Anker-Referenz</span>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkAnchorActive"> Aktiv</label>
+                <label><input type="checkbox" id="chkAnchorSettings"> Config</label>
             </div>
         </div>
+        <div class="module-body" id="panelAnchorSettings" style="display: none;">
+            <div class="slider-row">
+                <label>Toleranz: <span id="valAnchorSens">20</span></label>
+                <button class="adj-btn" id="anchorSensMinus">-</button>
+                <input type="range" id="slideAnchorSens" min="5" max="100" value="20">
+                <button class="adj-btn" id="anchorSensPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Breite: <span id="valAnchorW">15</span></label>
+                <button class="adj-btn" id="anchorWMinus">-</button>
+                <input type="range" id="slideAnchorW" min="5" max="100" value="15">
+                <button class="adj-btn" id="anchorWPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Höhe: <span id="valAnchorH">15</span></label>
+                <button class="adj-btn" id="anchorHMinus">-</button>
+                <input type="range" id="slideAnchorH" min="5" max="50" value="15">
+                <button class="adj-btn" id="anchorHPlus">+</button>
+            </div>
+            <button id="btnResetAnchor" class="reset-btn-small">Modul Reset</button>
+        </div>
+    </div>
 
-        <div class="slider-row">
-            <label>Anzahl Boxen:</label>
-            <select id="boxCountSelect">
-                <option value="1">1 Box</option>
-                <option value="2" selected>2 Boxen</option> 
-                <option value="3">3 Boxen</option>
-                <option value="4">4 Boxen</option>
-            </select>
+    <div class="module-section sec-mute">
+        <div class="module-header">
+            <span>Mute-Zone</span>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="chkMuteActive"> Aktiv</label>
+                <label><input type="checkbox" id="chkMuteSettings"> Config</label>
+            </div>
         </div>
-        
-        <div class="slider-row" style="background:#202020; padding:8px; border-radius:6px; margin-top:5px;">
-            <label style="color:#00aaff;">Anker-Toleranz: <span id="valAnchorSens">20</span></label>
-            <button class="adj-btn" id="anchorSensMinus">-</button>
-            <input type="range" id="slideAnchorSens" min="5" max="100" value="20">
-            <button class="adj-btn" id="anchorSensPlus">+</button>
-        </div>
-        
-        <div class="slider-row" style="background:#202020; padding:8px; border-radius:6px;">
-            <label style="color:#ffcc00;">Mute-Toleranz: <span id="valMuteSens">40</span></label>
-            <button class="adj-btn" id="muteSensMinus">-</button>
-            <input type="range" id="slideMuteSens" min="5" max="100" value="40">
-            <button class="adj-btn" id="muteSensPlus">+</button>
-        </div>
-
-        <div class="slider-row" style="margin-top: 5px;">
-            <label>Empfindlichkeit: <span id="valSens">15</span></label>
-            <button class="adj-btn" id="sensMinus">-</button>
-            <input type="range" id="slideSens" min="2" max="100" value="15">
-            <button class="adj-btn" id="sensPlus">+</button>
-        </div>
-        
-        <div class="slider-row">
-            <label>Ziel-Zyklus: <span id="valTakt">2000</span>ms</label>
-            <button class="adj-btn" id="taktMinus">-</button>
-            <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
-            <button class="adj-btn" id="taktPlus">+</button>
-        </div>
-
-        <div class="slider-row">
-            <label>Rahmen-Breite: <span id="valWidth">30</span></label>
-            <button class="adj-btn" id="widthMinus">-</button>
-            <input type="range" id="slideWidth" min="5" max="100" value="30">
-            <button class="adj-btn" id="widthPlus">+</button>
-        </div>
-        <div class="slider-row">
-            <label>Rahmen-Höhe: <span id="valHeight">12</span></label>
-            <button class="adj-btn" id="heightMinus">-</button>
-            <input type="range" id="slideHeight" min="5" max="50" value="12">
-            <button class="adj-btn" id="heightPlus">+</button>
-        </div>
-        <div class="slider-row">
-            <label>Min. Takt-Punkte: <span id="valPulse">4</span></label>
-            <button class="adj-btn" id="pulseMinus">-</button>
-            <input type="range" id="slidePulse" min="1" max="10" value="4">
-            <button class="adj-btn" id="pulsePlus">+</button>
-        </div>
-        <div class="slider-row">
-            <label>Alarmdauer: <span id="valHold">1.5</span>s</label>
-            <button class="adj-btn" id="holdMinus">-</button>
-            <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="1.5">
-            <button class="adj-btn" id="holdPlus">+</button>
+        <div class="module-body" id="panelMuteSettings" style="display: none;">
+            <div class="slider-row">
+                <label>Toleranz: <span id="valMuteSens">40</span></label>
+                <button class="adj-btn" id="muteSensMinus">-</button>
+                <input type="range" id="slideMuteSens" min="5" max="100" value="40">
+                <button class="adj-btn" id="muteSensPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Breite: <span id="valMuteW">15</span></label>
+                <button class="adj-btn" id="muteWMinus">-</button>
+                <input type="range" id="slideMuteW" min="5" max="100" value="15">
+                <button class="adj-btn" id="muteWPlus">+</button>
+            </div>
+            <div class="slider-row">
+                <label>Höhe: <span id="valMuteH">15</span></label>
+                <button class="adj-btn" id="muteHMinus">-</button>
+                <input type="range" id="slideMuteH" min="5" max="50" value="15">
+                <button class="adj-btn" id="muteHPlus">+</button>
+            </div>
+            <button id="btnResetMute" class="reset-btn-small">Modul Reset</button>
         </div>
     </div>
 </div>
@@ -308,29 +327,35 @@ const zoomHeader = document.getElementById('zoomHeader');
 
 const startBtn = document.getElementById('startBtn');
 const monitorBtn = document.getElementById('monitorBtn');
-const anchorBtn = document.getElementById('anchorBtn');
-const muteBoxBtn = document.getElementById('muteBoxBtn');
-const resetBtn = document.getElementById('resetBtn');
-const toggleZoomTextBtn = document.getElementById('toggleZoomTextBtn');
-const toggleCameraBtn = document.getElementById('toggleCameraBtn');
 const activateStealthBtn = document.getElementById('activateStealthBtn');
 const stealthOverlay = document.getElementById('stealthOverlay');
 const exitStealthBtn = document.getElementById('exitStealthBtn');
+const helpBtn = document.getElementById('helpBtn');
+const helpOverlay = document.getElementById('helpOverlay');
+const closeHelpBtn = document.getElementById('closeHelpBtn');
 
-const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
-const settingsPanel = document.getElementById('settingsPanel');
-const toggleDpadBtn = document.getElementById('toggleDpadBtn');
+// UI Checkboxes
+const chkShowZoom = document.getElementById('chkShowZoom');
+const chkShowCam = document.getElementById('chkShowCam');
+const chkShowDpad = document.getElementById('chkShowDpad');
+
+const chkMainSettings = document.getElementById('chkMainSettings');
+const chkAnchorActive = document.getElementById('chkAnchorActive');
+const chkAnchorSettings = document.getElementById('chkAnchorSettings');
+const chkMuteActive = document.getElementById('chkMuteActive');
+const chkMuteSettings = document.getElementById('chkMuteSettings');
+
+// Panels
+const panelMainSettings = document.getElementById('panelMainSettings');
+const panelAnchorSettings = document.getElementById('panelAnchorSettings');
+const panelMuteSettings = document.getElementById('panelMuteSettings');
 const dpadPanel = document.getElementById('dpadPanel');
 
 const cameraSelect = document.getElementById('cameraSelect');
 const slideCamZoom = document.getElementById('slideCamZoom');
 const valCamZoom = document.getElementById('valCamZoom');
 
-const slideAnchorSens = document.getElementById('slideAnchorSens');
-const valAnchorSens = document.getElementById('valAnchorSens');
-const slideMuteSens = document.getElementById('slideMuteSens');
-const valMuteSens = document.getElementById('valMuteSens');
-
+// Main Sliders
 const slideSens = document.getElementById('slideSens');
 const slideTakt = document.getElementById('slideTakt');
 const slideWidth = document.getElementById('slideWidth');
@@ -345,6 +370,23 @@ const valWidth = document.getElementById('valWidth');
 const valHeight = document.getElementById('valHeight');
 const valPulse = document.getElementById('valPulse');
 const valHold = document.getElementById('valHold');
+
+// Anchor Sliders
+const slideAnchorSens = document.getElementById('slideAnchorSens');
+const valAnchorSens = document.getElementById('valAnchorSens');
+const slideAnchorW = document.getElementById('slideAnchorW');
+const valAnchorW = document.getElementById('valAnchorW');
+const slideAnchorH = document.getElementById('slideAnchorH');
+const valAnchorH = document.getElementById('valAnchorH');
+
+// Mute Sliders
+const slideMuteSens = document.getElementById('slideMuteSens');
+const valMuteSens = document.getElementById('valMuteSens');
+const slideMuteW = document.getElementById('slideMuteW');
+const valMuteW = document.getElementById('valMuteW');
+const slideMuteH = document.getElementById('slideMuteH');
+const valMuteH = document.getElementById('valMuteH');
+
 const selectedBoxIdLabel = document.getElementById('selectedBoxId');
 const hoursHTML = document.getElementById('hoursHTML');
 const minsHTML = document.getElementById('minsHTML');
@@ -353,8 +395,6 @@ let isRunning = false;
 let isMonitoring = true; 
 let showZoomValues = true;
 let showCamera = true;
-let settingsVisible = false; 
-let dpadVisible = true;
 let isStealthActive = false;
 let currentTrack = null; 
 
@@ -366,6 +406,7 @@ let wakeLock = null;
 let lastBeep = 0;
 let lastAnchorBeep = 0;
 let lastQuietBeep = 0;
+let lastLoudBeep = 0;
 
 let lastFrameTime = 0;
 const TARGET_FPS = 15; 
@@ -374,7 +415,7 @@ const HIT_PAD = 20;
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
-const DEFAULTS = { sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, muteSens: 40, takt: 2000 };
+const DEFAULTS = { sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, anchorSens: 20, anchorW: 15, anchorH: 15, muteSens: 40, muteW: 15, muteH: 15, takt: 2000 };
 
 let boxes = [
     { id: 1, x: 60, y: 60, w: 30, h: 12, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
@@ -399,53 +440,50 @@ let activeBoxCount = 2;
 let selectedBox = boxes[0];
 
 function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.fillStyle = "black"; ctx.fillRect(0, 0, targetW, targetH);
     let scale = Math.min(targetW / sw, targetH / sh);
-    let drawW = sw * scale;
-    let drawH = sh * scale;
-    let dx = (targetW - drawW) / 2;
-    let dy = (targetH - drawH) / 2;
+    let drawW = sw * scale; let drawH = sh * scale;
+    let dx = (targetW - drawW) / 2; let dy = (targetH - drawH) / 2;
     ctx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, drawW, drawH);
 }
 
-toggleSettingsBtn.addEventListener('click', () => {
-    settingsVisible = !settingsVisible;
-    settingsPanel.style.display = settingsVisible ? 'flex' : 'none';
-    toggleSettingsBtn.innerText = settingsVisible ? '⚙️ Einstellungen ausblenden' : '⚙️ Einstellungen einblenden';
+// UI Toggles
+chkShowZoom.addEventListener('change', (e) => {
+    showZoomValues = e.target.checked;
+    for (let i = 0; i < activeBoxCount; i++) { if (boxes[i].zoomStatsDiv) boxes[i].zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none'; }
+    if (anchorBox.zoomStatsDiv) anchorBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
+    if (muteBox.zoomStatsDiv) muteBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
     saveSettings();
 });
 
-toggleDpadBtn.addEventListener('click', () => {
-    dpadVisible = !dpadVisible;
-    dpadPanel.style.display = dpadVisible ? 'flex' : 'none';
-    toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung: AUS' : '🎯 Feinjustierung: EIN';
-    saveSettings();
+chkShowCam.addEventListener('change', (e) => { 
+    showCamera = e.target.checked; 
+    canvas.style.display = showCamera ? 'block' : 'none'; // Komplette Ausblendung!
+    saveSettings(); 
 });
 
-anchorBtn.addEventListener('click', () => {
-    anchorBox.active = !anchorBox.active;
-    anchorBox.baseline = null; 
-    if (anchorBox.active) {
-        anchorBtn.innerText = "Anker: AKTIV"; anchorBtn.classList.remove("off"); selectedBox = anchorBox; 
-    } else {
-        anchorBtn.innerText = "Anker: AUS"; anchorBtn.classList.add("off"); if(selectedBox === anchorBox) selectedBox = boxes[0];
-    }
+chkShowDpad.addEventListener('change', (e) => { dpadPanel.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
+chkMainSettings.addEventListener('change', (e) => { panelMainSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
+chkAnchorSettings.addEventListener('change', (e) => { panelAnchorSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
+chkMuteSettings.addEventListener('change', (e) => { panelMuteSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
+
+chkAnchorActive.addEventListener('change', (e) => {
+    anchorBox.active = e.target.checked; anchorBox.baseline = null; 
+    if (anchorBox.active) { selectedBox = anchorBox; } else { if(selectedBox === anchorBox) selectedBox = boxes[0]; }
     saveSettings(); createZoomDisplays();
 });
 
-muteBoxBtn.addEventListener('click', () => {
-    muteBox.active = !muteBox.active;
-    muteBox.baseline = null; 
-    muteBox.isMuted = false; muteBox.insideStartTime = 0; muteBox.lastLeftTime = 0;
-    if (muteBox.active) {
-        muteBoxBtn.innerText = "Mutebox: AKTIV"; muteBoxBtn.classList.remove("off"); selectedBox = muteBox;
-    } else {
-        muteBoxBtn.innerText = "Mutebox: AUS"; muteBoxBtn.classList.add("off"); if(selectedBox === muteBox) selectedBox = boxes[0];
-    }
+chkMuteActive.addEventListener('change', (e) => {
+    muteBox.active = e.target.checked; muteBox.baseline = null; muteBox.isMuted = false; muteBox.insideStartTime = 0; muteBox.lastLeftTime = 0;
+    if (muteBox.active) { selectedBox = muteBox; } else { if(selectedBox === muteBox) selectedBox = boxes[0]; }
     saveSettings(); createZoomDisplays();
 });
 
+// Help Overlay
+helpBtn.addEventListener('click', () => helpOverlay.style.display = 'flex');
+closeHelpBtn.addEventListener('click', () => helpOverlay.style.display = 'none');
+
+// Sliders Setup
 function setupAdjBtn(minusId, plusId, sliderId) {
     const slider = document.getElementById(sliderId);
     document.getElementById(minusId).addEventListener('click', (e) => {
@@ -464,8 +502,14 @@ setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
 setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse');
 setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
 setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom');
+
 setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
+setupAdjBtn('anchorWMinus', 'anchorWPlus', 'slideAnchorW');
+setupAdjBtn('anchorHMinus', 'anchorHPlus', 'slideAnchorH');
+
 setupAdjBtn('muteSensMinus', 'muteSensPlus', 'slideMuteSens');
+setupAdjBtn('muteWMinus', 'muteWPlus', 'slideMuteW');
+setupAdjBtn('muteHMinus', 'muteHPlus', 'slideMuteH');
 
 async function loadCameras() {
     try {
@@ -475,40 +519,30 @@ async function loadCameras() {
             cameraSelect.innerHTML = '';
             videoDevices.forEach((device, index) => {
                 const option = document.createElement('option');
-                option.value = device.deviceId;
-                option.text = device.label || `Kamera ${index + 1}`;
+                option.value = device.deviceId; option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('estw_settings_v40');
+            const saved = localStorage.getItem('pixel_settings_v41');
             if (saved) {
                 const s = JSON.parse(saved);
-                if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) {
-                    cameraSelect.value = s.cameraId;
-                }
+                if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) { cameraSelect.value = s.cameraId; }
             }
         }
     } catch (e) {}
 }
 
-cameraSelect.addEventListener('change', () => {
-    saveSettings(); if (isRunning) { stopSystem(); setTimeout(startSystem, 500); }
-});
-
-slideCamZoom.addEventListener('input', (e) => {
-    valCamZoom.innerText = parseFloat(e.target.value).toFixed(1);
-    if (currentTrack) { try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {} }
-});
+cameraSelect.addEventListener('change', () => { saveSettings(); if (isRunning) { stopSystem(); setTimeout(startSystem, 500); } });
+slideCamZoom.addEventListener('input', (e) => { valCamZoom.innerText = parseFloat(e.target.value).toFixed(1); if (currentTrack) { try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {} } });
 
 function createZoomDisplays() {
     zoomHeader.innerHTML = '';
-    
     for (let i = 0; i < activeBoxCount; i++) {
         const div = document.createElement('div'); div.className = 'zoom-box';
         div.onclick = () => { selectedBox = boxes[i]; updateZoomSelectionUI(); };
         const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
         const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'BOX ' + (i+1);
         const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
-        stats.innerHTML = `Diff: 0<br>Punkte: 0`;
+        stats.innerHTML = `Diff: 0`;
         div.appendChild(c); div.appendChild(label); div.appendChild(stats); zoomHeader.appendChild(div);
         boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats; boxes[i].zoomBoxDiv = div;
     }
@@ -540,17 +574,14 @@ function createZoomDisplays() {
         const div = document.createElement('div'); div.className = 'zoom-box mute-zoom';
         div.onclick = () => { selectedBox = muteBox; updateZoomSelectionUI(); };
         const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
-        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'MUTE-BOX';
+        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'MUTE-ZONE';
         const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
         stats.innerHTML = `Lade...`;
-        
         const rst = document.createElement('button'); rst.innerText = "🔄 Leer setzen"; rst.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#28a745; border-radius:4px;";
         rst.onclick = (e) => { e.stopPropagation(); muteBox.baseline = null; playBeep(); };
-        
         div.appendChild(c); div.appendChild(label); div.appendChild(stats); div.appendChild(rst); zoomHeader.appendChild(div);
         muteBox.zoomCtx = c.getContext('2d'); muteBox.zoomStatsDiv = stats; muteBox.zoomBoxDiv = div;
     }
-    
     updateZoomSelectionUI();
 }
 
@@ -566,62 +597,61 @@ function updateZoomSelectionUI() {
 }
 
 function updateLabels() {
-    valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value;
-    valHeight.innerText = slideHeight.value; valPulse.innerText = slidePulse.value;
-    valHold.innerText = slideHold.value; valAnchorSens.innerText = slideAnchorSens.value;
-    valTakt.innerText = slideTakt.value; valMuteSens.innerText = slideMuteSens.value;
+    valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
+    valPulse.innerText = slidePulse.value; valHold.innerText = slideHold.value; valTakt.innerText = slideTakt.value; 
+    valAnchorSens.innerText = slideAnchorSens.value; valAnchorW.innerText = slideAnchorW.value; valAnchorH.innerText = slideAnchorH.value;
+    valMuteSens.innerText = slideMuteSens.value; valMuteW.innerText = slideMuteW.value; valMuteH.innerText = slideMuteH.value;
 }
 
 function saveSettings() {
     const settings = {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value,
-        pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, anchorSens: slideAnchorSens.value, muteSens: slideMuteSens.value,
-        showZoomValues: showZoomValues, showCamera: showCamera, settingsVisible: settingsVisible, dpadVisible: dpadVisible, cameraId: cameraSelect.value,
-        positions: boxes.map(b => ({ x: b.x, y: b.y })),
-        anchor: { x: anchorBox.x, y: anchorBox.y, w: anchorBox.w, h: anchorBox.h, active: anchorBox.active },
-        mute: { x: muteBox.x, y: muteBox.y, w: muteBox.w, h: muteBox.h, active: muteBox.active }
+        pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
+        anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value,
+        muteSens: slideMuteSens.value, muteW: slideMuteW.value, muteH: slideMuteH.value,
+        showZoomValues: showZoomValues, showCamera: showCamera, dpadVisible: chkShowDpad.checked, 
+        mainSett: chkMainSettings.checked, anchSett: chkAnchorSettings.checked, muteSett: chkMuteSettings.checked,
+        cameraId: cameraSelect.value, positions: boxes.map(b => ({ x: b.x, y: b.y })),
+        anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
+        mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active }
     };
-    localStorage.setItem('estw_settings_v40', JSON.stringify(settings));
+    localStorage.setItem('pixel_settings_v41', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('estw_settings_v40');
+        const saved = localStorage.getItem('pixel_settings_v41');
         if (saved) {
             const s = JSON.parse(saved);
-            if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width;
-            if (s.height) slideHeight.value = s.height; if (s.pulse) slidePulse.value = s.pulse;
-            if (s.hold) slideHold.value = s.hold; if (s.anchorSens) slideAnchorSens.value = s.anchorSens;
-            if (s.muteSens) slideMuteSens.value = s.muteSens; if (s.takt) slideTakt.value = s.takt; 
+            if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
+            if (s.pulse) slidePulse.value = s.pulse; if (s.hold) slideHold.value = s.hold; if (s.takt) slideTakt.value = s.takt; 
+            if (s.anchorSens) slideAnchorSens.value = s.anchorSens; if (s.anchorW) slideAnchorW.value = s.anchorW; if (s.anchorH) slideAnchorH.value = s.anchorH;
+            if (s.muteSens) slideMuteSens.value = s.muteSens; if (s.muteW) slideMuteW.value = s.muteW; if (s.muteH) slideMuteH.value = s.muteH;
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
-            if (s.showZoomValues !== undefined) showZoomValues = s.showZoomValues; 
-            if (s.showCamera !== undefined) showCamera = s.showCamera; 
-            if (s.settingsVisible !== undefined) {
-                settingsVisible = s.settingsVisible; settingsPanel.style.display = settingsVisible ? 'flex' : 'none';
-                toggleSettingsBtn.innerText = settingsVisible ? '⚙️ Einstellungen ausblenden' : '⚙️ Einstellungen einblenden';
-            }
-            if (s.dpadVisible !== undefined) {
-                dpadVisible = s.dpadVisible; dpadPanel.style.display = dpadVisible ? 'flex' : 'none';
-                toggleDpadBtn.innerText = dpadVisible ? '🎯 Feinjustierung: AUS' : '🎯 Feinjustierung: EIN';
-            }
+            
+            if (s.showZoomValues !== undefined) { showZoomValues = s.showZoomValues; chkShowZoom.checked = s.showZoomValues; }
+            if (s.showCamera !== undefined) { showCamera = s.showCamera; chkShowCam.checked = s.showCamera; canvas.style.display = showCamera ? 'block' : 'none'; }
+            if (s.dpadVisible !== undefined) { chkShowDpad.checked = s.dpadVisible; dpadPanel.style.display = s.dpadVisible ? 'flex' : 'none'; }
+            
+            if (s.mainSett !== undefined) { chkMainSettings.checked = s.mainSett; panelMainSettings.style.display = s.mainSett ? 'flex' : 'none'; }
+            if (s.anchSett !== undefined) { chkAnchorSettings.checked = s.anchSett; panelAnchorSettings.style.display = s.anchSett ? 'flex' : 'none'; }
+            if (s.muteSett !== undefined) { chkMuteSettings.checked = s.muteSett; panelMuteSettings.style.display = s.muteSett ? 'flex' : 'none'; }
+
             if (s.positions) { s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } }); }
             if (s.anchor) {
-                anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; anchorBox.w = s.anchor.w || 15; anchorBox.h = s.anchor.h || 15; anchorBox.active = s.anchor.active;
-                if(anchorBox.active) { anchorBtn.innerText = "Anker: AKTIV"; anchorBtn.classList.remove("off"); }
+                anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; anchorBox.active = s.anchor.active; chkAnchorActive.checked = s.anchor.active;
             }
             if (s.mute) {
-                muteBox.x = s.mute.x; muteBox.y = s.mute.y; muteBox.w = s.mute.w || 15; muteBox.h = s.mute.h || 15; muteBox.active = s.mute.active;
-                if(muteBox.active) { muteBoxBtn.innerText = "Mutebox: AKTIV"; muteBoxBtn.classList.remove("off"); }
+                muteBox.x = s.mute.x; muteBox.y = s.mute.y; muteBox.active = s.mute.active; chkMuteActive.checked = s.mute.active;
             }
         }
     } catch(e) {}
     
     boxCountSelect.value = activeBoxCount; 
-
-    toggleZoomTextBtn.innerText = showZoomValues ? "Werte: EIN" : "Werte: AUS";
-    toggleCameraBtn.innerText = showCamera ? "Live-Bild: SICHTBAR" : "Live-Bild: VERSTECKT";
     createZoomDisplays(); updateLabels();
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
+    anchorBox.w = parseInt(slideAnchorW.value); anchorBox.h = parseInt(slideAnchorH.value);
+    muteBox.w = parseInt(slideMuteW.value); muteBox.h = parseInt(slideMuteH.value);
 }
 
 loadSettings();
@@ -630,37 +660,31 @@ function updateStealthClock() {
     const d = new Date();
     hoursHTML.innerText = String(d.getHours()).padStart(2, '0');
     minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
-    
     const dots = document.querySelectorAll('#stealthOverlay div div');
     if (isStealthActive && muteBox.active && muteBox.isMuted) {
-        const visible = d.getSeconds() % 2 === 0;
-        dots.forEach(dot => dot.style.opacity = visible ? "1" : "0");
-    } else {
-        dots.forEach(dot => dot.style.opacity = "1"); 
-    }
+        const visible = d.getSeconds() % 2 === 0; dots.forEach(dot => dot.style.opacity = visible ? "1" : "0");
+    } else { dots.forEach(dot => dot.style.opacity = "1"); }
 }
 setInterval(updateStealthClock, 500);
 
 activateStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'flex'; isStealthActive = true; updateStealthClock(); });
 exitStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'none'; isStealthActive = false; });
 
-toggleZoomTextBtn.addEventListener('click', (e) => {
-    showZoomValues = !showZoomValues; e.target.innerText = showZoomValues ? "Werte: EIN" : "Werte: AUS";
-    for (let i = 0; i < activeBoxCount; i++) { if (boxes[i].zoomStatsDiv) boxes[i].zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none'; }
-    if (anchorBox.zoomStatsDiv) anchorBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
-    if (muteBox.zoomStatsDiv) muteBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
-    saveSettings();
-});
-
-toggleCameraBtn.addEventListener('click', (e) => { showCamera = !showCamera; e.target.innerText = showCamera ? "Live-Bild: SICHTBAR" : "Live-Bild: VERSTECKT"; saveSettings(); });
+// Slider Events
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideMuteSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
 slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
+
+slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideAnchorW.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; });
+slideAnchorH.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; });
+
+slideMuteSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideMuteW.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; });
+slideMuteH.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; });
 
 boxCountSelect.addEventListener('change', (e) => {
     activeBoxCount = parseInt(e.target.value); createZoomDisplays();
@@ -668,16 +692,36 @@ boxCountSelect.addEventListener('change', (e) => {
     updateLabels(); saveSettings();
 });
 
-resetBtn.addEventListener('click', () => {
-    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideAnchorSens.value = DEFAULTS.anchorSens; slideTakt.value = DEFAULTS.takt; slideMuteSens.value = DEFAULTS.muteSens;
-    boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count; showZoomValues = true; showCamera = true;
-    toggleZoomTextBtn.innerText = "Werte: EIN"; toggleCameraBtn.innerText = "Live-Bild: SICHTBAR";
-    
-    anchorBox.active = false; anchorBox.baseline = null; anchorBox.w = 15; anchorBox.h = 15; anchorBtn.innerText = "Anker: AUS"; anchorBtn.classList.add("off");
-    muteBox.active = false; muteBox.baseline = null; muteBox.isMuted = false; muteBox.w = 15; muteBox.h = 15; muteBoxBtn.innerText = "Mutebox: AUS"; muteBoxBtn.classList.add("off");
-    
-    selectedBox = boxes[0]; createZoomDisplays(); updateLabels(); saveSettings();
+// Reset Buttons
+document.getElementById('btnResetMain').addEventListener('click', () => {
+    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; 
+    slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideTakt.value = DEFAULTS.takt;
+    boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count;
     boxes.forEach((b, idx) => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; b.validCrossings=0; b.lastState=0; b.lastMeasuredCycle=0; });
+    if (selectedBox !== anchorBox && selectedBox !== muteBox) selectedBox = boxes[0];
+    createZoomDisplays(); updateLabels(); saveSettings();
+});
+
+document.getElementById('btnResetAnchor').addEventListener('click', () => {
+    slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH;
+    anchorBox.w = DEFAULTS.anchorW; anchorBox.h = DEFAULTS.anchorH; anchorBox.baseline = null; anchorBox.x = 200; anchorBox.y = 100;
+    updateLabels(); saveSettings();
+});
+
+document.getElementById('btnResetMute').addEventListener('click', () => {
+    slideMuteSens.value = DEFAULTS.muteSens; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH;
+    muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null; muteBox.x = 200; muteBox.y = 200; muteBox.isMuted = false;
+    updateLabels(); saveSettings();
+});
+
+document.getElementById('btnResetAll').addEventListener('click', () => {
+    if(confirm("⚠ Achtung!\nSollen alle Positionen, Zähler und Modul-Einstellungen auf die Werkseinstellungen zurückgesetzt werden?")) {
+        document.getElementById('btnResetMain').click();
+        document.getElementById('btnResetAnchor').click();
+        document.getElementById('btnResetMute').click();
+        chkShowZoom.checked = true; chkShowZoom.dispatchEvent(new Event('change'));
+        chkShowCam.checked = true; chkShowCam.dispatchEvent(new Event('change'));
+    }
 });
 
 monitorBtn.addEventListener('click', () => {
@@ -714,21 +758,31 @@ function bindTurboButton(btnId, actionFn) {
 
 bindTurboButton('btnUp', (s) => selectedBox.y -= s); bindTurboButton('btnDown', (s) => selectedBox.y += s);
 bindTurboButton('btnLeft', (s) => selectedBox.x -= s); bindTurboButton('btnRight', (s) => selectedBox.x += s);
+
+// Fix: D-Pad ändert auch die dedizierten Schieberegler für W und H dynamisch mit!
 bindTurboButton('btnWMinus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.w = Math.max(5, selectedBox.w - s); if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
-    else { slideWidth.value = Math.max(parseInt(slideWidth.min), parseInt(slideWidth.value) - s); slideWidth.dispatchEvent(new Event('input')); }
+    selectedBox.w = Math.max(5, selectedBox.w - s);
+    if(selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; slideAnchorW.dispatchEvent(new Event('input')); }
+    else if(selectedBox === muteBox) { slideMuteW.value = selectedBox.w; slideMuteW.dispatchEvent(new Event('input')); }
+    else { slideWidth.value = selectedBox.w; slideWidth.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnWPlus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.w += s; if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
-    else { slideWidth.value = Math.min(parseInt(slideWidth.max), parseInt(slideWidth.value) + s); slideWidth.dispatchEvent(new Event('input')); }
+    selectedBox.w = Math.min(100, selectedBox.w + s);
+    if(selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; slideAnchorW.dispatchEvent(new Event('input')); }
+    else if(selectedBox === muteBox) { slideMuteW.value = selectedBox.w; slideMuteW.dispatchEvent(new Event('input')); }
+    else { slideWidth.value = selectedBox.w; slideWidth.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnHMinus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.h = Math.max(5, selectedBox.h - s); if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
-    else { slideHeight.value = Math.max(parseInt(slideHeight.min), parseInt(slideHeight.value) - s); slideHeight.dispatchEvent(new Event('input')); }
+    selectedBox.h = Math.max(5, selectedBox.h - s);
+    if(selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; slideAnchorH.dispatchEvent(new Event('input')); }
+    else if(selectedBox === muteBox) { slideMuteH.value = selectedBox.h; slideMuteH.dispatchEvent(new Event('input')); }
+    else { slideHeight.value = selectedBox.h; slideHeight.dispatchEvent(new Event('input')); }
 });
 bindTurboButton('btnHPlus', (s) => {
-    if(selectedBox === anchorBox || selectedBox === muteBox) { selectedBox.h += s; if(selectedBox===anchorBox) anchorBox.baseline = null; if(selectedBox===muteBox) muteBox.baseline = null; }
-    else { slideHeight.value = Math.min(parseInt(slideHeight.max), parseInt(slideHeight.value) + s); slideHeight.dispatchEvent(new Event('input')); }
+    selectedBox.h = Math.min(50, selectedBox.h + s);
+    if(selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; slideAnchorH.dispatchEvent(new Event('input')); }
+    else if(selectedBox === muteBox) { slideMuteH.value = selectedBox.h; slideMuteH.dispatchEvent(new Event('input')); }
+    else { slideHeight.value = selectedBox.h; slideHeight.dispatchEvent(new Event('input')); }
 });
 
 function startDrag(e) {
@@ -765,6 +819,21 @@ function playBeep() { const now = Date.now(); if (now - lastBeep < 1000 || (mute
 function playAnchorBeep() { const now = Date.now(); if (now - lastAnchorBeep < 1500) return; lastAnchorBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
 function playQuietBeep() { const now = Date.now(); if (now - lastQuietBeep < 58000) return; lastQuietBeep = now; initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 600; gain.gain.value = 0.03; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
 
+// NEU: Sehr lauter Dauer-Alarm (für Mute > 5 Min)
+function playLoudAlarm() { 
+    const now = Date.now(); 
+    if (now - lastLoudBeep < 1000) return; 
+    lastLoudBeep = now; 
+    initAudio(); 
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'sawtooth'; 
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
+    gain.gain.value = 0.25; 
+    osc.connect(gain); gain.connect(audioCtx.destination); 
+    osc.start(); osc.stop(audioCtx.currentTime + 0.8); 
+}
+
 function adjustCanvas() { if (!video.videoWidth) return; canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays(); }
 async function startSystem() {
     try {
@@ -791,6 +860,7 @@ function processFrame() {
     const now = Date.now(); const elapsed = now - lastFrameTime;
     if (elapsed < FRAME_INTERVAL) return; lastFrameTime = now - (elapsed % FRAME_INTERVAL);
 
+    // Wenn showCamera false ist, wird das Live-Bild im DOM komplett versteckt. Wir rechnen aber im Hintergrund auf dem Canvas weiter!
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const threshold = parseInt(slideSens.value); const minCrossings = parseInt(slidePulse.value); const holdMs = parseFloat(slideHold.value) * 1000;
     
@@ -813,7 +883,13 @@ function processFrame() {
         if (isMausDrinnen) {
             if (!muteBox.isMuted) { muteBox.isMuted = true; muteBox.insideStartTime = now; }
             muteBox.lastLeftTime = 0;
-            if (now - muteBox.insideStartTime > 120000) { playQuietBeep(); }
+            
+            // NEU: Ist die Maus länger als 5 Min (300.000 ms) drin -> Daueralarm!
+            if (now - muteBox.insideStartTime > 300000) {
+                playLoudAlarm();
+            } else if (now - muteBox.insideStartTime > 120000) { 
+                playQuietBeep(); 
+            }
         } else {
             if (muteBox.isMuted && muteBox.lastLeftTime === 0) { muteBox.lastLeftTime = now; }
             if (muteBox.lastLeftTime > 0 && now - muteBox.lastLeftTime > 30000) {
@@ -821,15 +897,19 @@ function processFrame() {
             }
         }
         
-        // KOMBINIERTE ANZEIGE FÜR MUTEBOX
         if (muteBox.zoomStatsDiv && showZoomValues) {
             let txt = `Diff: ${Math.round(mDiff)} / Max: ${muteThreshold}<br>`;
             if (muteBox.isMuted) {
-                let rest = muteBox.lastLeftTime > 0 ? Math.ceil((30000 - (now - muteBox.lastLeftTime)) / 1000) + "s" : "Dauerhaft";
-                txt += `<b style="color:#ffcc00;">STUMM</b> (${rest})`;
+                if (now - muteBox.insideStartTime > 300000) {
+                    txt += `<b style="color:#ff0000; animation: blink 1s infinite;">⚠ ALARM (>5m)</b>`;
+                } else {
+                    let rest = muteBox.lastLeftTime > 0 ? Math.ceil((30000 - (now - muteBox.lastLeftTime)) / 1000) + "s" : "Dauerhaft";
+                    txt += `<b style="color:#ffcc00;">STUMM</b> (${rest})`;
+                }
             } else { 
                 txt += `Inaktiv`; 
             }
+            txt += `<br>Größe: ${mw}x${mh} px`; // NEU: Pixelgröße
             muteBox.zoomStatsDiv.innerHTML = txt;
         }
     } else { muteBox.isMuted = false; }
@@ -853,43 +933,28 @@ function processFrame() {
         if (box.history.length > 5) {
             const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
             diff = Math.round(maxVal - minVal);
-            
-            if (diff < threshold) {
-                box.validCrossings = 0;
-            }
+            if (diff < threshold) { box.validCrossings = 0; }
 
             const hysteresis = Math.max(diff * 0.2, threshold * 0.25); const mid = minVal + diff / 2;
-            
             let currentInstantState = 0; 
             if (avgBrightness > mid + hysteresis) currentInstantState = 1;
             else if (avgBrightness < mid - hysteresis) currentInstantState = -1;
             
             let targetTakt = parseInt(slideTakt.value);
-            let minAllowed = targetTakt * 0.5;
-            let maxAllowed = targetTakt * 1.5;
+            let minAllowed = targetTakt * 0.5; let maxAllowed = targetTakt * 1.5;
 
             if (currentInstantState === 1 && box.lastState === -1) {
                 if (box.lastRisingEdge > 0) {
                     let cycleDuration = now - box.lastRisingEdge;
                     box.lastMeasuredCycle = cycleDuration; 
-
                     if (cycleDuration >= minAllowed && cycleDuration <= maxAllowed) {
                         box.validCrossings++; box.lastValidTime = now;
-                    } else {
-                        if (cycleDuration > maxAllowed) {
-                            box.validCrossings = 0;
-                        }
-                    }
+                    } else { if (cycleDuration > maxAllowed) box.validCrossings = 0; }
                 }
                 box.lastRisingEdge = now;
             }
-            
             if (currentInstantState !== 0) { box.lastState = currentInstantState; }
-            
-            if (box.validCrossings > 0 && now - box.lastValidTime > (targetTakt * 2.5)) { 
-                box.validCrossings = 0; 
-            }
-            
+            if (box.validCrossings > 0 && now - box.lastValidTime > (targetTakt * 2.5)) { box.validCrossings = 0; }
             if (isMonitoring && diff >= threshold && box.validCrossings >= minCrossings) { box.lastAlarmTime = now; }
         }
 
@@ -901,9 +966,9 @@ function processFrame() {
         }
         if (box.zoomStatsDiv && showZoomValues) {
             let txt = `Diff: ${diff} | Pkt: ${box.validCrossings}`;
-            if (box.lastMeasuredCycle > 0) txt += `<br>Letzter: <span style="color:#00ff88;">${box.lastMeasuredCycle} ms</span>`;
-            else txt += `<br>Letzter: --- ms`;
+            if (box.lastMeasuredCycle > 0) txt += `<br>Letzter: <span style="color:#00ff88;">${box.lastMeasuredCycle} ms</span>`; else txt += `<br>Letzter: --- ms`;
             if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`;
+            txt += `<br>Größe: ${rw}x${rh} px`; // NEU: Pixelgröße
             box.zoomStatsDiv.innerHTML = txt;
         }
     }
@@ -930,7 +995,6 @@ function processFrame() {
             currTotal += aData[j]*0.299 + aData[j+1]*0.587 + aData[j+2]*0.114; pCount++;
         }
         let offset = (currTotal / pCount) - (baseTotal / pCount);
-
         let totalDiff = 0; 
         for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
             let baseVal = anchorBox.baseline[j]*0.299 + anchorBox.baseline[j+1]*0.587 + anchorBox.baseline[j+2]*0.114;
@@ -950,18 +1014,15 @@ function processFrame() {
         if (anchorBox.zoomStatsDiv && showZoomValues) {
             let txt = `Abw: <span style="color:#00ff88;">${structuralDiff}</span> / Max: ${anchorThreshold}`;
             if (anchorBox.isAlarm && isMonitoring) txt += `<br><b style="color:#ffaa00;">VERRUTSCHT!</b>`;
+            txt += `<br>Größe: ${aw}x${ah} px`; // NEU: Pixelgröße
             anchorBox.zoomStatsDiv.innerHTML = txt;
         }
 
         if (anchorBox.isAlarm && isMonitoring) playAnchorBeep();
     }
 
-    // --- 4. GRAPHIK ZEICHNEN ---
-    if (!showCamera) {
-        ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#333"; ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.fillText("Kamerabild ausgeblendet", canvas.width / 2, canvas.height / 2); ctx.fillText("Die Analyse läuft weiter...", canvas.width / 2, canvas.height / 2 + 30); ctx.textAlign = "left"; 
-    } else {
-        // ZUG BOXEN
+    // --- 4. GRAPHIK ZEICHNEN (nur wenn Kamera sichtbar) ---
+    if (showCamera) {
         for (let i = 0; i < activeBoxCount; i++) {
             const box = boxes[i]; 
             let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)'; 
@@ -972,12 +1033,10 @@ function processFrame() {
             
             ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); 
             ctx.lineWidth = box.isAlarm ? 4 : 2; 
-            
             if (!isMonitoring) ctx.setLineDash([4, 4]);
             ctx.strokeStyle = borderColor; ctx.stroke(); ctx.setLineDash([]);
         }
 
-        // ANKER BOX
         if (anchorBox.active) {
             let aFillColor = anchorBox.isAlarm ? 'rgba(255,170,0,0.3)' : 'rgba(0,170,255,0.15)'; 
             let aBorderColor = anchorBox.isAlarm ? '#ffaa00' : '#00aaff';
@@ -991,7 +1050,6 @@ function processFrame() {
             ctx.strokeStyle = aBorderColor; ctx.stroke(); ctx.setLineDash([]);
         }
 
-        // MUTE BOX (GELB)
         if (muteBox.active) {
             let mFillColor = muteBox.isMuted ? 'rgba(255,204,0,0.5)' : 'rgba(255,204,0,0.15)';
             let mBorderColor = '#ffcc00'; 
