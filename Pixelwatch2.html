@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel-Wächter Pro v47</title>
+<title>Pixel-Wächter Pro v48</title>
 
 <style>
     body {
@@ -135,6 +135,10 @@
             <li><b>Mute-Zone:</b> Unterdrückt die regulären Alarme der Mess-Felder temporär, wenn in diesem Rahmen eine Störung (z.B. ein Mauszeiger) auftaucht. Bleibt die Störung länger als 5 Minuten liegen, ertönt ein greller Dauer-Alarm.</li>
         </ul>
         <p style="font-size: 13px;"><i>Tipp: Beide Module verfügen über eine schaltbare <b>Auto-Korrektur</b>. Bei extrem langsamen Lichtveränderungen (Tageslicht/Wolken) passen sich die Referenzen automatisch und unbemerkt an, ohne Alarm auszulösen.</i></p>
+
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Tarnmodus</h3>
+        <p>Der Tarnmodus verdunkelt das Display, um Akku zu sparen und unauffällig zu bleiben, während die Kamera-Analyse im Hintergrund uneingeschränkt weiterläuft.<br>
+        <b>Beenden:</b> Tippe auf den <b>unteren Punkt</b> der angezeigten Uhrzeit, um den Tarnmodus zu verlassen.</p>
 
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
@@ -538,7 +542,7 @@ async function loadCameras() {
                 option.value = device.deviceId; option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('pixel_settings_v47');
+            const saved = localStorage.getItem('pixel_settings_v48');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) { cameraSelect.value = s.cameraId; }
@@ -629,12 +633,12 @@ function saveSettings() {
         anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active }
     };
-    localStorage.setItem('pixel_settings_v47', JSON.stringify(settings));
+    localStorage.setItem('pixel_settings_v48', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('pixel_settings_v47') || localStorage.getItem('pixel_settings_v46');
+        const saved = localStorage.getItem('pixel_settings_v48') || localStorage.getItem('pixel_settings_v47');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
@@ -1035,7 +1039,7 @@ function analyzeAnchor(now) {
     }
 
     if (anchorBox.isAlarm && isMonitoring) playAnchorBeep();
-    return anchorBox.isAlarm;
+    return anchorBox.isAlarm; // Wird nur noch für interne Checks genutzt, löst keinen globalen Beep mehr aus
 }
 
 function drawUI() {
@@ -1091,11 +1095,14 @@ function processFrame() {
     
     analyzeMute(now);
     let boxAlarm = analyzeBoxes(now);
-    let anchorAlarm = analyzeAnchor(now);
+    
+    // Die Anker-Analyse wird ausgeführt, sie triggert nun aber intern ausschließlich ihren eigenen Ton
+    analyzeAnchor(now);
     
     drawUI();
 
-    if ((boxAlarm || anchorAlarm) && !muteBox.isMuted) playBeep();
+    // Der reguläre Beep reagiert strikt nur noch auf die Mess-Boxen
+    if (boxAlarm && !muteBox.isMuted) playBeep();
 }
 </script>
 </body>
