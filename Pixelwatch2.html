@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel-Wächter Pro v46</title>
+<title>Pixel-Wächter Pro v47</title>
 
 <style>
     body {
@@ -86,7 +86,6 @@
 
     #container { position: relative; margin-top: 10px; display: flex; justify-content: center; width: 100%; }
     
-    /* CSS Fix: Keine touch-Einschränkungen hier. Die Scroll/Drag Logik passiert jetzt rein über JavaScript. */
     canvas { 
         width: 100%; max-width: 100%; height: auto; background: black; 
         border: 2px solid #555; border-radius: 8px; 
@@ -121,16 +120,21 @@
     <div class="help-content">
         <h2>Hilfe & Anleitung</h2>
         <p>Der <b>Pixel-Wächter Pro</b> ist ein optisches Analysewerkzeug zur Überwachung von Helligkeitsschwankungen und Rhythmen in definierten Bildbereichen.</p>
+        
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Schritt-für-Schritt Einrichtung</h3>
         <ol>
             <li><b>Kamera starten:</b> Erlaube den Kamerazugriff und richte das Gerät auf den Bereich.</li>
-            <li><b>Mess-Felder platzieren:</b> Wähle oben ein Feld aus und schiebe die Box über den Bereich. WICHTIG: <b>So eng wie möglich!</b></li>
-            <li><b>Feinjustieren:</b> Nutze das D-Pad. Stelle <i>Empfindlichkeit</i> so ein, dass sie nur bei echten Helligkeitswechseln anschlägt.</li>
-            <li><b>Überwachen:</b> Sobald das Feld im eingestellten <i>Ziel-Zyklus</i> wechselt, sammelt es Punkte.</li>
+            <li><b>Mess-Felder platzieren:</b> Tippe das gewünschte Feld direkt im Live-Bild an und schiebe die Box über den zu überwachenden Bereich. WICHTIG: Ziehe den Rahmen <b>so eng wie möglich</b>!</li>
+            <li><b>Feinjustieren:</b> Nutze das D-Pad für pixelgenaues Ausrichten. Stelle <i>Empfindlichkeit</i> so ein, dass sie nur bei echten Helligkeitswechseln anschlägt.</li>
+            <li><b>Überwachen:</b> Sobald das Feld im eingestellten <i>Ziel-Zyklus</i> wechselt, sammelt es Punkte. Sobald der eingestellte Wert für <b>Min. Takt-Punkte</b> überschritten ist, wird der Alarm ausgelöst.</li>
         </ol>
         
-        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smarte Auto-Korrektur</h3>
-        <p>Der Anker und die Mute-Zone verfügen über eine intelligente <b>Drift-Kompensation</b>. Verändert sich das Tageslicht langsam, passen sich die Mess-Baselines automatisch an, ohne versehentlich einen Alarm auszulösen. Die Funktion kann in den jeweiligen Modul-Einstellungen de-/aktiviert werden.</p>
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Spezial-Module (Zuschaltbar)</h3>
+        <ul>
+            <li><b>Anker-Referenz (Verrutsch-Schutz):</b> Überwacht das Bild strukturell. Verrutscht das Tablet oder die Kamera, schlägt das System sofort Alarm.</li>
+            <li><b>Mute-Zone:</b> Unterdrückt die regulären Alarme der Mess-Felder temporär, wenn in diesem Rahmen eine Störung (z.B. ein Mauszeiger) auftaucht. Bleibt die Störung länger als 5 Minuten liegen, ertönt ein greller Dauer-Alarm.</li>
+        </ul>
+        <p style="font-size: 13px;"><i>Tipp: Beide Module verfügen über eine schaltbare <b>Auto-Korrektur</b>. Bei extrem langsamen Lichtveränderungen (Tageslicht/Wolken) passen sich die Referenzen automatisch und unbemerkt an, ohne Alarm auszulösen.</i></p>
 
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
@@ -438,7 +442,7 @@ let lastLoudBeep = 0;
 let lastFrameTime = 0;
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 60; // Wurde auf 60 erhöht, um mit den Fingern die kleinen Boxen besser zu treffen
+const HIT_PAD = 60; 
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
@@ -534,7 +538,7 @@ async function loadCameras() {
                 option.value = device.deviceId; option.text = device.label || `Kamera ${index + 1}`;
                 cameraSelect.appendChild(option);
             });
-            const saved = localStorage.getItem('pixel_settings_v46');
+            const saved = localStorage.getItem('pixel_settings_v47');
             if (saved) {
                 const s = JSON.parse(saved);
                 if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) { cameraSelect.value = s.cameraId; }
@@ -625,12 +629,12 @@ function saveSettings() {
         anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active }
     };
-    localStorage.setItem('pixel_settings_v46', JSON.stringify(settings));
+    localStorage.setItem('pixel_settings_v47', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        const saved = localStorage.getItem('pixel_settings_v46') || localStorage.getItem('pixel_settings_v45');
+        const saved = localStorage.getItem('pixel_settings_v47') || localStorage.getItem('pixel_settings_v46');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
@@ -774,7 +778,6 @@ bindTurboButton('btnHPlus', (s) => {
     if(selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; slideAnchorH.dispatchEvent(new Event('input')); } else if(selectedBox === muteBox) { slideMuteH.value = selectedBox.h; slideMuteH.dispatchEvent(new Event('input')); } else { slideHeight.value = selectedBox.h; slideHeight.dispatchEvent(new Event('input')); }
 });
 
-// --- DIE SAUBERE TOUCH- & SCROLL-LOGIK ---
 function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
     let clientX, clientY;
@@ -810,8 +813,6 @@ function startDrag(e) {
         }
     }
 
-    // Wenn eine Box getroffen wurde, blockieren wir das native Scrollen des Tablets.
-    // Wenn nicht, lassen wir den Browser ganz normal scrollen.
     if (boxHit && e.cancelable) {
         e.preventDefault(); 
     }
@@ -824,7 +825,6 @@ function moveDrag(e) {
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
     if(draggingBox !== anchorBox && draggingBox !== muteBox) draggingBox.history = []; else if(draggingBox===anchorBox) anchorBox.baseline = null; else if(draggingBox===muteBox) muteBox.baseline = null;
     
-    // Während wir aktiv eine Box ziehen, darf das Tablet auf keinen Fall scrollen.
     if (e.cancelable) {
         e.preventDefault(); 
     }
@@ -880,7 +880,6 @@ function analyzeMute(now) {
     let mDiff = Math.abs(mAvg - muteBox.baseline);
     let muteThreshold = parseInt(slideMuteSens.value);
     let muteHoldMs = parseInt(slideMuteHold.value) * 1000;
-    let isTracking = false; 
 
     if (mDiff >= muteThreshold) {
         if (!muteBox.isMuted) { muteBox.isMuted = true; muteBox.insideStartTime = now; }
@@ -895,7 +894,6 @@ function analyzeMute(now) {
 
         if (chkMuteDrift.checked && !muteBox.isMuted && mDiff > 0 && mDiff < muteThreshold * 0.5) {
             muteBox.baseline = (muteBox.baseline * 0.95) + (mAvg * 0.05); 
-            isTracking = true;
         }
     }
     
@@ -908,7 +906,7 @@ function analyzeMute(now) {
                 txt += `<b style="color:#ffcc00;">STUMM</b> (${rest})`;
             }
         } else { 
-            txt += isTracking ? `<span style="color:#17a2b8;">Auto-Korrektur...</span>` : `Inaktiv`; 
+            txt += `Inaktiv`; 
         }
         txt += `<br>Größe: ${mw}x${mh} px`;
         muteBox.zoomStatsDiv.innerHTML = txt;
@@ -1009,7 +1007,6 @@ function analyzeAnchor(now) {
     }
     
     let structuralDiff = Math.round(totalDiff / pCount); let anchorThreshold = parseInt(slideAnchorSens.value);
-    let isTracking = false;
 
     if (isMonitoring && structuralDiff > anchorThreshold) { 
         if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now; else if (now - anchorBox.alarmStart > 1000) anchorBox.isAlarm = true; 
@@ -1020,7 +1017,6 @@ function analyzeAnchor(now) {
             for (let j = 0; j < aData.length; j++) {
                 anchorBox.baseline[j] = Math.round(anchorBox.baseline[j] * 0.98 + aData[j] * 0.02);
             }
-            isTracking = true;
             if (Math.random() < 0.05) anchorBox.refNeedsDraw = true;
         }
     }
@@ -1032,8 +1028,6 @@ function analyzeAnchor(now) {
         let txt = `Abw: <span style="color:#00ff88;">${structuralDiff}</span> / Max: ${anchorThreshold}`;
         if (anchorBox.isAlarm && isMonitoring) {
             txt += `<br><b style="color:#ffaa00;">VERRUTSCHT!</b>`;
-        } else if (isTracking) {
-            txt += `<br><span style="color:#17a2b8;">Auto-Korrektur...</span>`;
         } else {
             txt += `<br>Größe: ${aw}x${ah} px`;
         }
