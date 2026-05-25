@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro v50</title>
+<title>Pixel-Wächter Pro v51</title>
 
 <style>
     body {
@@ -139,7 +139,7 @@
             <li><b>Anker-Referenz (Verrutsch-Schutz):</b> Überwacht das Bild strukturell. Verrutscht das Tablet oder die Kamera, schlägt das System sofort Alarm.</li>
             <li><b>Mute-Zone:</b> Unterdrückt die regulären Alarme der Mess-Felder temporär, wenn in diesem Rahmen eine Störung (z.B. ein Mauszeiger) auftaucht. Bleibt die Störung länger als 5 Minuten liegen, ertönt ein greller Dauer-Alarm.</li>
         </ul>
-        <p style="font-size: 13px;"><i>Tipp: Beide Module verfügen über eine schaltbare <b>Auto-Korrektur</b>. Bei extrem langsamen Lichtveränderungen (Tageslicht/Wolken) passen sich die Referenzen automatisch und unbemerkt an, ohne Alarm auszulösen.</i></p>
+        <p style="font-size: 13px;"><i>Tipp: Beide Module verfügen über eine schaltbare <b>Auto-Korrektur</b>. Bei extrem langsamen Lichtveränderungen (Tageslicht/Wolken) passen sich die Referenzen automatisch und unbemerkt an, ohne Alarm auszulösen. Über das Drift-Tempo lässt sich steuern, wie träge (Tempo 1) oder schnell (Tempo 10) das System auf Veränderungen reagiert.</i></p>
 
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Tarnmodus</h3>
         <p>Der Tarnmodus verdunkelt das Display, um Akku zu sparen und unauffällig zu bleiben, während die Kamera-Analyse im Hintergrund uneingeschränkt weiterläuft.<br>
@@ -291,6 +291,12 @@
                         <input type="checkbox" id="chkAnchorDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
                     </label>
                 </div>
+                <div class="slider-row" id="rowAnchorDriftSpeed">
+                    <label>Drift-Tempo: <span id="valAnchorDrift">1</span></label>
+                    <button class="adj-btn" id="anchorDriftMinus">-</button>
+                    <input type="range" id="slideAnchorDrift" min="1" max="10" value="1">
+                    <button class="adj-btn" id="anchorDriftPlus">+</button>
+                </div>
                 <div class="slider-row">
                     <label>Toleranz: <span id="valAnchorSens">20</span></label>
                     <button class="adj-btn" id="anchorSensMinus">-</button>
@@ -326,6 +332,12 @@
                     <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="chkMuteDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
                     </label>
+                </div>
+                <div class="slider-row" id="rowMuteDriftSpeed">
+                    <label>Drift-Tempo: <span id="valMuteDrift">1</span></label>
+                    <button class="adj-btn" id="muteDriftMinus">-</button>
+                    <input type="range" id="slideMuteDrift" min="1" max="10" value="1">
+                    <button class="adj-btn" id="muteDriftPlus">+</button>
                 </div>
                 <div class="slider-row">
                     <label>Toleranz: <span id="valMuteSens">40</span></label>
@@ -363,7 +375,6 @@
 </div>
 
 <script>
-// PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Setup fehlgeschlagen', err));
@@ -411,7 +422,7 @@ const valCamZoom = document.getElementById('valCamZoom');
 
 const slideSens = document.getElementById('slideSens');
 const slideTakt = document.getElementById('slideTakt');
-const slideToleranz = document.getElementById('slideToleranz'); // NEU
+const slideToleranz = document.getElementById('slideToleranz'); 
 const slideWidth = document.getElementById('slideWidth');
 const slideHeight = document.getElementById('slideHeight');
 const slidePulse = document.getElementById('slidePulse');
@@ -420,7 +431,7 @@ const boxCountSelect = document.getElementById('boxCountSelect');
 
 const valSens = document.getElementById('valSens');
 const valTakt = document.getElementById('valTakt'); 
-const valToleranz = document.getElementById('valToleranz'); // NEU
+const valToleranz = document.getElementById('valToleranz'); 
 const valWidth = document.getElementById('valWidth');
 const valHeight = document.getElementById('valHeight');
 const valPulse = document.getElementById('valPulse');
@@ -432,6 +443,9 @@ const slideAnchorW = document.getElementById('slideAnchorW');
 const valAnchorW = document.getElementById('valAnchorW');
 const slideAnchorH = document.getElementById('slideAnchorH');
 const valAnchorH = document.getElementById('valAnchorH');
+const slideAnchorDrift = document.getElementById('slideAnchorDrift');
+const valAnchorDrift = document.getElementById('valAnchorDrift');
+const rowAnchorDriftSpeed = document.getElementById('rowAnchorDriftSpeed');
 
 const slideMuteSens = document.getElementById('slideMuteSens');
 const valMuteSens = document.getElementById('valMuteSens');
@@ -441,6 +455,9 @@ const slideMuteW = document.getElementById('slideMuteW');
 const valMuteW = document.getElementById('valMuteW');
 const slideMuteH = document.getElementById('slideMuteH');
 const valMuteH = document.getElementById('valMuteH');
+const slideMuteDrift = document.getElementById('slideMuteDrift');
+const valMuteDrift = document.getElementById('valMuteDrift');
+const rowMuteDriftSpeed = document.getElementById('rowMuteDriftSpeed');
 
 const selectedBoxIdLabel = document.getElementById('selectedBoxId');
 const hoursHTML = document.getElementById('hoursHTML');
@@ -468,14 +485,14 @@ let lastFrameTime = 0;
 let frameCounter = 0; 
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 30; // REDUZIERT von 60 auf 30
+const HIT_PAD = 30; 
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
 const DEFAULTS = { 
     sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, takt: 2000, toleranz: 50,
-    anchorSens: 20, anchorW: 15, anchorH: 15, anchorDrift: true,
-    muteSens: 40, muteHold: 40, muteW: 15, muteH: 15, muteDrift: true
+    anchorSens: 20, anchorW: 15, anchorH: 15, anchorDrift: true, anchorDriftSpeed: 1,
+    muteSens: 40, muteHold: 40, muteW: 15, muteH: 15, muteDrift: true, muteDriftSpeed: 1
 };
 
 let boxes = [
@@ -497,6 +514,11 @@ function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
     let drawW = sw * scale; let drawH = sh * scale;
     let dx = (targetW - drawW) / 2; let dy = (targetH - drawH) / 2;
     ctx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, drawW, drawH);
+}
+
+function updateDriftVisibility() {
+    rowAnchorDriftSpeed.style.display = chkAnchorDrift.checked ? 'flex' : 'none';
+    rowMuteDriftSpeed.style.display = chkMuteDrift.checked ? 'flex' : 'none';
 }
 
 toggleSettingsBtn.addEventListener('click', () => {
@@ -522,8 +544,8 @@ chkMainSettings.addEventListener('change', (e) => { panelMainSettings.style.disp
 chkAnchorSettings.addEventListener('change', (e) => { panelAnchorSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 chkMuteSettings.addEventListener('change', (e) => { panelMuteSettings.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 
-chkAnchorDrift.addEventListener('change', () => saveSettings());
-chkMuteDrift.addEventListener('change', () => saveSettings());
+chkAnchorDrift.addEventListener('change', () => { updateDriftVisibility(); saveSettings(); });
+chkMuteDrift.addEventListener('change', () => { updateDriftVisibility(); saveSettings(); });
 
 chkAnchorActive.addEventListener('change', (e) => {
     anchorBox.active = e.target.checked; anchorBox.baseline = null; 
@@ -546,13 +568,15 @@ function setupAdjBtn(minusId, plusId, sliderId) {
     document.getElementById(plusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) + (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
 }
 setupAdjBtn('sensMinus', 'sensPlus', 'slideSens'); setupAdjBtn('taktMinus', 'taktPlus', 'slideTakt'); 
-setupAdjBtn('toleranzMinus', 'toleranzPlus', 'slideToleranz'); // NEU
+setupAdjBtn('toleranzMinus', 'toleranzPlus', 'slideToleranz'); 
 setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth'); setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
 setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse'); setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
 setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom'); setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
 setupAdjBtn('anchorWMinus', 'anchorWPlus', 'slideAnchorW'); setupAdjBtn('anchorHMinus', 'anchorHPlus', 'slideAnchorH');
+setupAdjBtn('anchorDriftMinus', 'anchorDriftPlus', 'slideAnchorDrift');
 setupAdjBtn('muteSensMinus', 'muteSensPlus', 'slideMuteSens'); setupAdjBtn('muteHoldMinus', 'muteHoldPlus', 'slideMuteHold'); 
 setupAdjBtn('muteWMinus', 'muteWPlus', 'slideMuteW'); setupAdjBtn('muteHMinus', 'muteHPlus', 'slideMuteH');
+setupAdjBtn('muteDriftMinus', 'muteDriftPlus', 'slideMuteDrift');
 
 async function loadCameras() {
     try {
@@ -639,18 +663,20 @@ function updateZoomSelectionUI() {
 function updateLabels() {
     valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
     valPulse.innerText = slidePulse.value; valHold.innerText = slideHold.value; valTakt.innerText = slideTakt.value; 
-    valToleranz.innerText = slideToleranz.value; // NEU
+    valToleranz.innerText = slideToleranz.value; 
     valAnchorSens.innerText = slideAnchorSens.value; valAnchorW.innerText = slideAnchorW.value; valAnchorH.innerText = slideAnchorH.value;
+    valAnchorDrift.innerText = slideAnchorDrift.value;
     valMuteSens.innerText = slideMuteSens.value; valMuteHold.innerText = slideMuteHold.value; 
     valMuteW.innerText = slideMuteW.value; valMuteH.innerText = slideMuteH.value;
+    valMuteDrift.innerText = slideMuteDrift.value;
 }
 
 function saveSettings() {
     const settings = {
         sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, toleranz: slideToleranz.value,
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
-        anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value, anchorDrift: chkAnchorDrift.checked,
-        muteSens: slideMuteSens.value, muteHold: slideMuteHold.value, muteW: slideMuteW.value, muteH: slideMuteH.value, muteDrift: chkMuteDrift.checked,
+        anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value, anchorDrift: chkAnchorDrift.checked, anchorDriftSpeed: slideAnchorDrift.value,
+        muteSens: slideMuteSens.value, muteHold: slideMuteHold.value, muteW: slideMuteW.value, muteH: slideMuteH.value, muteDrift: chkMuteDrift.checked, muteDriftSpeed: slideMuteDrift.value,
         showZoomValues: showZoomValues, showCamera: showCamera, dpadVisible: chkShowDpad.checked, 
         settingsVisible: settingsVisible, mainSett: chkMainSettings.checked, anchSett: chkAnchorSettings.checked, muteSett: chkMuteSettings.checked,
         cameraId: cameraSelect.value, positions: boxes.map(b => ({ x: b.x, y: b.y })),
@@ -671,10 +697,12 @@ function loadSettings() {
             
             if (s.anchorSens) slideAnchorSens.value = s.anchorSens; if (s.anchorW) slideAnchorW.value = s.anchorW; if (s.anchorH) slideAnchorH.value = s.anchorH;
             if (s.anchorDrift !== undefined) chkAnchorDrift.checked = s.anchorDrift;
+            if (s.anchorDriftSpeed) slideAnchorDrift.value = s.anchorDriftSpeed;
             
             if (s.muteSens) slideMuteSens.value = s.muteSens; if (s.muteHold) slideMuteHold.value = s.muteHold; 
             if (s.muteW) slideMuteW.value = s.muteW; if (s.muteH) slideMuteH.value = s.muteH;
             if (s.muteDrift !== undefined) chkMuteDrift.checked = s.muteDrift;
+            if (s.muteDriftSpeed) slideMuteDrift.value = s.muteDriftSpeed;
             
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
             
@@ -693,7 +721,7 @@ function loadSettings() {
     } catch(e) {}
     
     boxCountSelect.value = activeBoxCount; 
-    createZoomDisplays(); updateLabels();
+    createZoomDisplays(); updateLabels(); updateDriftVisibility();
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); });
     anchorBox.w = parseInt(slideAnchorW.value); anchorBox.h = parseInt(slideAnchorH.value);
     muteBox.w = parseInt(slideMuteW.value); muteBox.h = parseInt(slideMuteH.value);
@@ -721,7 +749,7 @@ activateStealthBtn.addEventListener('click', () => { stealthOverlay.style.displa
 exitStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'none'; isStealthActive = false; });
 
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideToleranz.addEventListener('input', () => { updateLabels(); saveSettings(); }); // NEU
+slideToleranz.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
 slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
@@ -729,10 +757,12 @@ slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); bo
 slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideAnchorW.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; });
 slideAnchorH.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; });
+slideAnchorDrift.addEventListener('input', () => { updateLabels(); saveSettings(); });
 
 slideMuteSens.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideMuteHold.addEventListener('input', () => { updateLabels(); saveSettings(); }); 
 slideMuteW.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; });
 slideMuteH.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; });
+slideMuteDrift.addEventListener('input', () => { updateLabels(); saveSettings(); });
 
 boxCountSelect.addEventListener('change', (e) => {
     activeBoxCount = parseInt(e.target.value); createZoomDisplays();
@@ -750,15 +780,17 @@ document.getElementById('btnResetMain').addEventListener('click', () => {
 });
 
 document.getElementById('btnResetAnchor').addEventListener('click', () => {
-    slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH; chkAnchorDrift.checked = DEFAULTS.anchorDrift;
+    slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH; 
+    chkAnchorDrift.checked = DEFAULTS.anchorDrift; slideAnchorDrift.value = DEFAULTS.anchorDriftSpeed;
     anchorBox.w = DEFAULTS.anchorW; anchorBox.h = DEFAULTS.anchorH; anchorBox.baseline = null; anchorBox.x = 200; anchorBox.y = 100;
-    updateLabels(); saveSettings();
+    updateLabels(); updateDriftVisibility(); saveSettings();
 });
 
 document.getElementById('btnResetMute').addEventListener('click', () => {
-    slideMuteSens.value = DEFAULTS.muteSens; slideMuteHold.value = DEFAULTS.muteHold; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH; chkMuteDrift.checked = DEFAULTS.muteDrift;
+    slideMuteSens.value = DEFAULTS.muteSens; slideMuteHold.value = DEFAULTS.muteHold; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH; 
+    chkMuteDrift.checked = DEFAULTS.muteDrift; slideMuteDrift.value = DEFAULTS.muteDriftSpeed;
     muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null; muteBox.x = 200; muteBox.y = 200; muteBox.isMuted = false;
-    updateLabels(); saveSettings();
+    updateLabels(); updateDriftVisibility(); saveSettings();
 });
 
 document.getElementById('btnResetAll').addEventListener('click', () => {
@@ -933,8 +965,11 @@ function analyzeMute(now) {
             muteBox.isMuted = false; muteBox.insideStartTime = 0; muteBox.lastLeftTime = 0;
         }
 
-        if (chkMuteDrift.checked && !muteBox.isMuted && mDiff > 0 && mDiff < muteThreshold * 0.5) {
-            muteBox.baseline = (muteBox.baseline * 0.95) + (mAvg * 0.05); 
+        // NEU: Alpha-Wert berechnet aus Slider (Stufe 1 bis 10 entspricht 0.001 bis 0.01)
+        // Zusätzlich reagiert der Ausgleich nur noch unter 20% statt 50%
+        let alpha = parseInt(slideMuteDrift.value) * 0.001; 
+        if (chkMuteDrift.checked && !muteBox.isMuted && mDiff > 0 && mDiff < muteThreshold * 0.2) {
+            muteBox.baseline = (muteBox.baseline * (1 - alpha)) + (mAvg * alpha); 
         }
     }
     
@@ -961,7 +996,6 @@ function analyzeBoxes(now) {
     const holdMs = parseFloat(slideHold.value) * 1000;
     const targetTakt = parseInt(slideTakt.value);
     
-    // NEU: Berechnung der Toleranzgrenzen auf Basis des Sliders
     const tolerancePct = parseInt(slideToleranz.value) / 100;
     const minAllowed = targetTakt * (1 - tolerancePct); 
     const maxAllowed = targetTakt * (1 + tolerancePct);
@@ -1058,11 +1092,12 @@ function analyzeAnchor(now) {
     } else { 
         anchorBox.alarmStart = 0; anchorBox.isAlarm = false; 
 
+        // NEU: Alpha-Wert aus Slider berechnen
+        let alpha = parseInt(slideAnchorDrift.value) * 0.001;
         if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold * 0.5) {
             for (let j = 0; j < aData.length; j++) {
-                anchorBox.baseline[j] = Math.round(anchorBox.baseline[j] * 0.98 + aData[j] * 0.02);
+                anchorBox.baseline[j] = Math.round(anchorBox.baseline[j] * (1 - alpha) + aData[j] * alpha);
             }
-            // Zuvor Random, jetzt deterministisch: Exakt alle ~2 Sekunden neu zeichnen
             if (frameCounter % 30 === 0) anchorBox.refNeedsDraw = true;
         }
     }
