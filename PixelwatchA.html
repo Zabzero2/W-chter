@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro</title>
+<title>Pixel-Wächter Pro v50</title>
 
 <style>
     body {
@@ -244,6 +244,12 @@
                     <button class="adj-btn" id="taktPlus">+</button>
                 </div>
                 <div class="slider-row">
+                    <label>Takt-Toleranz: <span id="valToleranz">50</span>%</label>
+                    <button class="adj-btn" id="toleranzMinus">-</button>
+                    <input type="range" id="slideToleranz" min="5" max="100" step="5" value="50">
+                    <button class="adj-btn" id="toleranzPlus">+</button>
+                </div>
+                <div class="slider-row">
                     <label>Rahmen-Breite: <span id="valWidth">30</span></label>
                     <button class="adj-btn" id="widthMinus">-</button>
                     <input type="range" id="slideWidth" min="5" max="100" value="30">
@@ -405,6 +411,7 @@ const valCamZoom = document.getElementById('valCamZoom');
 
 const slideSens = document.getElementById('slideSens');
 const slideTakt = document.getElementById('slideTakt');
+const slideToleranz = document.getElementById('slideToleranz'); // NEU
 const slideWidth = document.getElementById('slideWidth');
 const slideHeight = document.getElementById('slideHeight');
 const slidePulse = document.getElementById('slidePulse');
@@ -413,6 +420,7 @@ const boxCountSelect = document.getElementById('boxCountSelect');
 
 const valSens = document.getElementById('valSens');
 const valTakt = document.getElementById('valTakt'); 
+const valToleranz = document.getElementById('valToleranz'); // NEU
 const valWidth = document.getElementById('valWidth');
 const valHeight = document.getElementById('valHeight');
 const valPulse = document.getElementById('valPulse');
@@ -457,15 +465,15 @@ let lastQuietBeep = 0;
 let lastLoudBeep = 0;
 
 let lastFrameTime = 0;
-let frameCounter = 0; // NEU: Zähler für UI-Throttling
+let frameCounter = 0; 
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 60; 
+const HIT_PAD = 30; // REDUZIERT von 60 auf 30
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
 const DEFAULTS = { 
-    sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, takt: 2000,
+    sens: 15, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, takt: 2000, toleranz: 50,
     anchorSens: 20, anchorW: 15, anchorH: 15, anchorDrift: true,
     muteSens: 40, muteHold: 40, muteW: 15, muteH: 15, muteDrift: true
 };
@@ -538,6 +546,7 @@ function setupAdjBtn(minusId, plusId, sliderId) {
     document.getElementById(plusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) + (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
 }
 setupAdjBtn('sensMinus', 'sensPlus', 'slideSens'); setupAdjBtn('taktMinus', 'taktPlus', 'slideTakt'); 
+setupAdjBtn('toleranzMinus', 'toleranzPlus', 'slideToleranz'); // NEU
 setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth'); setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
 setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse'); setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
 setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom'); setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
@@ -630,6 +639,7 @@ function updateZoomSelectionUI() {
 function updateLabels() {
     valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
     valPulse.innerText = slidePulse.value; valHold.innerText = slideHold.value; valTakt.innerText = slideTakt.value; 
+    valToleranz.innerText = slideToleranz.value; // NEU
     valAnchorSens.innerText = slideAnchorSens.value; valAnchorW.innerText = slideAnchorW.value; valAnchorH.innerText = slideAnchorH.value;
     valMuteSens.innerText = slideMuteSens.value; valMuteHold.innerText = slideMuteHold.value; 
     valMuteW.innerText = slideMuteW.value; valMuteH.innerText = slideMuteH.value;
@@ -637,7 +647,7 @@ function updateLabels() {
 
 function saveSettings() {
     const settings = {
-        sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value,
+        sens: slideSens.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, toleranz: slideToleranz.value,
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
         anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value, anchorDrift: chkAnchorDrift.checked,
         muteSens: slideMuteSens.value, muteHold: slideMuteHold.value, muteW: slideMuteW.value, muteH: slideMuteH.value, muteDrift: chkMuteDrift.checked,
@@ -647,18 +657,17 @@ function saveSettings() {
         anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active }
     };
-    // Zukünftig nur noch diesen Key nutzen
     localStorage.setItem('pixel_settings_pro', JSON.stringify(settings));
 }
 
 function loadSettings() {
     try {
-        // Migration von alten Versionen
-        const saved = localStorage.getItem('pixel_settings_pro') || localStorage.getItem('pixel_settings_v48');
+        const saved = localStorage.getItem('pixel_settings_pro');
         if (saved) {
             const s = JSON.parse(saved);
             if (s.sens) slideSens.value = s.sens; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
-            if (s.pulse) slidePulse.value = s.pulse; if (s.hold) slideHold.value = s.hold; if (s.takt) slideTakt.value = s.takt; 
+            if (s.pulse) slidePulse.value = s.pulse; if (s.hold) slideHold.value = s.hold; 
+            if (s.takt) slideTakt.value = s.takt; if (s.toleranz) slideToleranz.value = s.toleranz; 
             
             if (s.anchorSens) slideAnchorSens.value = s.anchorSens; if (s.anchorW) slideAnchorW.value = s.anchorW; if (s.anchorH) slideAnchorH.value = s.anchorH;
             if (s.anchorDrift !== undefined) chkAnchorDrift.checked = s.anchorDrift;
@@ -696,12 +705,10 @@ function updateStealthClock() {
     hoursHTML.innerText = String(d.getHours()).padStart(2, '0'); minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
     const dots = document.querySelectorAll('#stealthOverlay div div');
     
-    // Mute Blink Logik
     if (isStealthActive && muteBox.active && muteBox.isMuted) {
         const visible = d.getSeconds() % 2 === 0; dots.forEach(dot => dot.style.opacity = visible ? "1" : "0");
     } else { dots.forEach(dot => dot.style.opacity = "1"); }
     
-    // Pause Farb Logik (NEU: Leicht rötlich wenn pausiert)
     if (!isMonitoring) {
         stealthOverlay.style.color = '#ffcccc'; 
     } else {
@@ -714,6 +721,7 @@ activateStealthBtn.addEventListener('click', () => { stealthOverlay.style.displa
 exitStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'none'; isStealthActive = false; });
 
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideToleranz.addEventListener('input', () => { updateLabels(); saveSettings(); }); // NEU
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; }); });
 slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; }); });
@@ -734,7 +742,7 @@ boxCountSelect.addEventListener('change', (e) => {
 
 document.getElementById('btnResetMain').addEventListener('click', () => {
     slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; 
-    slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideTakt.value = DEFAULTS.takt;
+    slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideTakt.value = DEFAULTS.takt; slideToleranz.value = DEFAULTS.toleranz;
     boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count;
     boxes.forEach((b, idx) => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; b.validCrossings=0; b.lastState=0; b.lastMeasuredCycle=0; });
     if (selectedBox !== anchorBox && selectedBox !== muteBox) selectedBox = boxes[0];
@@ -893,7 +901,7 @@ async function startSystem() {
     } catch (err) { alert('Kamerafehler: ' + err.message); }
 }
 startBtn.addEventListener('click', () => { 
-    initAudio(); // ERZWUNGEN DURCH NUTZERINTERAKTION
+    initAudio(); 
     if (!isRunning) startSystem(); else stopSystem(); 
 });
 function stopSystem() { isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop()); if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera Start'; }
@@ -930,7 +938,6 @@ function analyzeMute(now) {
         }
     }
     
-    // UI-Throttling: Nur jedes 4. Frame (ca. 3-4x pro Sekunde) Text anpassen
     if (muteBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
         let txt = `Diff: ${Math.round(mDiff)} / Max: ${muteThreshold}<br>`;
         if (muteBox.isMuted) {
@@ -953,8 +960,11 @@ function analyzeBoxes(now) {
     const minCrossings = parseInt(slidePulse.value); 
     const holdMs = parseFloat(slideHold.value) * 1000;
     const targetTakt = parseInt(slideTakt.value);
-    const minAllowed = targetTakt * 0.5; 
-    const maxAllowed = targetTakt * 1.5;
+    
+    // NEU: Berechnung der Toleranzgrenzen auf Basis des Sliders
+    const tolerancePct = parseInt(slideToleranz.value) / 100;
+    const minAllowed = targetTakt * (1 - tolerancePct); 
+    const maxAllowed = targetTakt * (1 + tolerancePct);
 
     for (let i = 0; i < activeBoxCount; i++) {
         const box = boxes[i]; let diff = 0;
@@ -1000,7 +1010,6 @@ function analyzeBoxes(now) {
             if (box.isAlarm && isMonitoring) box.zoomBoxDiv.classList.add('alarm-zoom'); else box.zoomBoxDiv.classList.remove('alarm-zoom');
         }
         
-        // UI-Throttling: Nur jedes 4. Frame Text anpassen
         if (box.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
             let txt = `Diff: ${diff} | Pkt: ${box.validCrossings}`;
             if (box.lastMeasuredCycle > 0) txt += `<br>Letzter: <span style="color:#00ff88;">${box.lastMeasuredCycle} ms</span>`; else txt += `<br>Letzter: --- ms`;
@@ -1053,7 +1062,8 @@ function analyzeAnchor(now) {
             for (let j = 0; j < aData.length; j++) {
                 anchorBox.baseline[j] = Math.round(anchorBox.baseline[j] * 0.98 + aData[j] * 0.02);
             }
-            if (Math.random() < 0.05) anchorBox.refNeedsDraw = true;
+            // Zuvor Random, jetzt deterministisch: Exakt alle ~2 Sekunden neu zeichnen
+            if (frameCounter % 30 === 0) anchorBox.refNeedsDraw = true;
         }
     }
 
@@ -1061,7 +1071,6 @@ function analyzeAnchor(now) {
         if (anchorBox.isAlarm && isMonitoring) anchorBox.zoomBoxDiv.classList.add('alarm-zoom'); else anchorBox.zoomBoxDiv.classList.remove('alarm-zoom');
     }
     
-    // UI-Throttling
     if (anchorBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
         let txt = `Abw: <span style="color:#00ff88;">${structuralDiff}</span> / Max: ${anchorThreshold}`;
         if (anchorBox.isAlarm && isMonitoring) {
@@ -1125,7 +1134,7 @@ function processFrame() {
     const now = Date.now(); const elapsed = now - lastFrameTime;
     if (elapsed < FRAME_INTERVAL) return; lastFrameTime = now - (elapsed % FRAME_INTERVAL);
     
-    frameCounter++; // Erhöht sich mit jedem gezeichneten Frame
+    frameCounter++; 
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
