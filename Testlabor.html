@@ -2,102 +2,88 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Stellwerk Test-Labor</title>
+<title>Stellwerk-Simulator Pro</title>
 <style>
-  body { 
-      background: #111; color: white; font-family: Arial, sans-serif; 
-      display: flex; flex-direction: column; align-items: center; padding-top: 50px;
-  }
-  .steuerpult { background: #333; padding: 20px; border-radius: 10px; margin-bottom: 50px; border: 2px solid #555; }
-  button { padding: 10px 15px; margin: 5px; font-weight: bold; cursor: pointer; }
-  
-  .gleis { 
-      width: 150px; height: 35px; margin: 20px; background: #333; 
-      border: 2px solid #555; display: flex; justify-content: center; align-items: center;
-      transition: background 0.05s; /* Harter Umschlag für echtes Blink-Feeling */
-  }
-  
-  .anker-karo { 
-      width: 150px; height: 150px; margin-top: 10px; border: 2px solid #fff;
-      /* Erzeugt ein Schachbrettmuster, das perfekt als Struktur für den Anker dient */
-      background-image: linear-gradient(45deg, #444 25%, transparent 25%), 
-                        linear-gradient(-45deg, #444 25%, transparent 25%), 
-                        linear-gradient(45deg, transparent 75%, #444 75%), 
-                        linear-gradient(-45deg, transparent 75%, #444 75%);
-      background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-  }
-
-  #stoerung { 
-      width: 60px; height: 60px; background: white; 
-      position: absolute; left: -100px; top: 400px; 
-      display: none; z-index: 100; box-shadow: 0 0 15px white;
-  }
+    body { background: #1a1a1a; color: #eee; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    .panel { background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: 100%; max-width: 500px; margin-bottom: 30px; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; font-size: 12px; margin-bottom: 5px; color: #aaa; }
+    input[type="text"], input[type="number"], select { width: 100%; padding: 8px; background: #444; border: 1px solid #666; color: white; border-radius: 4px; box-sizing: border-box; }
+    
+    .test-area { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .gleis { 
+        width: 160px; height: 50px; background: #333; border: 2px solid #555; 
+        display: flex; justify-content: center; align-items: center; 
+        font-weight: bold; font-family: monospace; font-size: 18px;
+    }
 </style>
 </head>
 <body>
 
-  <div class="steuerpult">
-    <h2>🛠️ Test-Labor</h2>
-    <button onclick="startBlink(2000)">Blinken (Takt: 2000ms)</button>
-    <button onclick="startBlink(1000)">Schnell (Takt: 1000ms)</button>
-    <button onclick="stopBlink()">Blinken stoppen</button>
-    <br><br>
-    <button onclick="moveDisturbance()">Weiße Störung durchs Bild schieben (Mute-Test)</button>
-  </div>
-  
-  <div style="display: flex; gap: 50px; width: 80%; justify-content: center;">
-      <div>
-          <div style="color: #aaa; margin-bottom: -10px;">Test-Messfelder</div>
-          <div class="gleis" id="b1">Zugnummer 1</div>
-          <div class="gleis" id="b2">Zugnummer 2</div>
-      </div>
-      <div>
-          <div style="color: #aaa;">Test-Anker (Struktur)</div>
-          <div class="anker-karo"></div>
-      </div>
-  </div>
+<div class="panel">
+    <h3>Konfiguration</h3>
+    <div class="input-group">
+        <label>Zugnummer (Text):</label>
+        <input type="text" id="zugNr" value="IC 2012" oninput="updateDisplay()">
+    </div>
+    <div class="input-group">
+        <label>Blink-Modus:</label>
+        <select id="blinkMode" onchange="updateDisplay()">
+            <option value="all">Komplette Nummer blinkt</option>
+            <option value="last">Nur letzte Ziffer blinkt</option>
+        </select>
+    </div>
+    <div class="input-group">
+        <label>Blink-Farbe:</label>
+        <input type="color" id="blinkColor" value="#ff0000" onchange="updateDisplay()">
+    </div>
+    <div class="input-group">
+        <label>Blink-Frequenz (ms pro Phase): <span id="freqVal">1000</span>ms</label>
+        <input type="range" id="freqSlider" min="100" max="2000" step="50" value="1000" oninput="restartBlink()">
+    </div>
+</div>
 
-  <div id="stoerung"></div>
+<div class="test-area">
+    <div class="gleis" id="displayBox"></div>
+</div>
 
-  <script>
+<script>
     let blinkInterval;
-    let isRed = false;
+    let isOn = false;
 
-    function startBlink(zyklusMs) {
-      clearInterval(blinkInterval);
-      // Wenn der Zyklus 2000ms ist, bleibt das Licht 1000ms an und 1000ms aus
-      let umschlagZeit = zyklusMs / 2; 
-      
-      blinkInterval = setInterval(() => {
-        isRed = !isRed;
-        let color = isRed ? '#ff0000' : '#333';
-        document.getElementById('b1').style.background = color;
-        // Box 2 blinkt zeitversetzt
-        document.getElementById('b2').style.background = !isRed ? '#ff0000' : '#333'; 
-      }, umschlagZeit);
+    function restartBlink() {
+        const freq = document.getElementById('freqSlider').value;
+        document.getElementById('freqVal').innerText = freq;
+        clearInterval(blinkInterval);
+        blinkInterval = setInterval(toggleBlink, freq);
     }
 
-    function stopBlink() {
-      clearInterval(blinkInterval);
-      document.getElementById('b1').style.background = '#333';
-      document.getElementById('b2').style.background = '#333';
-    }
-
-    function moveDisturbance() {
-      const s = document.getElementById('stoerung');
-      s.style.display = 'block';
-      let x = -100;
-      
-      let move = setInterval(() => {
-        x += 3; // Schiebt sich langsam von links nach rechts
-        s.style.left = x + 'px';
-        if(x > window.innerWidth) { 
-            clearInterval(move); 
-            s.style.display = 'none'; 
+    function updateDisplay() {
+        const text = document.getElementById('zugNr').value;
+        const mode = document.getElementById('blinkMode').value;
+        const color = document.getElementById('blinkColor').value;
+        const box = document.getElementById('displayBox');
+        
+        box.innerHTML = '';
+        if (mode === 'all') {
+            box.innerText = text;
+            box.style.color = isOn ? color : 'white';
+        } else {
+            const last = text.slice(-1);
+            const rest = text.slice(0, -1);
+            box.innerHTML = `<span>${rest}</span><span id="blinkPart">${last}</span>`;
+            document.getElementById('blinkPart').style.color = isOn ? color : 'white';
         }
-      }, 30);
     }
-  </script>
+
+    function toggleBlink() {
+        isOn = !isOn;
+        updateDisplay();
+    }
+
+    // Start
+    updateDisplay();
+    restartBlink();
+</script>
 </body>
 </html>
