@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro v53</title>
+<title>Pixel-Wächter Pro v54</title>
 
 <style>
     body {
@@ -71,7 +71,6 @@
     }
     .module-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; }
     
-    /* Config Button Style */
     .config-btn { background: #444; padding: 6px 10px; font-size: 14px; border-radius: 6px; }
     .config-btn:hover { background: #666; }
     .config-btn.open { background: #777; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
@@ -506,7 +505,6 @@ let boxes = [
 
 let anchorBox = { id: 'Anker', x: 200, y: 100, w: 15, h: 15, active: false, baseline: null, alarmStart: 0, isAlarm: false, zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false };
 
-// Mute Box mit 1-Sekunden-Entprellung (emptyStartTime)
 let muteBox = { 
     id: 'Mute', x: 200, y: 200, w: 15, h: 15, active: false, baseline: null, 
     state: 'IDLE', timerStart: 0, continuousStart: 0, wasEmpty: true, lastWarningTime: 0, emptyStartTime: 0,
@@ -956,10 +954,10 @@ startBtn.addEventListener('click', () => {
 });
 function stopSystem() { isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop()); if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera Start'; }
 
-function analyzeMute(now) {
+// GLOBALER BILDDATEN-SPEICHER für drastisch verbesserte Performance
+function analyzeMute(now, fullFrame, imgW, imgH) {
     if (!muteBox.active) { muteBox.state = 'IDLE'; return; }
     
-    // Unterbreche Mute-Logik, wenn Anker verrutscht ist
     if (anchorBox.active && anchorBox.isAlarm) {
         muteBox.state = 'IDLE';
         muteBox.continuousStart = 0;
@@ -970,9 +968,17 @@ function analyzeMute(now) {
     const mx = Math.floor(muteBox.x); const my = Math.floor(muteBox.y); const mw = Math.floor(muteBox.w); const mh = Math.floor(muteBox.h);
     if (muteBox.zoomCtx) { drawProportional(muteBox.zoomCtx, canvas, mx, my, mw, mh, 100, 50); }
     
-    const mFrame = ctx.getImageData(mx, my, mw, mh); const mData = mFrame.data;
+    const data = fullFrame.data;
     let mTotal = 0; let mCount = 0;
-    for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) { mTotal += mData[j]*0.299 + mData[j+1]*0.587 + mData[j+2]*0.114; mCount++; }
+    for (let y = my; y < my + mh; y += PIXEL_STEP) {
+        for (let x = mx; x < mx + mw; x += PIXEL_STEP) {
+            if (x >= 0 && x < imgW && y >= 0 && y < imgH) {
+                let idx = (y * imgW + x) * 4;
+                mTotal += data[idx]*0.299 + data[idx+1]*0.587 + data[idx+2]*0.114;
+                mCount++;
+            }
+        }
+    }
     const mAvg = mTotal / mCount;
     
     if (muteBox.baseline === null) muteBox.baseline = mAvg;
@@ -982,25 +988,20 @@ function analyzeMute(now) {
     let muteHoldMs = parseInt(slideMuteHold.value) * 1000;
 
     if (mDiff >= muteThreshold) {
-        // Nicht Leer!
-        muteBox.emptyStartTime = 0; // Entprellungs-Timer zurücksetzen
-
+        muteBox.emptyStartTime = 0; 
         if (muteBox.state === 'IDLE') {
             muteBox.state = 'MUTED';
             muteBox.timerStart = now;
             muteBox.continuousStart = now;
             muteBox.wasEmpty = false;
         } else if (muteBox.state === 'MUTED' && muteBox.wasEmpty) {
-            muteBox.timerStart = now; // Timer neu starten
+            muteBox.timerStart = now; 
             muteBox.wasEmpty = false;
         }
     } else {
-        // Potenziell Leer! Starte Entprellungs-Timer
         if (muteBox.emptyStartTime === 0) {
             muteBox.emptyStartTime = now;
         }
-
-        // Feld muss zwingend 1000ms ununterbrochen "leer" sein!
         if (now - muteBox.emptyStartTime >= 1000) {
             muteBox.wasEmpty = true;
             if (muteBox.state === 'WAITING_FOR_EMPTY') {
@@ -1015,7 +1016,6 @@ function analyzeMute(now) {
         }
     }
     
-    // Timer und Sicherheits-Logik bearbeiten
     if (muteBox.state === 'MUTED') {
         if (now - muteBox.timerStart >= muteHoldMs) {
             muteBox.state = 'WAITING_FOR_EMPTY';
@@ -1054,7 +1054,7 @@ function analyzeMute(now) {
     }
 }
 
-function analyzeBoxes(now) {
+function analyzeBoxes(now, fullFrame, imgW, imgH) {
     let boxAlarmTriggered = false;
     const threshold = parseInt(slideSens.value); 
     const minCrossings = parseInt(slidePulse.value); 
@@ -1065,14 +1065,23 @@ function analyzeBoxes(now) {
     const minAllowed = targetTakt * (1 - tolerancePct); 
     const maxAllowed = targetTakt * (1 + tolerancePct);
 
+    const data = fullFrame.data;
+
     for (let i = 0; i < activeBoxCount; i++) {
         const box = boxes[i]; let diff = 0;
         const rx = Math.floor(box.x); const ry = Math.floor(box.y); const rw = Math.floor(box.w); const rh = Math.floor(box.h);
         if (box.zoomCtx) { drawProportional(box.zoomCtx, canvas, rx, ry, rw, rh, 100, 50); }
 
-        const frame = ctx.getImageData(rx, ry, rw, rh); const data = frame.data;
         let totalBrightness = 0; let pixelCount = 0;
-        for (let j = 0; j < data.length; j += PIXEL_STEP * 4) { totalBrightness += data[j]*0.299 + data[j+1]*0.587 + data[j+2]*0.114; pixelCount++; }
+        for (let y = ry; y < ry + rh; y += PIXEL_STEP) {
+            for (let x = rx; x < rx + rw; x += PIXEL_STEP) {
+                if (x >= 0 && x < imgW && y >= 0 && y < imgH) {
+                    let idx = (y * imgW + x) * 4;
+                    totalBrightness += data[idx]*0.299 + data[idx+1]*0.587 + data[idx+2]*0.114;
+                    pixelCount++;
+                }
+            }
+        }
         const avgBrightness = totalBrightness / pixelCount;
         
         box.history.push({ val: avgBrightness, time: now });
@@ -1120,13 +1129,20 @@ function analyzeBoxes(now) {
     return boxAlarmTriggered;
 }
 
-function analyzeAnchor(now) {
+function analyzeAnchor(now, fullFrame, imgW, imgH) {
     if (!anchorBox.active) return false;
     
     const ax = Math.floor(anchorBox.x); const ay = Math.floor(anchorBox.y); const aw = Math.floor(anchorBox.w); const ah = Math.floor(anchorBox.h);
     if (anchorBox.zoomCtx) { drawProportional(anchorBox.zoomCtx, canvas, ax, ay, aw, ah, 80, 40); }
 
-    const aFrame = ctx.getImageData(ax, ay, aw, ah); const aData = aFrame.data;
+    let safeAx = Math.max(0, Math.min(ax, imgW - aw));
+    let safeAy = Math.max(0, Math.min(ay, imgH - ah));
+    let aData = new Uint8ClampedArray(aw * ah * 4);
+    for (let y = 0; y < ah; y++) {
+        let gStart = ((safeAy + y) * imgW + safeAx) * 4;
+        aData.set(fullFrame.data.subarray(gStart, gStart + aw * 4), y * aw * 4);
+    }
+
     if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) { anchorBox.baseline = new Uint8ClampedArray(aData); anchorBox.refNeedsDraw = true; }
 
     if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
@@ -1235,11 +1251,18 @@ function processFrame() {
     
     frameCounter++; 
 
+    // Bild 1x auf den Canvas zeichnen
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    analyzeAnchor(now); 
-    analyzeMute(now);
-    let boxAlarm = analyzeBoxes(now);
+    // DIE MAGIE: Nur noch EIN einziger Aufruf für alle Hardware-Pixel-Daten
+    const fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const imgW = canvas.width;
+    const imgH = canvas.height;
+    
+    // Daten werden ressourcenschonend an die Module übergeben
+    analyzeAnchor(now, fullFrame, imgW, imgH); 
+    analyzeMute(now, fullFrame, imgW, imgH);
+    let boxAlarm = analyzeBoxes(now, fullFrame, imgW, imgH);
     
     drawUI();
 
