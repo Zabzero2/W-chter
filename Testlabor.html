@@ -2,44 +2,49 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Stellwerk-Simulator Pro</title>
+<title>Stellwerk-Simulator Pro v2</title>
 <style>
     body { background: #1a1a1a; color: #eee; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
     .panel { background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: 100%; max-width: 500px; margin-bottom: 30px; }
-    .input-group { margin-bottom: 15px; }
-    label { display: block; font-size: 12px; margin-bottom: 5px; color: #aaa; }
-    input[type="text"], input[type="number"], select { width: 100%; padding: 8px; background: #444; border: 1px solid #666; color: white; border-radius: 4px; box-sizing: border-box; }
+    .input-group { margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; }
+    label { font-size: 13px; color: #aaa; }
+    input[type="text"], select { width: 60%; padding: 8px; background: #444; border: 1px solid #666; color: white; border-radius: 4px; }
     
     .test-area { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
     .gleis { 
-        width: 160px; height: 50px; background: #333; border: 2px solid #555; 
+        width: 200px; height: 60px; background: #333; border: 2px solid #555; 
         display: flex; justify-content: center; align-items: center; 
-        font-weight: bold; font-family: monospace; font-size: 18px;
+        font-weight: bold; font-family: 'Courier New', monospace; font-size: 24px;
+        text-shadow: 1px 1px 2px black;
     }
 </style>
 </head>
 <body>
 
 <div class="panel">
-    <h3>Konfiguration</h3>
+    <h3>Simulator-Konfiguration</h3>
     <div class="input-group">
-        <label>Zugnummer (Text):</label>
+        <label>Zugnummer:</label>
         <input type="text" id="zugNr" value="IC 2012" oninput="updateDisplay()">
     </div>
     <div class="input-group">
-        <label>Blink-Modus:</label>
+        <label>Modus:</label>
         <select id="blinkMode" onchange="updateDisplay()">
             <option value="all">Komplette Nummer blinkt</option>
             <option value="last">Nur letzte Ziffer blinkt</option>
         </select>
     </div>
     <div class="input-group">
-        <label>Blink-Farbe:</label>
-        <input type="color" id="blinkColor" value="#ff0000" onchange="updateDisplay()">
+        <label>Basis-Farbe (Ruhe):</label>
+        <input type="color" id="baseColor" value="#ffffff" onchange="updateDisplay()">
     </div>
     <div class="input-group">
-        <label>Blink-Frequenz (ms pro Phase): <span id="freqVal">1000</span>ms</label>
-        <input type="range" id="freqSlider" min="100" max="2000" step="50" value="1000" oninput="restartBlink()">
+        <label>Blink-Farbe (Aktiv):</label>
+        <input type="color" id="blinkColor" value="#ff0000" onchange="updateDisplay()">
+    </div>
+    <div class="input-group" style="flex-direction: column; align-items: flex-start;">
+        <label>Blink-Frequenz: <span id="freqVal">1000</span>ms</label>
+        <input type="range" id="freqSlider" style="width:100%" min="100" max="2000" step="50" value="1000" oninput="restartBlink()">
     </div>
 </div>
 
@@ -61,18 +66,20 @@
     function updateDisplay() {
         const text = document.getElementById('zugNr').value;
         const mode = document.getElementById('blinkMode').value;
-        const color = document.getElementById('blinkColor').value;
+        const baseCol = document.getElementById('baseColor').value;
+        const blinkCol = document.getElementById('blinkColor').value;
         const box = document.getElementById('displayBox');
+        
+        const activeColor = isOn ? blinkCol : baseCol;
         
         box.innerHTML = '';
         if (mode === 'all') {
             box.innerText = text;
-            box.style.color = isOn ? color : 'white';
+            box.style.color = activeColor;
         } else {
             const last = text.slice(-1);
             const rest = text.slice(0, -1);
-            box.innerHTML = `<span>${rest}</span><span id="blinkPart">${last}</span>`;
-            document.getElementById('blinkPart').style.color = isOn ? color : 'white';
+            box.innerHTML = `<span style="color:${baseCol}">${rest}</span><span id="blinkPart" style="color:${activeColor}">${last}</span>`;
         }
     }
 
@@ -81,9 +88,9 @@
         updateDisplay();
     }
 
-    // Start
-    updateDisplay();
+    // Init
     restartBlink();
+    updateDisplay();
 </script>
 </body>
 </html>
