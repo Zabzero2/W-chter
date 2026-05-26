@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Stellwerk-Simulator Pro v2</title>
+<title>Stellwerk-Simulator Pro v3</title>
 <style>
     body { background: #1a1a1a; color: #eee; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
     .panel { background: #2d2d2d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); width: 100%; max-width: 500px; margin-bottom: 30px; }
@@ -12,9 +12,10 @@
     
     .test-area { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
     .gleis { 
-        width: 200px; height: 60px; background: #333; border: 2px solid #555; 
+        width: 200px; height: 60px; background: #333; 
+        /* Rahmen entfernt */
         display: flex; justify-content: center; align-items: center; 
-        font-weight: bold; font-family: 'Courier New', monospace; font-size: 24px;
+        font-weight: bold; font-family: 'Courier New', monospace; font-size: 28px;
         text-shadow: 1px 1px 2px black;
     }
 </style>
@@ -35,7 +36,7 @@
         </select>
     </div>
     <div class="input-group">
-        <label>Basis-Farbe (Ruhe):</label>
+        <label>Basis-Farbe (Dauerlicht):</label>
         <input type="color" id="baseColor" value="#ffffff" onchange="updateDisplay()">
     </div>
     <div class="input-group">
@@ -70,16 +71,27 @@
         const blinkCol = document.getElementById('blinkColor').value;
         const box = document.getElementById('displayBox');
         
-        const activeColor = isOn ? blinkCol : baseCol;
-        
         box.innerHTML = '';
+        
         if (mode === 'all') {
+            // Komplette Nummer wechselt zwischen Basis und Blinkfarbe
             box.innerText = text;
-            box.style.color = activeColor;
+            box.style.color = isOn ? blinkCol : baseCol;
         } else {
+            // Restliche Ziffern leuchten permanent in der Basis-Farbe
             const last = text.slice(-1);
             const rest = text.slice(0, -1);
-            box.innerHTML = `<span style="color:${baseCol}">${rest}</span><span id="blinkPart" style="color:${activeColor}">${last}</span>`;
+            
+            const spanRest = document.createElement('span');
+            spanRest.innerText = rest;
+            spanRest.style.color = baseCol; // Dauerhaft Basis-Farbe
+            
+            const spanLast = document.createElement('span');
+            spanLast.innerText = last;
+            spanLast.style.color = isOn ? blinkCol : baseCol; // Blinkt
+            
+            box.appendChild(spanRest);
+            box.appendChild(spanLast);
         }
     }
 
