@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro v56</title>
+<title>Pixel-Wächter Pro v57</title>
 
 <style>
     body {
@@ -486,7 +486,7 @@ let lastFrameTime = 0;
 let frameCounter = 0; 
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 45; // Vergrößert für besseres Greifen auf Touchscreens
+const HIT_PAD = 30; // ZURÜCK AUF ORIGINALWERT!
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
@@ -1011,7 +1011,6 @@ function analyzeMute(now, fullFrame, imgW, imgH) {
         }
 
         let alpha = parseInt(slideMuteDrift.value) * 0.001; 
-        // ENTSPERRT: Darf jetzt immer lernen, solange Wert unter Limit ist
         if (chkMuteDrift.checked && muteBox.state !== 'MUTED' && mDiff > 0 && mDiff < muteThreshold) {
             muteBox.baseline = (muteBox.baseline * (1 - alpha)) + (mAvg * alpha); 
         }
@@ -1144,11 +1143,18 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
         aData.set(fullFrame.data.subarray(gStart, gStart + aw * 4), y * aw * 4);
     }
 
-    if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) { anchorBox.baseline = new Uint8ClampedArray(aData); anchorBox.refNeedsDraw = true; }
+    // ACHTUNG: Hier ist der magische Umbau auf Float32Array (Fließkommazahlen)!
+    if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) { 
+        anchorBox.baseline = new Float32Array(aData); 
+        anchorBox.refNeedsDraw = true; 
+    }
 
     if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
         try {
-            let imgData = new ImageData(anchorBox.baseline, aw, ah); let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah; tmpC.getContext('2d').putImageData(imgData, 0, 0);
+            // Um das Bild auf den Bildschirm zu zeichnen, müssen wir es kurz wieder in ganze Zahlen (Uint8ClampedArray) umwandeln
+            let drawData = new Uint8ClampedArray(anchorBox.baseline);
+            let imgData = new ImageData(drawData, aw, ah); 
+            let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah; tmpC.getContext('2d').putImageData(imgData, 0, 0);
             drawProportional(anchorBox.refCtx, tmpC, 0, 0, aw, ah, 80, 40);
             anchorBox.refNeedsDraw = false;
         } catch(e) { anchorBox.baseline = null; }
@@ -1175,10 +1181,10 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
         anchorBox.alarmStart = 0; anchorBox.isAlarm = false; 
 
         let alpha = parseInt(slideAnchorDrift.value) * 0.001;
-        // ENTSPERRT: Darf jetzt immer lernen, solange Wert unter Limit ist
         if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold) {
             for (let j = 0; j < aData.length; j++) {
-                anchorBox.baseline[j] = Math.round(anchorBox.baseline[j] * (1 - alpha) + aData[j] * alpha);
+                // Die Rundung (Math.round) wurde hier komplett entfernt! Er rechnet jetzt mit Kommastellen.
+                anchorBox.baseline[j] = anchorBox.baseline[j] * (1 - alpha) + aData[j] * alpha;
             }
             if (frameCounter % 30 === 0) anchorBox.refNeedsDraw = true;
         }
@@ -1253,15 +1259,12 @@ function processFrame() {
     
     frameCounter++; 
 
-    // Bild 1x auf den Canvas zeichnen
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    // DIE MAGIE: Nur noch EIN einziger Aufruf für alle Hardware-Pixel-Daten
     const fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const imgW = canvas.width;
     const imgH = canvas.height;
     
-    // Daten werden ressourcenschonend an die Module übergeben
     analyzeAnchor(now, fullFrame, imgW, imgH); 
     analyzeMute(now, fullFrame, imgW, imgH);
     let boxAlarm = analyzeBoxes(now, fullFrame, imgW, imgH);
