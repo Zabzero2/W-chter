@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro v54</title>
+<title>Pixel-Wächter Pro v56</title>
 
 <style>
     body {
@@ -486,7 +486,7 @@ let lastFrameTime = 0;
 let frameCounter = 0; 
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 30; 
+const HIT_PAD = 45; // Vergrößert für besseres Greifen auf Touchscreens
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
@@ -1011,7 +1011,8 @@ function analyzeMute(now, fullFrame, imgW, imgH) {
         }
 
         let alpha = parseInt(slideMuteDrift.value) * 0.001; 
-        if (chkMuteDrift.checked && muteBox.state !== 'MUTED' && mDiff > 0 && mDiff < muteThreshold * 0.2) {
+        // ENTSPERRT: Darf jetzt immer lernen, solange Wert unter Limit ist
+        if (chkMuteDrift.checked && muteBox.state !== 'MUTED' && mDiff > 0 && mDiff < muteThreshold) {
             muteBox.baseline = (muteBox.baseline * (1 - alpha)) + (mAvg * alpha); 
         }
     }
@@ -1174,7 +1175,8 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
         anchorBox.alarmStart = 0; anchorBox.isAlarm = false; 
 
         let alpha = parseInt(slideAnchorDrift.value) * 0.001;
-        if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold * 0.5) {
+        // ENTSPERRT: Darf jetzt immer lernen, solange Wert unter Limit ist
+        if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold) {
             for (let j = 0; j < aData.length; j++) {
                 anchorBox.baseline[j] = Math.round(anchorBox.baseline[j] * (1 - alpha) + aData[j] * alpha);
             }
