@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro v57</title>
+<title>Pixel-Wächter Pro v58</title>
 
 <style>
     body {
@@ -486,7 +486,7 @@ let lastFrameTime = 0;
 let frameCounter = 0; 
 const TARGET_FPS = 15; 
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 30; // ZURÜCK AUF ORIGINALWERT!
+const HIT_PAD = 30; 
 const HISTORY_MS = 5000; 
 const PIXEL_STEP = 4; 
 
@@ -508,6 +508,7 @@ let anchorBox = { id: 'Anker', x: 200, y: 100, w: 15, h: 15, active: false, base
 let muteBox = { 
     id: 'Mute', x: 200, y: 200, w: 15, h: 15, active: false, baseline: null, 
     state: 'IDLE', timerStart: 0, continuousStart: 0, wasEmpty: true, lastWarningTime: 0, emptyStartTime: 0,
+    triggerStart: 0, // NEU: Der 1000ms Start-Verzögerungs-Zähler für die MuteBox
     zoomCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
 };
 
@@ -568,7 +569,7 @@ chkAnchorActive.addEventListener('change', (e) => {
 
 chkMuteActive.addEventListener('change', (e) => {
     muteBox.active = e.target.checked; muteBox.baseline = null; muteBox.state = 'IDLE'; 
-    muteBox.continuousStart = 0; muteBox.wasEmpty = true; muteBox.emptyStartTime = 0;
+    muteBox.continuousStart = 0; muteBox.wasEmpty = true; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
     if (muteBox.active) selectedBox = muteBox; else if(selectedBox === muteBox) selectedBox = boxes[0];
     saveSettings(); createZoomDisplays();
 });
@@ -659,7 +660,7 @@ function createZoomDisplays() {
         const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
         stats.innerHTML = `Lade...`;
         const rst = document.createElement('button'); rst.innerText = "🔄 Leer setzen"; rst.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#28a745; border-radius:4px;";
-        rst.onclick = (e) => { e.stopPropagation(); muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; playBeep(); };
+        rst.onclick = (e) => { e.stopPropagation(); muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; playBeep(); };
         div.appendChild(c); div.appendChild(label); div.appendChild(stats); div.appendChild(rst); zoomHeader.appendChild(div);
         muteBox.zoomCtx = c.getContext('2d'); muteBox.zoomStatsDiv = stats; muteBox.zoomBoxDiv = div;
     }
@@ -805,7 +806,7 @@ document.getElementById('btnResetAnchor').addEventListener('click', () => {
 document.getElementById('btnResetMute').addEventListener('click', () => {
     slideMuteSens.value = DEFAULTS.muteSens; slideMuteHold.value = DEFAULTS.muteHold; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH; 
     chkMuteDrift.checked = DEFAULTS.muteDrift; slideMuteDrift.value = DEFAULTS.muteDriftSpeed;
-    muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null; muteBox.x = 200; muteBox.y = 200; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0;
+    muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null; muteBox.x = 200; muteBox.y = 200; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
     updateLabels(); updateDriftVisibility(); saveSettings();
 });
 
@@ -820,19 +821,19 @@ document.getElementById('btnResetAll').addEventListener('click', () => {
 monitorBtn.addEventListener('click', () => {
     isMonitoring = !isMonitoring;
     if (isMonitoring) { monitorBtn.innerText = "Überwachung: AKTIV"; monitorBtn.classList.remove("off"); } 
-    else { monitorBtn.innerText = "Überwachung: PAUSIERT"; monitorBtn.classList.add("off"); boxes.forEach(b => { b.isAlarm = false; b.validCrossings = 0; }); anchorBox.isAlarm = false; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; }
+    else { monitorBtn.innerText = "Überwachung: PAUSIERT"; monitorBtn.classList.add("off"); boxes.forEach(b => { b.isAlarm = false; b.validCrossings = 0; }); anchorBox.isAlarm = false; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
     updateStealthClock();
 });
 
 let turboTimeout = null; let turboInterval = null;
 function startTurboAction(actionFn) {
     if (!selectedBox) return; actionFn(1);
-    if(selectedBox === anchorBox) anchorBox.baseline = null; if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; } saveSettings();
+    if(selectedBox === anchorBox) anchorBox.baseline = null; if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; } saveSettings();
     turboTimeout = setTimeout(() => {
         let speed = 1; let tick = 0;
         turboInterval = setInterval(() => {
             tick++; if (tick > 15) speed = 3; if (tick > 35) speed = 8; actionFn(speed);
-            if(selectedBox === anchorBox) anchorBox.baseline = null; if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; } saveSettings();
+            if(selectedBox === anchorBox) anchorBox.baseline = null; if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; } saveSettings();
         }, 50);
     }, 600); 
 }
@@ -893,7 +894,7 @@ function startDrag(e) {
         if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
             draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
             dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; 
-            if(box !== anchorBox && box !== muteBox) box.history = []; else if(box===anchorBox) anchorBox.baseline = null; else if(box===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; }
+            if(box !== anchorBox && box !== muteBox) box.history = []; else if(box===anchorBox) anchorBox.baseline = null; else if(box===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
             boxHit = true;
             break;
         }
@@ -909,7 +910,7 @@ function moveDrag(e) {
     const pos = getPointerPos(e);
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
-    if(draggingBox !== anchorBox && draggingBox !== muteBox) draggingBox.history = []; else if(draggingBox===anchorBox) anchorBox.baseline = null; else if(draggingBox===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; }
+    if(draggingBox !== anchorBox && draggingBox !== muteBox) draggingBox.history = []; else if(draggingBox===anchorBox) anchorBox.baseline = null; else if(draggingBox===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
     
     if (e.cancelable) {
         e.preventDefault(); 
@@ -954,14 +955,15 @@ startBtn.addEventListener('click', () => {
 });
 function stopSystem() { isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop()); if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera Start'; }
 
-// GLOBALER BILDDATEN-SPEICHER für drastisch verbesserte Performance
 function analyzeMute(now, fullFrame, imgW, imgH) {
-    if (!muteBox.active) { muteBox.state = 'IDLE'; return; }
+    if (!muteBox.active) { muteBox.state = 'IDLE'; muteBox.triggerStart = 0; return; }
     
+    // RACECONDITION-SCHUTZ: Wenn der Anker Alarm hat, brich die MuteBox sofort ab!
     if (anchorBox.active && anchorBox.isAlarm) {
         muteBox.state = 'IDLE';
         muteBox.continuousStart = 0;
         muteBox.emptyStartTime = 0;
+        muteBox.triggerStart = 0;
         return;
     }
 
@@ -989,16 +991,26 @@ function analyzeMute(now, fullFrame, imgW, imgH) {
 
     if (mDiff >= muteThreshold) {
         muteBox.emptyStartTime = 0; 
-        if (muteBox.state === 'IDLE') {
-            muteBox.state = 'MUTED';
-            muteBox.timerStart = now;
-            muteBox.continuousStart = now;
-            muteBox.wasEmpty = false;
-        } else if (muteBox.state === 'MUTED' && muteBox.wasEmpty) {
-            muteBox.timerStart = now; 
-            muteBox.wasEmpty = false;
+        
+        // DIE NEUE STARTVERZÖGERUNG (1000ms Entprellung)
+        if (muteBox.triggerStart === 0) {
+            muteBox.triggerStart = now; // Stoppuhr starten
+        } else if (now - muteBox.triggerStart >= 1000) {
+            // Erst wenn 1 Sekunde durchgehend vergangen ist, schalte wirklich Mute!
+            if (muteBox.state === 'IDLE') {
+                muteBox.state = 'MUTED';
+                muteBox.timerStart = now;
+                muteBox.continuousStart = now;
+                muteBox.wasEmpty = false;
+            } else if (muteBox.state === 'MUTED' && muteBox.wasEmpty) {
+                muteBox.timerStart = now; 
+                muteBox.wasEmpty = false;
+            }
         }
     } else {
+        // Wenn der Wert kurzzeitig abfällt, Stoppuhr sofort wieder abbrechen
+        muteBox.triggerStart = 0;
+        
         if (muteBox.emptyStartTime === 0) {
             muteBox.emptyStartTime = now;
         }
@@ -1046,6 +1058,9 @@ function analyzeMute(now, fullFrame, imgW, imgH) {
             }
         } else if (muteBox.state === 'WAITING_FOR_EMPTY') {
             txt += `<span style="color:#aaa;">Wartet auf Freigabe...</span>`;
+        } else if (muteBox.triggerStart > 0) {
+            // Optisches Feedback für die laufende Startverzögerung
+            txt += `<b style="color:#ffcc00;">Prüfe...</b>`;
         } else { 
             txt += `Inaktiv`; 
         }
@@ -1143,7 +1158,6 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
         aData.set(fullFrame.data.subarray(gStart, gStart + aw * 4), y * aw * 4);
     }
 
-    // ACHTUNG: Hier ist der magische Umbau auf Float32Array (Fließkommazahlen)!
     if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) { 
         anchorBox.baseline = new Float32Array(aData); 
         anchorBox.refNeedsDraw = true; 
@@ -1151,7 +1165,6 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
 
     if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
         try {
-            // Um das Bild auf den Bildschirm zu zeichnen, müssen wir es kurz wieder in ganze Zahlen (Uint8ClampedArray) umwandeln
             let drawData = new Uint8ClampedArray(anchorBox.baseline);
             let imgData = new ImageData(drawData, aw, ah); 
             let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah; tmpC.getContext('2d').putImageData(imgData, 0, 0);
@@ -1183,7 +1196,6 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
         let alpha = parseInt(slideAnchorDrift.value) * 0.001;
         if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold) {
             for (let j = 0; j < aData.length; j++) {
-                // Die Rundung (Math.round) wurde hier komplett entfernt! Er rechnet jetzt mit Kommastellen.
                 anchorBox.baseline[j] = anchorBox.baseline[j] * (1 - alpha) + aData[j] * alpha;
             }
             if (frameCounter % 30 === 0) anchorBox.refNeedsDraw = true;
@@ -1265,6 +1277,7 @@ function processFrame() {
     const imgW = canvas.width;
     const imgH = canvas.height;
     
+    // Die Aufrufreihenfolge garantiert, dass der Anker den Vorrang bekommt!
     analyzeAnchor(now, fullFrame, imgW, imgH); 
     analyzeMute(now, fullFrame, imgW, imgH);
     let boxAlarm = analyzeBoxes(now, fullFrame, imgW, imgH);
