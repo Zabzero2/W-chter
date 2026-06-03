@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro v59</title>
+<title>Pixel-Wächter Pro v60</title>
 
 <style>
     body {
@@ -135,14 +135,14 @@
         <ol>
             <li><b>Kamera starten:</b> Erlaube den Kamerazugriff und richte das Gerät auf den Bereich.</li>
             <li><b>Mess-Felder platzieren:</b> Tippe das gewünschte Feld direkt im Live-Bild an und schiebe die Box über den zu überwachenden Bereich. WICHTIG: Ziehe den Rahmen <b>so eng wie möglich</b>!</li>
-            <li><b>Feinjustieren:</b> Nutze das D-Pad für pixelgenaues Ausrichten. Stelle die <i>Pixel-Schwelle</i> und <i>Kritische Masse</i> so ein, dass sie nur bei der gewünschten Anzahl an blinkenden Ziffern anschlagen.</li>
-            <li><b>Überwachen:</b> Sobald das Feld im eingestellten <i>Ziel-Zyklus</i> wechselt, sammelt es Punkte. Sobald der eingestellte Wert für <b>Min. Takt-Punkte</b> überschritten ist, wird der Alarm ausgelöst.</li>
+            <li><b>Feinjustieren:</b> Nutze das D-Pad für pixelgenaues Ausrichten. Stelle die <i>Pixel-Helligkeit</i> und das <i>Max-Delta Limit</i> so ein, dass sie nur bei der gewünschten Anzahl an blinkenden Ziffern anschlagen.</li>
+            <li><b>Automatische Erkennung:</b> Sobald die blinkende Fläche rhythmisch wechselt, sammelt das System Takt-Punkte. Bei Erreichen der Mindest-Punkte wird der Alarm verlässlich ausgelöst.</li>
         </ol>
         
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Spezial-Module (Zuschaltbar)</h3>
         <ul>
             <li><b>Anker-Referenz (Verrutsch-Schutz):</b> Überwacht das Bild strukturell. Verrutscht das Tablet oder die Kamera, schlägt das System sofort Alarm.</li>
-            <li><b>Mute-Zone:</b> Unterdrückt Alarme temporär (z.B. für einen Mauszeiger). Die Zone schaltet exakt für die eingestellte <i>Mute-Dauer</i> stumm. Danach ist das System wieder scharf – selbst wenn die Maus liegen bleibt! Die Zone muss erst wieder ununterbrochen für mindestens 1 Sekunde komplett frei sein, bevor sie erneut stumm schalten kann.</li>
+            <li><b>Mute-Zone:</b> Ermöglicht das temporäre Ausblenden von betriebsbedingten Bewegungen im Überwachungsbereich. Sobald Aktivität in dieser Zone erkannt wird, unterdrückt sie Alarme für die voreingestellte Mute-Dauer. Nach Ablauf wird das System sofort wieder scharf geschaltet. Um erneut stummzuschalten, muss die Zone zuerst für mindestens 1 Sekunde komplett aktivitätsfrei sein.</li>
         </ul>
         <p style="font-size: 13px;"><i>Sicherheitsnetz: Verfängt sich die Mute-Zone durch extremes Flackern in einem Dauer-Stumm-Zustand, ertönt nach 5 Minuten ein Warn-Beep und nach 10 Minuten ein Alarm.</i></p>
 
@@ -200,6 +200,7 @@
             <div class="module-header">
                 <span>Anzeige & Justierung</span>
                 <div class="checkbox-group">
+                    <label><input type="checkbox" id="chkExpert"> Experten</label>
                     <label><input type="checkbox" id="chkShowZoom" checked> Werte</label>
                     <label><input type="checkbox" id="chkShowCam" checked> Live-Bild</label>
                     <label><input type="checkbox" id="chkShowDpad" checked> D-Pad</label>
@@ -211,7 +212,7 @@
                 </select>
                 <button id="btnResetAll" style="background: #dc3545; font-size: 12px; padding: 8px 12px; margin-left: auto;">⚠ Alles Zurücksetzen</button>
             </div>
-            <div class="slider-row" style="margin-top: 10px;">
+            <div class="slider-row" id="rowCamZoom" style="margin-top: 10px;">
                 <label>Live-Zoom: <span id="valCamZoom">1.0</span>x</label>
                 <button class="adj-btn" id="zoomMinus">-</button>
                 <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
@@ -234,52 +235,52 @@
                         <option value="4">4 Felder</option>
                     </select>
                 </div>
-                <div class="slider-row">
-                    <label>Pixel-Schwelle: <span id="valSens">15</span></label>
+                <div class="slider-row" id="rowSens">
+                    <label>Pixel-Helligkeit (Limit): <span id="valSens">30</span></label>
                     <button class="adj-btn" id="sensMinus">-</button>
-                    <input type="range" id="slideSens" min="2" max="100" value="15">
+                    <input type="range" id="slideSens" min="2" max="100" value="30">
                     <button class="adj-btn" id="sensPlus">+</button>
                 </div>
-                <div class="slider-row">
-                    <label>Kritische Masse: <span id="valMass">20</span> px</label>
+                <div class="slider-row" id="rowMass">
+                    <label>Max-Delta Limit: <span id="valMass">60</span> px</label>
                     <button class="adj-btn" id="massMinus">-</button>
-                    <input type="range" id="slideMass" min="1" max="1000" value="20">
+                    <input type="range" id="slideMass" min="1" max="700" value="60">
                     <button class="adj-btn" id="massPlus">+</button>
                 </div>
-                <div class="slider-row">
+                <div class="slider-row" id="rowTakt">
                     <label>Ziel-Zyklus: <span id="valTakt">2000</span>ms</label>
                     <button class="adj-btn" id="taktMinus">-</button>
                     <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
                     <button class="adj-btn" id="taktPlus">+</button>
                 </div>
-                <div class="slider-row">
-                    <label>Takt-Toleranz: <span id="valToleranz">50</span>%</label>
+                <div class="slider-row" id="rowToleranz">
+                    <label>Takt-Toleranz: <span id="valToleranz">10</span>%</label>
                     <button class="adj-btn" id="toleranzMinus">-</button>
-                    <input type="range" id="slideToleranz" min="5" max="100" step="5" value="50">
+                    <input type="range" id="slideToleranz" min="5" max="100" step="5" value="10">
                     <button class="adj-btn" id="toleranzPlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Rahmen-Breite: <span id="valWidth">30</span></label>
+                    <label>Rahmen-Breite: <span id="valWidth">35</span></label>
                     <button class="adj-btn" id="widthMinus">-</button>
-                    <input type="range" id="slideWidth" min="5" max="100" value="30">
+                    <input type="range" id="slideWidth" min="5" max="100" value="35">
                     <button class="adj-btn" id="widthPlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Rahmen-Höhe: <span id="valHeight">12</span></label>
+                    <label>Rahmen-Höhe: <span id="valHeight">20</span></label>
                     <button class="adj-btn" id="heightMinus">-</button>
-                    <input type="range" id="slideHeight" min="5" max="50" value="12">
+                    <input type="range" id="slideHeight" min="5" max="50" value="20">
                     <button class="adj-btn" id="heightPlus">+</button>
                 </div>
-                <div class="slider-row">
-                    <label>Min. Takt-Punkte: <span id="valPulse">4</span></label>
+                <div class="slider-row" id="rowPulse">
+                    <label>Min. Takt-Punkte: <span id="valPulse">3</span></label>
                     <button class="adj-btn" id="pulseMinus">-</button>
-                    <input type="range" id="slidePulse" min="1" max="10" value="4">
+                    <input type="range" id="slidePulse" min="1" max="10" value="3">
                     <button class="adj-btn" id="pulsePlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Alarmdauer: <span id="valHold">1.5</span>s</label>
+                    <label>Alarmdauer: <span id="valHold">6.0</span>s</label>
                     <button class="adj-btn" id="holdMinus">-</button>
-                    <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="1.5">
+                    <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="6.0">
                     <button class="adj-btn" id="holdPlus">+</button>
                 </div>
                 <button id="btnResetMain" class="reset-btn-small">Modul Reset</button>
@@ -292,7 +293,7 @@
                 <button class="config-btn" id="btnToggleAnchorConfig">⚙️</button>
             </div>
             <div class="module-body" id="panelAnchorSettings" style="display: none;">
-                <div style="text-align: left; margin-bottom: 10px;">
+                <div style="text-align: left; margin-bottom: 10px;" id="rowAnchorDriftCheck">
                     <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="chkAnchorDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
                     </label>
@@ -303,22 +304,22 @@
                     <input type="range" id="slideAnchorDrift" min="1" max="10" value="1">
                     <button class="adj-btn" id="anchorDriftPlus">+</button>
                 </div>
-                <div class="slider-row">
-                    <label>Toleranz: <span id="valAnchorSens">20</span></label>
+                <div class="slider-row" id="rowAnchorSens">
+                    <label>Toleranz: <span id="valAnchorSens">15</span></label>
                     <button class="adj-btn" id="anchorSensMinus">-</button>
-                    <input type="range" id="slideAnchorSens" min="5" max="100" value="20">
+                    <input type="range" id="slideAnchorSens" min="5" max="100" value="15">
                     <button class="adj-btn" id="anchorSensPlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Breite: <span id="valAnchorW">15</span></label>
+                    <label>Breite: <span id="valAnchorW">10</span></label>
                     <button class="adj-btn" id="anchorWMinus">-</button>
-                    <input type="range" id="slideAnchorW" min="5" max="100" value="15">
+                    <input type="range" id="slideAnchorW" min="5" max="100" value="10">
                     <button class="adj-btn" id="anchorWPlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Höhe: <span id="valAnchorH">15</span></label>
+                    <label>Höhe: <span id="valAnchorH">10</span></label>
                     <button class="adj-btn" id="anchorHMinus">-</button>
-                    <input type="range" id="slideAnchorH" min="5" max="50" value="15">
+                    <input type="range" id="slideAnchorH" min="5" max="50" value="10">
                     <button class="adj-btn" id="anchorHPlus">+</button>
                 </div>
                 <button id="btnResetAnchor" class="reset-btn-small">Modul Reset</button>
@@ -331,7 +332,7 @@
                 <button class="config-btn" id="btnToggleMuteConfig">⚙️</button>
             </div>
             <div class="module-body" id="panelMuteSettings" style="display: none;">
-                <div style="text-align: left; margin-bottom: 10px;">
+                <div style="text-align: left; margin-bottom: 10px;" id="rowMuteDriftCheck">
                     <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                         <input type="checkbox" id="chkMuteDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
                     </label>
@@ -342,28 +343,28 @@
                     <input type="range" id="slideMuteDrift" min="1" max="10" value="1">
                     <button class="adj-btn" id="muteDriftPlus">+</button>
                 </div>
-                <div class="slider-row">
-                    <label>Toleranz: <span id="valMuteSens">40</span></label>
+                <div class="slider-row" id="rowMuteSens">
+                    <label>Toleranz: <span id="valMuteSens">30</span></label>
                     <button class="adj-btn" id="muteSensMinus">-</button>
-                    <input type="range" id="slideMuteSens" min="5" max="100" value="40">
+                    <input type="range" id="slideMuteSens" min="5" max="100" value="30">
                     <button class="adj-btn" id="muteSensPlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Mute-Dauer: <span id="valMuteHold">40</span>s</label>
+                    <label>Mute-Dauer: <span id="valMuteHold">60</span>s</label>
                     <button class="adj-btn" id="muteHoldMinus">-</button>
-                    <input type="range" id="slideMuteHold" min="10" max="120" step="1" value="40">
+                    <input type="range" id="slideMuteHold" min="10" max="120" step="1" value="60">
                     <button class="adj-btn" id="muteHoldPlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Breite: <span id="valMuteW">15</span></label>
+                    <label>Breite: <span id="valMuteW">9</span></label>
                     <button class="adj-btn" id="muteWMinus">-</button>
-                    <input type="range" id="slideMuteW" min="5" max="100" value="15">
+                    <input type="range" id="slideMuteW" min="5" max="100" value="9">
                     <button class="adj-btn" id="muteWPlus">+</button>
                 </div>
                 <div class="slider-row">
-                    <label>Höhe: <span id="valMuteH">15</span></label>
+                    <label>Höhe: <span id="valMuteH">11</span></label>
                     <button class="adj-btn" id="muteHMinus">-</button>
-                    <input type="range" id="slideMuteH" min="5" max="50" value="15">
+                    <input type="range" id="slideMuteH" min="5" max="50" value="11">
                     <button class="adj-btn" id="muteHPlus">+</button>
                 </div>
                 <button id="btnResetMute" class="reset-btn-small">Modul Reset</button>
@@ -401,6 +402,7 @@ const helpBtn = document.getElementById('helpBtn');
 const helpOverlay = document.getElementById('helpOverlay');
 const closeHelpBtn = document.getElementById('closeHelpBtn');
 
+const chkExpert = document.getElementById('chkExpert');
 const chkShowZoom = document.getElementById('chkShowZoom');
 const chkShowCam = document.getElementById('chkShowCam');
 const chkShowDpad = document.getElementById('chkShowDpad');
@@ -496,27 +498,27 @@ const TARGET_FPS = 15;
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
 const HIT_PAD = 30; 
 const HISTORY_MS = 5000; 
-
-// V59: KOMPROMISSLOSE 100% PIXEL PRÄZISION
 const PIXEL_STEP = 1; 
 
+// V60 UNGEÄNDERTE LOGIK MIT NEUEN PRAXIS-STANDARDWERTEN
 const DEFAULTS = { 
-    sens: 15, mass: 20, width: 30, height: 12, pulse: 4, hold: 1.5, count: 2, takt: 2000, toleranz: 50,
-    anchorSens: 20, anchorW: 15, anchorH: 15, anchorDrift: true, anchorDriftSpeed: 1,
-    muteSens: 40, muteHold: 40, muteW: 15, muteH: 15, muteDrift: true, muteDriftSpeed: 1
+    sens: 30, mass: 60, width: 35, height: 20, pulse: 3, hold: 6.0, count: 2, takt: 2000, toleranz: 10,
+    anchorSens: 15, anchorW: 10, anchorH: 10, anchorDrift: true, anchorDriftSpeed: 1,
+    muteSens: 30, muteHold: 60, muteW: 9, muteH: 11, muteDrift: true, muteDriftSpeed: 1,
+    expert: false
 };
 
 let boxes = [
-    { id: 1, x: 60, y: 60, w: 30, h: 12, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
-    { id: 2, x: 60, y: 160, w: 30, h: 12, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
-    { id: 3, x: 60, y: 260, w: 30, h: 12, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
-    { id: 4, x: 60, y: 360, w: 30, h: 12, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 }
+    { id: 1, x: 60, y: 60, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 2, x: 60, y: 160, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 3, x: 60, y: 260, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 4, x: 60, y: 360, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 }
 ];
 
-let anchorBox = { id: 'Anker', x: 200, y: 100, w: 15, h: 15, active: false, baseline: null, alarmStart: 0, isAlarm: false, zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false };
+let anchorBox = { id: 'Anker', x: 200, y: 100, w: 10, h: 10, active: false, baseline: null, alarmStart: 0, isAlarm: false, zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false };
 
 let muteBox = { 
-    id: 'Mute', x: 200, y: 200, w: 15, h: 15, active: false, baseline: null, 
+    id: 'Mute', x: 200, y: 200, w: 9, h: 11, active: false, baseline: null, 
     state: 'IDLE', timerStart: 0, continuousStart: 0, wasEmpty: true, lastWarningTime: 0, emptyStartTime: 0,
     triggerStart: 0, 
     zoomCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
@@ -533,9 +535,38 @@ function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
     ctx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, drawW, drawH);
 }
 
-function updateDriftVisibility() {
-    rowAnchorDriftSpeed.style.display = chkAnchorDrift.checked ? 'flex' : 'none';
-    rowMuteDriftSpeed.style.display = chkMuteDrift.checked ? 'flex' : 'none';
+// INTELLIGENTES SENSE-STEURING: EXPERTENMODUS UND DRIFT EINBLÄNDUNG GEKOPPELT
+function updateUIVisibility() {
+    const exp = chkExpert.checked;
+    
+    cameraSelect.style.display = exp ? 'block' : 'none';
+    document.getElementById('rowCamZoom').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowSens').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowMass').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowTakt').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowToleranz').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowPulse').style.display = exp ? 'flex' : 'none';
+    
+    document.getElementById('rowAnchorDriftCheck').style.display = exp ? 'block' : 'none';
+    document.getElementById('rowAnchorSens').style.display = exp ? 'flex' : 'none';
+    
+    document.getElementById('rowMuteDriftCheck').style.display = exp ? 'block' : 'none';
+    document.getElementById('rowMuteSens').style.display = exp ? 'flex' : 'none';
+    
+    rowAnchorDriftSpeed.style.display = (exp && chkAnchorDrift.checked) ? 'flex' : 'none';
+    rowMuteDriftSpeed.style.display = (exp && chkMuteDrift.checked) ? 'flex' : 'none';
+}
+
+// DYNAMISCHES MAXIMAL-LIMIT FÜR MAX-DELTA ANHAND DER GEWÄHLTEN RAHMENGRÖSSE
+function updateMaxDeltaLimitRange() {
+    const w = parseInt(slideWidth.value);
+    const h = parseInt(slideHeight.value);
+    const maxPixels = w * h;
+    slideMass.max = maxPixels;
+    if (parseInt(slideMass.value) > maxPixels) {
+        slideMass.value = maxPixels;
+    }
+    valMass.innerText = slideMass.value;
 }
 
 toggleSettingsBtn.addEventListener('click', () => {
@@ -557,6 +588,7 @@ btnToggleMainConfig.addEventListener('click', () => { panelMainOpen = !panelMain
 btnToggleAnchorConfig.addEventListener('click', () => { panelAnchorOpen = !panelAnchorOpen; togglePanel(btnToggleAnchorConfig, panelAnchorSettings, !panelAnchorOpen); saveSettings(); });
 btnToggleMuteConfig.addEventListener('click', () => { panelMuteOpen = !panelMuteOpen; togglePanel(btnToggleMuteConfig, panelMuteSettings, !panelMuteOpen); saveSettings(); });
 
+chkExpert.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
 chkShowZoom.addEventListener('change', (e) => {
     showZoomValues = e.target.checked;
     for (let i = 0; i < activeBoxCount; i++) { if (boxes[i].zoomStatsDiv) boxes[i].zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none'; }
@@ -568,8 +600,8 @@ chkShowZoom.addEventListener('change', (e) => {
 chkShowCam.addEventListener('change', (e) => { showCamera = e.target.checked; canvas.style.display = showCamera ? 'block' : 'none'; saveSettings(); });
 chkShowDpad.addEventListener('change', (e) => { dpadPanel.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 
-chkAnchorDrift.addEventListener('change', () => { updateDriftVisibility(); saveSettings(); });
-chkMuteDrift.addEventListener('change', () => { updateDriftVisibility(); saveSettings(); });
+chkAnchorDrift.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
+chkMuteDrift.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
 
 chkAnchorActive.addEventListener('change', (e) => {
     anchorBox.active = e.target.checked; anchorBox.baseline = null; 
@@ -686,7 +718,7 @@ function updateZoomSelectionUI() {
 }
 
 function updateLabels() {
-    valSens.innerText = slideSens.value; valMass.innerText = slideMass.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
+    valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
     valPulse.innerText = slidePulse.value; valHold.innerText = slideHold.value; valTakt.innerText = slideTakt.value; 
     valToleranz.innerText = slideToleranz.value; 
     valAnchorSens.innerText = slideAnchorSens.value; valAnchorW.innerText = slideAnchorW.value; valAnchorH.innerText = slideAnchorH.value;
@@ -694,10 +726,12 @@ function updateLabels() {
     valMuteSens.innerText = slideMuteSens.value; valMuteHold.innerText = slideMuteHold.value; 
     valMuteW.innerText = slideMuteW.value; valMuteH.innerText = slideMuteH.value;
     valMuteDrift.innerText = slideMuteDrift.value;
+    updateMaxDeltaLimitRange();
 }
 
 function saveSettings() {
     const settings = {
+        expert: chkExpert.checked,
         sens: slideSens.value, mass: slideMass.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, toleranz: slideToleranz.value,
         pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
         anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value, anchorDrift: chkAnchorDrift.checked, anchorDriftSpeed: slideAnchorDrift.value,
@@ -716,6 +750,7 @@ function loadSettings() {
         const saved = localStorage.getItem('pixel_settings_pro');
         if (saved) {
             const s = JSON.parse(saved);
+            if (s.expert !== undefined) chkExpert.checked = s.expert;
             if (s.sens) slideSens.value = s.sens; if (s.mass) slideMass.value = s.mass; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
             if (s.pulse) slidePulse.value = s.pulse; if (s.hold) slideHold.value = s.hold; 
             if (s.takt) slideTakt.value = s.takt; if (s.toleranz) slideToleranz.value = s.toleranz; 
@@ -744,11 +779,15 @@ function loadSettings() {
             if (s.positions) { s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } }); }
             if (s.anchor) { anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; anchorBox.active = s.anchor.active; chkAnchorActive.checked = s.anchor.active; }
             if (s.mute) { muteBox.x = s.mute.x; muteBox.y = s.mute.y; muteBox.active = s.mute.active; chkMuteActive.checked = s.mute.active; }
+        } else {
+            chkExpert.checked = DEFAULTS.expert;
+            chkAnchorActive.checked = false;
+            chkMuteActive.checked = false;
         }
     } catch(e) {}
     
     boxCountSelect.value = activeBoxCount; 
-    createZoomDisplays(); updateLabels(); updateDriftVisibility();
+    createZoomDisplays(); updateMaxDeltaLimitRange(); updateLabels(); updateUIVisibility();
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); b.baseline = null; });
     anchorBox.w = parseInt(slideAnchorW.value); anchorBox.h = parseInt(slideAnchorH.value);
     muteBox.w = parseInt(slideMuteW.value); muteBox.h = parseInt(slideMuteH.value);
@@ -776,12 +815,12 @@ activateStealthBtn.addEventListener('click', () => { stealthOverlay.style.displa
 exitStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'none'; isStealthActive = false; });
 
 slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); }); 
-slideMass.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideMass.addEventListener('input', () => { valMass.innerText = slideMass.value; saveSettings(); });
 slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideToleranz.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; b.baseline = null; }); });
-slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; b.baseline = null; }); });
+slideWidth.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; b.baseline = null; }); });
+slideHeight.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; b.baseline = null; }); });
 
 slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideAnchorW.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; });
@@ -800,7 +839,8 @@ boxCountSelect.addEventListener('change', (e) => {
 });
 
 document.getElementById('btnResetMain').addEventListener('click', () => {
-    slideSens.value = DEFAULTS.sens; slideMass.value = DEFAULTS.mass; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; 
+    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; 
+    updateMaxDeltaLimitRange(); slideMass.value = DEFAULTS.mass;
     slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideTakt.value = DEFAULTS.takt; slideToleranz.value = DEFAULTS.toleranz;
     boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count;
     boxes.forEach((b, idx) => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; b.baseline = null; b.validCrossings=0; b.lastState=0; b.lastMeasuredCycle=0; });
@@ -812,21 +852,27 @@ document.getElementById('btnResetAnchor').addEventListener('click', () => {
     slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH; 
     chkAnchorDrift.checked = DEFAULTS.anchorDrift; slideAnchorDrift.value = DEFAULTS.anchorDriftSpeed;
     anchorBox.w = DEFAULTS.anchorW; anchorBox.h = DEFAULTS.anchorH; anchorBox.baseline = null; anchorBox.x = 200; anchorBox.y = 100;
-    updateLabels(); updateDriftVisibility(); saveSettings();
+    chkAnchorActive.checked = false; anchorBox.active = false;
+    updateLabels(); updateUIVisibility(); saveSettings(); createZoomDisplays();
 });
 
 document.getElementById('btnResetMute').addEventListener('click', () => {
     slideMuteSens.value = DEFAULTS.muteSens; slideMuteHold.value = DEFAULTS.muteHold; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH; 
     chkMuteDrift.checked = DEFAULTS.muteDrift; slideMuteDrift.value = DEFAULTS.muteDriftSpeed;
     muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null; muteBox.x = 200; muteBox.y = 200; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
-    updateLabels(); updateDriftVisibility(); saveSettings();
+    chkMuteActive.checked = false; muteBox.active = false;
+    updateLabels(); updateUIVisibility(); saveSettings(); createZoomDisplays();
 });
 
 document.getElementById('btnResetAll').addEventListener('click', () => {
     if(confirm("⚠ Achtung!\nSollen alle Positionen, Zähler und Modul-Einstellungen auf die Werkseinstellungen zurückgesetzt werden?")) {
+        chkExpert.checked = DEFAULTS.expert;
         document.getElementById('btnResetMain').click(); document.getElementById('btnResetAnchor').click(); document.getElementById('btnResetMute').click();
         chkShowZoom.checked = true; chkShowZoom.dispatchEvent(new Event('change'));
         chkShowCam.checked = true; chkShowCam.dispatchEvent(new Event('change'));
+        chkShowDpad.checked = true; chkShowDpad.dispatchEvent(new Event('change'));
+        slideCamZoom.value = 1; slideCamZoom.dispatchEvent(new Event('input'));
+        updateUIVisibility();
     }
 });
 
@@ -994,7 +1040,6 @@ function analyzeMute(now, fullFrame, imgW, imgH) {
     const data = fullFrame.data;
     let mTotal = 0; let mCount = 0;
     
-    // PIXEL_STEP = 1: Die Mute-Box wertet jetzt JEDEN Pixel aus
     for (let y = my; y < my + mh; y += PIXEL_STEP) {
         for (let x = mx; x < mx + mw; x += PIXEL_STEP) {
             if (x >= 0 && x < imgW && y >= 0 && y < imgH) {
@@ -1088,7 +1133,6 @@ function analyzeMute(now, fullFrame, imgW, imgH) {
     }
 }
 
-// DER NEUE MASSEN-ZÄHLER FÜR DIE RHYTHMUS-FELDER
 function analyzeBoxes(now, fullFrame, imgW, imgH) {
     let boxAlarmTriggered = false;
     
@@ -1112,7 +1156,6 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
         
         if (box.zoomCtx) { drawProportional(box.zoomCtx, canvas, rx, ry, rw, rh, 100, 50); }
 
-        // Speicher-Reservierung für den neuen Nullpunkt-Tracker
         if (!box.baseline || box.baseline.length !== pixelCount) {
             box.baseline = new Float32Array(pixelCount);
             box.baseline.fill(-1); 
@@ -1121,7 +1164,6 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
         let activePixels = 0; 
         let pIdx = 0;
         
-        // JEDER einzelne Pixel wird als eigene Instanz geprüft
         for (let y = ry; y < ry + rh; y += PIXEL_STEP) {
             for (let x = rx; x < rx + rw; x += PIXEL_STEP) {
                 if (x >= 0 && x < imgW && y >= 0 && y < imgH) {
@@ -1130,14 +1172,12 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
 
                     if (box.baseline[pIdx] === -1) box.baseline[pIdx] = curr;
 
-                    // Blitzschnelles Lernen des lokalen dunklen Hintergrunds
                     if (curr < box.baseline[pIdx]) {
-                        box.baseline[pIdx] = curr; // Wenn es dunkler wird, sofort als Nullpunkt merken
+                        box.baseline[pIdx] = curr; 
                     } else {
-                        box.baseline[pIdx] += Math.min(curr - box.baseline[pIdx], 0.5); // Wenn es hell ist, langsam mitziehen (gegen Tag-Licht)
+                        box.baseline[pIdx] += Math.min(curr - box.baseline[pIdx], 0.5); 
                     }
 
-                    // Der Türsteher: Ist dieser Pixel gerade massiv heller als sein eigener Nullpunkt?
                     if (curr - box.baseline[pIdx] > pixelSchwelle) {
                         activePixels++; 
                     }
@@ -1146,7 +1186,6 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
             }
         }
         
-        // Die Rhythmus-Historie arbeitet ab jetzt mit "Masse" (Anzahl der aktiven Pixel) statt mit Durchschnittshelligkeit
         box.history.push({ val: activePixels, time: now });
         while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) { box.history.shift(); }
 
@@ -1154,7 +1193,6 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
             const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
             diff = Math.round(maxVal - minVal);
             
-            // Wenn die Differenz der aktiven Pixel kleiner als deine kritische Masse ist, wird abgebrochen
             if (diff < kritischeMasse) { box.validCrossings = 0; }
 
             const hysteresis = Math.max(diff * 0.2, kritischeMasse * 0.25); const mid = minVal + diff / 2;
@@ -1185,7 +1223,7 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
         
         if (box.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
             let txt = `Masse: <span style="color:#00aaff;">${activePixels}</span> px | Pkt: ${box.validCrossings}`;
-            txt += `<br>Max-Delta: ${diff} / Krit: ${kritischeMasse}`;
+            txt += `<br>Max-Delta: ${diff} / Limit: ${kritischeMasse}`;
             if (box.lastMeasuredCycle > 0) txt += `<br>Letzter: <span style="color:#00ff88;">${box.lastMeasuredCycle} ms</span>`; else txt += `<br>Letzter: --- ms`;
             if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`;
             box.zoomStatsDiv.innerHTML = txt;
@@ -1225,7 +1263,6 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
 
     let baseTotal = 0; let currTotal = 0; let pCount = 0;
     
-    // PIXEL_STEP = 1: Der Anker wertet jetzt JEDEN Pixel aus
     for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
         baseTotal += anchorBox.baseline[j]*0.299 + anchorBox.baseline[j+1]*0.587 + anchorBox.baseline[j+2]*0.114;
         currTotal += aData[j]*0.299 + aData[j+1]*0.587 + aData[j+2]*0.114; pCount++;
