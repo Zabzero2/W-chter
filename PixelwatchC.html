@@ -85,7 +85,7 @@
     .slider-row { display: flex; align-items: center; gap: 8px; width: 100%; }
     .slider-row label { width: 140px; text-align: left; font-size: 13px; }
     .slider-row input[type="range"] { flex-grow: 1; }
-    .slider-row select, .slider-row input[type="text"] { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; width: 100%; box-sizing: border-box; }
+    .slider-row select, .slider-row input[type="text"] { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; box-sizing: border-box; }
     .adj-btn { width: 32px; height: 32px; padding: 0; background: #555; font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center; }
 
     .checkbox-group { display: flex; gap: 15px; font-size: 13px; font-weight: normal; }
@@ -113,6 +113,7 @@
     .help-content h2 { margin-top: 0; color: #00aaff; }
     .help-content p, .help-content li { font-size: 14px; line-height: 1.5; color: #ccc; }
     .help-content ul, .help-content ol { padding-left: 20px; margin-bottom: 15px; }
+    .help-content li { margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -132,13 +133,14 @@
 
 <div id="helpOverlay" class="overlay">
     <div class="help-content">
-        <h2>Hilfe & Anleitung V2.0</h2>
-        <p>Der <b>Pixel-Wächter Pro V2.0</b> beinhaltet neue experimentelle Smart-Features.</p>
+        <h2>Hilfe & Anleitung V2.0 (Labor)</h2>
+        <p>Der <b>Pixel-Wächter Pro V2.0</b> vereint V61 mit Smart-Features.</p>
+        
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smart-Modem & Warnungen</h3>
         <ul>
             <li><b>Telegram-Warnung:</b> Sende Befehle wie <code>/foto</code> an deinen Bot für Live-Bilder. Bei einem Alarm sendet das System vollautomatisch ein 4-Sekunden Beweis-Video der Boxen.</li>
-            <li><b>Audio-Wächter:</b> Ein intelligenter Filter ignoriert tiefes Rauschen (Vorblock) und Tassen-Klappern. Erkennet er eine langanhaltende hohe Frequenz (Telefon/GSMR), nimmt er 5s Audio auf und sendet es via Telegram.</li>
-            <li><b>Wetter-Station:</b> Gebe Orte (z.B. München, Augsburg) in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos alle 5 Minuten aktualisiert.</li>
+            <li><b>Audio-Wächter:</b> Ein intelligenter Filter ignoriert tiefes Rauschen (Vorblock). Erkennt er im Takt hohe Frequenzen (Telefon/GSMR), sendet er 5s Audio via Telegram.</li>
+            <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos alle 5 Minuten aktualisiert.</li>
         </ul>
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
@@ -175,12 +177,14 @@
 
 <div id="ui">
     <div class="button-row">
-        <button id="startBtn">System Starten</button>
-        <button id="monitorBtn" class="off">System offline</button>
+        <button id="startBtn">Kamera Start</button>
+        <button id="monitorBtn" class="off">Kamera starten zur Überwachung</button>
         <button id="activateStealthBtn">Tarnmodus</button>
         <button id="toggleSettingsBtn" style="background: #444; padding: 12px 18px; font-size: 18px;">⚙️</button>
         <button id="helpBtn" style="background: #17a2b8; padding: 12px 18px; font-size: 18px;">❓</button>
     </div>
+    
+    <div class="stealth-hint">Tipp: Tarnmodus beenden durch Tippen auf den unteren Uhr-Punkt.</div>
 
     <div id="mainSettingsWrapper">
         <div class="module-section">
@@ -199,6 +203,12 @@
                 </select>
                 <button id="btnResetAll" style="background: #dc3545; font-size: 12px; padding: 8px 12px; margin-left: auto;">⚠ Alles Zurücksetzen</button>
             </div>
+            <div class="slider-row" id="rowCamZoom" style="margin-top: 10px;">
+                <label>Live-Zoom: <span id="valCamZoom">1.0</span>x</label>
+                <button class="adj-btn" id="zoomMinus">-</button>
+                <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
+                <button class="adj-btn" id="zoomPlus">+</button>
+            </div>
         </div>
 
         <div class="module-section sec-smart">
@@ -209,16 +219,16 @@
             <div class="module-body" id="panelSmartSettings" style="display: none;">
                 <div class="checkbox-group" style="flex-wrap: wrap; margin-bottom: 10px;">
                     <label><input type="checkbox" id="chkLocalAlarm" checked> Lokaler Ton (Tablet)</label>
-                    <label><input type="checkbox" id="chkTelegram"> Telegram-Warnung (Media)</label>
+                    <label><input type="checkbox" id="chkTelegram"> Telegram (Bilder/Media)</label>
                     <label><input type="checkbox" id="chkAudioGuard"> Audio-Wächter (>1kHz)</label>
                 </div>
                 <div id="telegramSettingsBox" style="display:none; flex-direction:column; gap:10px; background:#333; padding:10px; border-radius:6px; margin-bottom:10px;">
                     <div class="slider-row">
-                        <label>Bot Token:</label>
+                        <label style="width: 80px;">Bot Token:</label>
                         <input type="text" id="txtTelegramToken" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
                     </div>
                     <div class="slider-row">
-                        <label>Chat ID:</label>
+                        <label style="width: 80px;">Chat ID:</label>
                         <input type="text" id="txtTelegramChatId" placeholder="123456789">
                     </div>
                 </div>
@@ -245,7 +255,7 @@
                     </select>
                 </div>
                 <div class="slider-row" id="rowSens">
-                    <label>Pixel-Helligkeit: <span id="valSens">30</span></label>
+                    <label>Pixel-Helligkeit (Limit): <span id="valSens">30</span></label>
                     <button class="adj-btn" id="sensMinus">-</button>
                     <input type="range" id="slideSens" min="2" max="100" value="30">
                     <button class="adj-btn" id="sensPlus">+</button>
@@ -261,6 +271,12 @@
                     <button class="adj-btn" id="taktMinus">-</button>
                     <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
                     <button class="adj-btn" id="taktPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowToleranz">
+                    <label>Takt-Toleranz: <span id="valToleranz">10</span>%</label>
+                    <button class="adj-btn" id="toleranzMinus">-</button>
+                    <input type="range" id="slideToleranz" min="5" max="100" step="5" value="10">
+                    <button class="adj-btn" id="toleranzPlus">+</button>
                 </div>
                 <div class="slider-row">
                     <label>Rahmen-Breite: <span id="valWidth">35</span></label>
@@ -280,6 +296,13 @@
                     <input type="range" id="slidePulse" min="1" max="10" value="3">
                     <button class="adj-btn" id="pulsePlus">+</button>
                 </div>
+                <div class="slider-row">
+                    <label>Alarmdauer: <span id="valHold">6.0</span>s</label>
+                    <button class="adj-btn" id="holdMinus">-</button>
+                    <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="6.0">
+                    <button class="adj-btn" id="holdPlus">+</button>
+                </div>
+                <button id="btnResetMain" class="reset-btn-small">Modul Reset</button>
             </div>
         </div>
 
@@ -289,6 +312,17 @@
                 <button class="config-btn" id="btnToggleAnchorConfig">⚙️</button>
             </div>
             <div class="module-body" id="panelAnchorSettings" style="display: none;">
+                <div style="text-align: left; margin-bottom: 10px;" id="rowAnchorDriftCheck">
+                    <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkAnchorDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
+                    </label>
+                </div>
+                <div class="slider-row" id="rowAnchorDriftSpeed">
+                    <label>Drift-Tempo: <span id="valAnchorDrift">1</span></label>
+                    <button class="adj-btn" id="anchorDriftMinus">-</button>
+                    <input type="range" id="slideAnchorDrift" min="1" max="10" value="1">
+                    <button class="adj-btn" id="anchorDriftPlus">+</button>
+                </div>
                 <div class="slider-row" id="rowAnchorSens">
                     <label>Toleranz: <span id="valAnchorSens">15</span></label>
                     <button class="adj-btn" id="anchorSensMinus">-</button>
@@ -307,6 +341,7 @@
                     <input type="range" id="slideAnchorH" min="5" max="50" value="10">
                     <button class="adj-btn" id="anchorHPlus">+</button>
                 </div>
+                <button id="btnResetAnchor" class="reset-btn-small">Modul Reset</button>
             </div>
         </div>
 
@@ -316,11 +351,28 @@
                 <button class="config-btn" id="btnToggleMuteConfig">⚙️</button>
             </div>
             <div class="module-body" id="panelMuteSettings" style="display: none;">
+                <div style="text-align: left; margin-bottom: 10px;" id="rowMuteDriftCheck">
+                    <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkMuteDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
+                    </label>
+                </div>
+                <div class="slider-row" id="rowMuteDriftSpeed">
+                    <label>Drift-Tempo: <span id="valMuteDrift">1</span></label>
+                    <button class="adj-btn" id="muteDriftMinus">-</button>
+                    <input type="range" id="slideMuteDrift" min="1" max="10" value="1">
+                    <button class="adj-btn" id="muteDriftPlus">+</button>
+                </div>
                 <div class="slider-row" id="rowMuteSens">
                     <label>Toleranz: <span id="valMuteSens">30</span></label>
                     <button class="adj-btn" id="muteSensMinus">-</button>
                     <input type="range" id="slideMuteSens" min="5" max="100" value="30">
                     <button class="adj-btn" id="muteSensPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Mute-Dauer: <span id="valMuteHold">60</span>s</label>
+                    <button class="adj-btn" id="muteHoldMinus">-</button>
+                    <input type="range" id="slideMuteHold" min="10" max="120" step="1" value="60">
+                    <button class="adj-btn" id="muteHoldPlus">+</button>
                 </div>
                 <div class="slider-row">
                     <label>Breite: <span id="valMuteW">9</span></label>
@@ -334,6 +386,7 @@
                     <input type="range" id="slideMuteH" min="5" max="50" value="11">
                     <button class="adj-btn" id="muteHPlus">+</button>
                 </div>
+                <button id="btnResetMute" class="reset-btn-small">Modul Reset</button>
             </div>
         </div>
     </div>
@@ -345,7 +398,7 @@
 </div>
 
 <script>
-// ---------- UI & SETTINGS ----------
+// ---------- CORE VARIABLES ----------
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -356,8 +409,31 @@ const startBtn = document.getElementById('startBtn');
 const monitorBtn = document.getElementById('monitorBtn');
 const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
 const mainSettingsWrapper = document.getElementById('mainSettingsWrapper');
+const activateStealthBtn = document.getElementById('activateStealthBtn');
+const stealthOverlay = document.getElementById('stealthOverlay');
+const exitStealthBtn = document.getElementById('exitStealthBtn');
 
-// Config Checkboxes
+// Modul Panels & Checkboxes
+const btnToggleMainConfig = document.getElementById('btnToggleMainConfig');
+const btnToggleAnchorConfig = document.getElementById('btnToggleAnchorConfig');
+const btnToggleMuteConfig = document.getElementById('btnToggleMuteConfig');
+const btnToggleSmartConfig = document.getElementById('btnToggleSmartConfig');
+const panelMainSettings = document.getElementById('panelMainSettings');
+const panelAnchorSettings = document.getElementById('panelAnchorSettings');
+const panelMuteSettings = document.getElementById('panelMuteSettings');
+const panelSmartSettings = document.getElementById('panelSmartSettings');
+const dpadPanel = document.getElementById('dpadPanel');
+
+const chkExpert = document.getElementById('chkExpert');
+const chkShowZoom = document.getElementById('chkShowZoom');
+const chkShowCam = document.getElementById('chkShowCam');
+const chkShowDpad = document.getElementById('chkShowDpad');
+const chkAnchorActive = document.getElementById('chkAnchorActive');
+const chkAnchorDrift = document.getElementById('chkAnchorDrift'); 
+const chkMuteActive = document.getElementById('chkMuteActive');
+const chkMuteDrift = document.getElementById('chkMuteDrift'); 
+
+// Smart-Modem Inputs
 const chkLocalAlarm = document.getElementById('chkLocalAlarm');
 const chkTelegram = document.getElementById('chkTelegram');
 const chkAudioGuard = document.getElementById('chkAudioGuard');
@@ -367,89 +443,95 @@ const txtTelegramChatId = document.getElementById('txtTelegramChatId');
 const txtWeatherCities = document.getElementById('txtWeatherCities');
 const weatherDisplay = document.getElementById('weatherDisplay');
 
-// Panels
-const btnToggleMainConfig = document.getElementById('btnToggleMainConfig');
-const btnToggleAnchorConfig = document.getElementById('btnToggleAnchorConfig');
-const btnToggleMuteConfig = document.getElementById('btnToggleMuteConfig');
-const btnToggleSmartConfig = document.getElementById('btnToggleSmartConfig');
-const panelMainSettings = document.getElementById('panelMainSettings');
-const panelAnchorSettings = document.getElementById('panelAnchorSettings');
-const panelMuteSettings = document.getElementById('panelMuteSettings');
-const panelSmartSettings = document.getElementById('panelSmartSettings');
-
-// Modul toggles
-const chkExpert = document.getElementById('chkExpert');
-const chkAnchorActive = document.getElementById('chkAnchorActive');
-const chkMuteActive = document.getElementById('chkMuteActive');
-
-// Sliders (Nur das Nötigste für V2 Labor)
-const slideSens = document.getElementById('slideSens');
-const slideMass = document.getElementById('slideMass');
-const slideTakt = document.getElementById('slideTakt');
-const slideWidth = document.getElementById('slideWidth');
-const slideHeight = document.getElementById('slideHeight');
-const slidePulse = document.getElementById('slidePulse');
+// V61 Sliders
+const cameraSelect = document.getElementById('cameraSelect');
+const slideCamZoom = document.getElementById('slideCamZoom'); const valCamZoom = document.getElementById('valCamZoom');
+const slideSens = document.getElementById('slideSens'); const valSens = document.getElementById('valSens');
+const slideMass = document.getElementById('slideMass'); const valMass = document.getElementById('valMass');
+const slideTakt = document.getElementById('slideTakt'); const valTakt = document.getElementById('valTakt'); 
+const slideToleranz = document.getElementById('slideToleranz'); const valToleranz = document.getElementById('valToleranz'); 
+const slideWidth = document.getElementById('slideWidth'); const valWidth = document.getElementById('valWidth');
+const slideHeight = document.getElementById('slideHeight'); const valHeight = document.getElementById('valHeight');
+const slidePulse = document.getElementById('slidePulse'); const valPulse = document.getElementById('valPulse');
+const slideHold = document.getElementById('slideHold'); const valHold = document.getElementById('valHold');
 const boxCountSelect = document.getElementById('boxCountSelect');
 
-// Labels
-const valSens = document.getElementById('valSens');
-const valMass = document.getElementById('valMass');
-const valTakt = document.getElementById('valTakt'); 
-const valWidth = document.getElementById('valWidth');
-const valHeight = document.getElementById('valHeight');
-const valPulse = document.getElementById('valPulse');
+const slideAnchorSens = document.getElementById('slideAnchorSens'); const valAnchorSens = document.getElementById('valAnchorSens');
+const slideAnchorW = document.getElementById('slideAnchorW'); const valAnchorW = document.getElementById('valAnchorW');
+const slideAnchorH = document.getElementById('slideAnchorH'); const valAnchorH = document.getElementById('valAnchorH');
+const slideAnchorDrift = document.getElementById('slideAnchorDrift'); const valAnchorDrift = document.getElementById('valAnchorDrift');
+const rowAnchorDriftSpeed = document.getElementById('rowAnchorDriftSpeed');
 
-// Boxen Definitionen
-let boxes = [
-    { id: 1, x: 60, y: 60, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 },
-    { id: 2, x: 60, y: 160, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 },
-    { id: 3, x: 60, y: 260, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 },
-    { id: 4, x: 60, y: 360, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 }
-];
-let activeBoxCount = 2;
-let selectedBox = boxes[0];
-let anchorBox = { id: 'Anker', x: 200, y: 100, w: 10, h: 10, active: false, baseline: null, isAlarm: false };
-let muteBox = { id: 'Mute', x: 200, y: 200, w: 9, h: 11, active: false, baseline: null, state: 'IDLE' };
+const slideMuteSens = document.getElementById('slideMuteSens'); const valMuteSens = document.getElementById('valMuteSens');
+const slideMuteHold = document.getElementById('slideMuteHold'); const valMuteHold = document.getElementById('valMuteHold'); 
+const slideMuteW = document.getElementById('slideMuteW'); const valMuteW = document.getElementById('valMuteW');
+const slideMuteH = document.getElementById('slideMuteH'); const valMuteH = document.getElementById('valMuteH');
+const slideMuteDrift = document.getElementById('slideMuteDrift'); const valMuteDrift = document.getElementById('valMuteDrift');
+const rowMuteDriftSpeed = document.getElementById('rowMuteDriftSpeed');
+
+const selectedBoxIdLabel = document.getElementById('selectedBoxId');
+const hoursHTML = document.getElementById('hoursHTML');
+const minsHTML = document.getElementById('minsHTML');
 
 // System States
 let isRunning = false;
 let isMonitoring = true; 
+let showZoomValues = true;
 let showCamera = true;
 let settingsVisible = false; 
+let panelMainOpen = false, panelAnchorOpen = false, panelMuteOpen = false, panelSmartOpen = false;
+let isStealthActive = false;
+let currentTrack = null; 
 
-// ---------- AUDIO & VIDEO CORE ----------
-let audioCtx, analyser, dataArray;
+let draggingBox = null; let dragOffsetX = 0; let dragOffsetY = 0;
+let audioCtx = null; let wakeLock = null;
+let lastFrameTime = 0; let frameCounter = 0; 
+const TARGET_FPS = 15; const FRAME_INTERVAL = 1000 / TARGET_FPS;
+const HIT_PAD = 30; const HISTORY_MS = 5000; const PIXEL_STEP = 1; 
+
+// V2 Audio Wächter Variables
+let analyser, dataArray;
 let micStream = null;
 let isMutedInternally = false;
 let internalMuteTimeout = null;
-
-// Audio Density Buffer ("Der Eimer")
 let loudFrames = []; 
 const AUDIO_LOUDNESS_THRESHOLD = 25; 
-const AUDIO_DENSITY_REQ_MS = 600; // Eimer muss 600ms laut sein (in 2s)
+const AUDIO_DENSITY_REQ_MS = 600; // Eimer
 let lastAcousticAlarm = 0;
 
-// Recording Locks
+// V2 Telegram Variables
 let isRecordingVideo = false;
 let isRecordingAudio = false;
-
-// Telegram Polling
 let tgUpdateOffset = 0;
 
-function setupAdjBtn(minusId, plusId, sliderId) {
-    const slider = document.getElementById(sliderId);
-    document.getElementById(minusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) - (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
-    document.getElementById(plusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) + (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
+// Boxen Setup (V61)
+let boxes = [
+    { id: 1, x: 60, y: 60, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 2, x: 60, y: 160, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 3, x: 60, y: 260, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 4, x: 60, y: 360, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 }
+];
+let activeBoxCount = 2;
+let selectedBox = boxes[0];
+
+let anchorBox = { id: 'Anker', x: 200, y: 100, w: 10, h: 10, active: false, baseline: null, alarmStart: 0, isAlarm: false, zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false };
+
+let muteBox = { 
+    id: 'Mute', x: 200, y: 200, w: 9, h: 11, active: false, baseline: null, 
+    state: 'IDLE', timerStart: 0, continuousStart: 0, wasEmpty: true, lastWarningTime: 0, emptyStartTime: 0, triggerStart: 0, zoomCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
+};
+
+// ---------- UI HELPER FUNKTIONEN (V61) ----------
+function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
+    ctx.fillStyle = "black"; ctx.fillRect(0, 0, targetW, targetH);
+    let scale = Math.min(targetW / sw, targetH / sh);
+    let drawW = sw * scale; let drawH = sh * scale;
+    let dx = (targetW - drawW) / 2; let dy = (targetH - drawH) / 2;
+    ctx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, drawW, drawH);
 }
-setupAdjBtn('sensMinus', 'sensPlus', 'slideSens'); setupAdjBtn('massMinus', 'massPlus', 'slideMass'); 
-setupAdjBtn('taktMinus', 'taktPlus', 'slideTakt'); 
-setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth'); setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
-setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse'); 
 
 function updateMaxDeltaLimitRange() {
-    const w = parseInt(slideWidth.value);
-    const h = parseInt(slideHeight.value);
-    const maxPixels = w * h;
+    const w = parseInt(slideWidth.value); const h = parseInt(slideHeight.value); const maxPixels = w * h;
     slideMass.max = maxPixels;
     if (parseInt(slideMass.value) > maxPixels) slideMass.value = maxPixels;
     valMass.innerText = slideMass.value;
@@ -457,145 +539,350 @@ function updateMaxDeltaLimitRange() {
 
 function updateLabels() {
     valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
-    valPulse.innerText = slidePulse.value; valTakt.innerText = slideTakt.value; 
+    valPulse.innerText = slidePulse.value; valHold.innerText = slideHold.value; valTakt.innerText = slideTakt.value; 
+    valToleranz.innerText = slideToleranz.value; 
+    valAnchorSens.innerText = slideAnchorSens.value; valAnchorW.innerText = slideAnchorW.value; valAnchorH.innerText = slideAnchorH.value;
+    valAnchorDrift.innerText = slideAnchorDrift.value;
+    valMuteSens.innerText = slideMuteSens.value; valMuteHold.innerText = slideMuteHold.value; 
+    valMuteW.innerText = slideMuteW.value; valMuteH.innerText = slideMuteH.value;
+    valMuteDrift.innerText = slideMuteDrift.value;
     updateMaxDeltaLimitRange();
 }
 
-chkTelegram.addEventListener('change', () => { telegramSettingsBox.style.display = chkTelegram.checked ? 'flex' : 'none'; saveSettings(); });
-txtTelegramToken.addEventListener('input', saveSettings); txtTelegramChatId.addEventListener('input', saveSettings);
-txtWeatherCities.addEventListener('input', saveSettings); chkLocalAlarm.addEventListener('change', saveSettings);
-chkAudioGuard.addEventListener('change', () => { saveSettings(); if(isRunning) restartAudioSystem(); });
+function updateMonitorButtonUI() {
+    if (!isRunning) {
+        monitorBtn.innerText = "Kamera starten zur Überwachung"; monitorBtn.style.background = "#dc3545"; monitorBtn.classList.add("off");
+    } else {
+        if (isMonitoring) { monitorBtn.innerText = "Überwachung: AKTIV"; monitorBtn.style.background = ""; monitorBtn.classList.remove("off"); } 
+        else { monitorBtn.innerText = "Überwachung: PAUSIERT"; monitorBtn.style.background = "#dc3545"; monitorBtn.classList.add("off"); }
+    }
+    updateStealthClock();
+}
 
-function togglePanel(btn, panel) {
+function updateUIVisibility() {
+    const exp = chkExpert.checked;
+    cameraSelect.style.display = exp ? 'block' : 'none';
+    document.getElementById('rowCamZoom').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowSens').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowMass').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowTakt').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowToleranz').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowPulse').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowAnchorDriftCheck').style.display = exp ? 'block' : 'none';
+    document.getElementById('rowAnchorSens').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowMuteDriftCheck').style.display = exp ? 'block' : 'none';
+    document.getElementById('rowMuteSens').style.display = exp ? 'flex' : 'none';
+    rowAnchorDriftSpeed.style.display = (exp && chkAnchorDrift.checked) ? 'flex' : 'none';
+    rowMuteDriftSpeed.style.display = (exp && chkMuteDrift.checked) ? 'flex' : 'none';
+}
+
+function setupAdjBtn(minusId, plusId, sliderId) {
+    const slider = document.getElementById(sliderId);
+    document.getElementById(minusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) - (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
+    document.getElementById(plusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) + (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
+}
+setupAdjBtn('sensMinus', 'sensPlus', 'slideSens'); setupAdjBtn('massMinus', 'massPlus', 'slideMass'); 
+setupAdjBtn('taktMinus', 'taktPlus', 'slideTakt'); setupAdjBtn('toleranzMinus', 'toleranzPlus', 'slideToleranz'); 
+setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth'); setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
+setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse'); setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
+setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom'); setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
+setupAdjBtn('anchorWMinus', 'anchorWPlus', 'slideAnchorW'); setupAdjBtn('anchorHMinus', 'anchorHPlus', 'slideAnchorH');
+setupAdjBtn('anchorDriftMinus', 'anchorDriftPlus', 'slideAnchorDrift');
+setupAdjBtn('muteSensMinus', 'muteSensPlus', 'slideMuteSens'); setupAdjBtn('muteHoldMinus', 'muteHoldPlus', 'slideMuteHold'); 
+setupAdjBtn('muteWMinus', 'muteWPlus', 'slideMuteW'); setupAdjBtn('muteHMinus', 'muteHPlus', 'slideMuteH');
+setupAdjBtn('muteDriftMinus', 'muteDriftPlus', 'slideMuteDrift');
+
+// ---------- EVENT LISTENERS ----------
+toggleSettingsBtn.addEventListener('click', () => { settingsVisible = !settingsVisible; mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none'; toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444'; saveSettings(); });
+function togglePanel(btn, panel, stateVarName) {
     let isOpen = panel.style.display === 'flex';
     panel.style.display = isOpen ? 'none' : 'flex';
     isOpen ? btn.classList.remove('open') : btn.classList.add('open');
+    if(stateVarName==='main') panelMainOpen = !isOpen;
+    if(stateVarName==='anchor') panelAnchorOpen = !isOpen;
+    if(stateVarName==='mute') panelMuteOpen = !isOpen;
+    if(stateVarName==='smart') panelSmartOpen = !isOpen;
+    saveSettings();
 }
-btnToggleMainConfig.addEventListener('click', () => togglePanel(btnToggleMainConfig, panelMainSettings));
-btnToggleAnchorConfig.addEventListener('click', () => togglePanel(btnToggleAnchorConfig, panelAnchorSettings));
-btnToggleMuteConfig.addEventListener('click', () => togglePanel(btnToggleMuteConfig, panelMuteSettings));
-btnToggleSmartConfig.addEventListener('click', () => togglePanel(btnToggleSmartConfig, panelSmartSettings));
-toggleSettingsBtn.addEventListener('click', () => { settingsVisible = !settingsVisible; mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none'; toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444'; });
+btnToggleMainConfig.addEventListener('click', () => togglePanel(btnToggleMainConfig, panelMainSettings, 'main'));
+btnToggleAnchorConfig.addEventListener('click', () => togglePanel(btnToggleAnchorConfig, panelAnchorSettings, 'anchor'));
+btnToggleMuteConfig.addEventListener('click', () => togglePanel(btnToggleMuteConfig, panelMuteSettings, 'mute'));
+btnToggleSmartConfig.addEventListener('click', () => togglePanel(btnToggleSmartConfig, panelSmartSettings, 'smart'));
+
+chkExpert.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
+chkShowZoom.addEventListener('change', (e) => { showZoomValues = e.target.checked; createZoomDisplays(); saveSettings(); });
+chkShowCam.addEventListener('change', (e) => { showCamera = e.target.checked; canvas.style.display = showCamera ? 'block' : 'none'; saveSettings(); });
+chkShowDpad.addEventListener('change', (e) => { dpadPanel.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
+
+chkTelegram.addEventListener('change', () => { telegramSettingsBox.style.display = chkTelegram.checked ? 'flex' : 'none'; saveSettings(); });
+txtTelegramToken.addEventListener('input', saveSettings); txtTelegramChatId.addEventListener('input', saveSettings);
+txtWeatherCities.addEventListener('input', saveSettings); 
+chkLocalAlarm.addEventListener('change', saveSettings);
+chkAudioGuard.addEventListener('change', () => { saveSettings(); if(isRunning) restartAudioSystem(); });
+
+chkAnchorActive.addEventListener('change', (e) => { anchorBox.active = e.target.checked; anchorBox.baseline = null; if (anchorBox.active) selectedBox = anchorBox; else if(selectedBox === anchorBox) selectedBox = boxes[0]; saveSettings(); createZoomDisplays(); });
+chkMuteActive.addEventListener('change', (e) => { muteBox.active = e.target.checked; muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.continuousStart = 0; muteBox.wasEmpty = true; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; if (muteBox.active) selectedBox = muteBox; else if(selectedBox === muteBox) selectedBox = boxes[0]; saveSettings(); createZoomDisplays(); });
+
+document.getElementById('helpBtn').addEventListener('click', () => document.getElementById('helpOverlay').style.display = 'flex');
+document.getElementById('closeHelpBtn').addEventListener('click', () => document.getElementById('helpOverlay').style.display = 'none');
+
+// Sliders Event Listeners
+slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideMass.addEventListener('input', () => { valMass.innerText = slideMass.value; saveSettings(); });
+slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideToleranz.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideWidth.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; b.baseline = null; }); });
+slideHeight.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; b.baseline = null; }); });
+
+boxCountSelect.addEventListener('change', (e) => { activeBoxCount = parseInt(e.target.value); createZoomDisplays(); if (selectedBox !== anchorBox && selectedBox !== muteBox && selectedBox.id > activeBoxCount) { selectedBox = boxes[0]; updateZoomSelectionUI(); } updateLabels(); saveSettings(); });
+
+// Reset Buttons
+document.getElementById('btnResetMain').addEventListener('click', () => { slideSens.value=30; slideWidth.value=35; slideHeight.value=20; updateMaxDeltaLimitRange(); slideMass.value=60; slidePulse.value=3; slideHold.value=6.0; slideTakt.value=2000; slideToleranz.value=10; boxCountSelect.value=2; activeBoxCount=2; boxes.forEach((b, idx) => { b.w=35; b.h=20; b.x=60; b.y=60+(idx*100); b.history=[]; b.baseline=null; b.validCrossings=0; b.lastState=0; b.lastMeasuredCycle=0; }); if(selectedBox!==anchorBox && selectedBox!==muteBox) selectedBox=boxes[0]; createZoomDisplays(); updateLabels(); saveSettings(); });
+
+// ---------- ZOOM & BOX UI ----------
+function createZoomDisplays() {
+    zoomHeader.innerHTML = '';
+    for (let i = 0; i < activeBoxCount; i++) {
+        const div = document.createElement('div'); div.className = 'zoom-box';
+        div.onclick = () => { selectedBox = boxes[i]; updateZoomSelectionUI(); };
+        const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
+        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'BOX ' + (i+1);
+        const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Masse: 0`;
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats); zoomHeader.appendChild(div);
+        boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats; boxes[i].zoomBoxDiv = div;
+    }
+    
+    if (anchorBox.active) {
+        const div = document.createElement('div'); div.className = 'zoom-box anchor-zoom';
+        div.onclick = () => { selectedBox = anchorBox; updateZoomSelectionUI(); };
+        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'ANKER';
+        const canvasContainer = document.createElement('div'); canvasContainer.style.cssText = "display:flex; gap:5px; margin-top:4px;";
+        const liveWrap = document.createElement('div'); const liveLabel = document.createElement('div'); liveLabel.style.cssText="font-size:9px; color:#ccc;"; liveLabel.innerText="LIVE";
+        const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 80; cLive.height = 40;
+        liveWrap.appendChild(liveLabel); liveWrap.appendChild(cLive);
+        const refWrap = document.createElement('div'); const refLabel = document.createElement('div'); refLabel.style.cssText="font-size:9px; color:#00aaff;"; refLabel.innerText="REFERENZ";
+        const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 80; cRef.height = 40;
+        refWrap.appendChild(refLabel); refWrap.appendChild(cRef);
+        canvasContainer.appendChild(liveWrap); canvasContainer.appendChild(refWrap);
+        const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none'; stats.innerHTML = `Lade...`;
+        const rst = document.createElement('button'); rst.innerText = "🔄 Neu"; rst.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#17a2b8; border-radius:4px;";
+        rst.onclick = (e) => { e.stopPropagation(); anchorBox.baseline = null; playLocalBeep(); };
+        div.appendChild(label); div.appendChild(canvasContainer); div.appendChild(stats); div.appendChild(rst); zoomHeader.appendChild(div);
+        anchorBox.zoomCtx = cLive.getContext('2d'); anchorBox.refCtx = cRef.getContext('2d'); anchorBox.zoomStatsDiv = stats; anchorBox.zoomBoxDiv = div;
+        if (anchorBox.baseline) anchorBox.refNeedsDraw = true;
+    }
+
+    if (muteBox.active) {
+        const div = document.createElement('div'); div.className = 'zoom-box mute-zoom';
+        div.onclick = () => { selectedBox = muteBox; updateZoomSelectionUI(); };
+        const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
+        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'MUTE-ZONE';
+        const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none'; stats.innerHTML = `Lade...`;
+        const rst = document.createElement('button'); rst.innerText = "🔄 Leer"; rst.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#28a745; border-radius:4px;";
+        rst.onclick = (e) => { e.stopPropagation(); muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; playLocalBeep(); };
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats); div.appendChild(rst); zoomHeader.appendChild(div);
+        muteBox.zoomCtx = c.getContext('2d'); muteBox.zoomStatsDiv = stats; muteBox.zoomBoxDiv = div;
+    }
+    updateZoomSelectionUI();
+}
+
+function updateZoomSelectionUI() {
+    let allDivs = [...boxes.map(b => b.zoomBoxDiv)];
+    if (anchorBox.active) allDivs.push(anchorBox.zoomBoxDiv);
+    if (muteBox.active) allDivs.push(muteBox.zoomBoxDiv);
+    allDivs.forEach((div) => { if (div) div.classList.remove('active-zoom'); });
+    if (selectedBox && selectedBox.zoomBoxDiv) { selectedBox.zoomBoxDiv.classList.add('active-zoom'); selectedBoxIdLabel.innerText = selectedBox.id; }
+}
+
+// ---------- SETTINGS (Speichern/Laden V2) ----------
+function saveSettings() {
+    const settings = {
+        expert: chkExpert.checked, sens: slideSens.value, mass: slideMass.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, toleranz: slideToleranz.value, pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
+        anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value, anchorDrift: chkAnchorDrift.checked, anchorDriftSpeed: slideAnchorDrift.value,
+        muteSens: slideMuteSens.value, muteHold: slideMuteHold.value, muteW: slideMuteW.value, muteH: slideMuteH.value, muteDrift: chkMuteDrift.checked, muteDriftSpeed: slideMuteDrift.value,
+        showZoomValues: showZoomValues, showCamera: showCamera, dpadVisible: chkShowDpad.checked, settingsVisible: settingsVisible, 
+        panelMainOpen: panelMainOpen, panelAnchorOpen: panelAnchorOpen, panelMuteOpen: panelMuteOpen, panelSmartOpen: panelSmartOpen,
+        cameraId: cameraSelect.value, positions: boxes.map(b => ({ x: b.x, y: b.y })), anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active }, mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active },
+        localAlarm: chkLocalAlarm.checked, telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked, tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), weather: txtWeatherCities.value.trim()
+    };
+    localStorage.setItem('pixel_settings_v2', JSON.stringify(settings));
+}
 
 function loadSettings() {
     try {
         const saved = localStorage.getItem('pixel_settings_v2');
         if (saved) {
             const s = JSON.parse(saved);
+            if (s.expert !== undefined) chkExpert.checked = s.expert;
             if (s.sens) slideSens.value = s.sens; if (s.mass) slideMass.value = s.mass; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
-            if (s.pulse) slidePulse.value = s.pulse; if (s.takt) slideTakt.value = s.takt; 
+            if (s.pulse) slidePulse.value = s.pulse; if (s.hold) slideHold.value = s.hold; if (s.takt) slideTakt.value = s.takt; if (s.toleranz) slideToleranz.value = s.toleranz; 
+            if (s.anchorSens) slideAnchorSens.value = s.anchorSens; if (s.anchorW) slideAnchorW.value = s.anchorW; if (s.anchorH) slideAnchorH.value = s.anchorH; if (s.anchorDrift !== undefined) chkAnchorDrift.checked = s.anchorDrift; if (s.anchorDriftSpeed) slideAnchorDrift.value = s.anchorDriftSpeed;
+            if (s.muteSens) slideMuteSens.value = s.muteSens; if (s.muteHold) slideMuteHold.value = s.muteHold; if (s.muteW) slideMuteW.value = s.muteW; if (s.muteH) slideMuteH.value = s.muteH; if (s.muteDrift !== undefined) chkMuteDrift.checked = s.muteDrift; if (s.muteDriftSpeed) slideMuteDrift.value = s.muteDriftSpeed;
             if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
+            if (s.showZoomValues !== undefined) { showZoomValues = s.showZoomValues; chkShowZoom.checked = s.showZoomValues; }
+            if (s.showCamera !== undefined) { showCamera = s.showCamera; chkShowCam.checked = s.showCamera; canvas.style.display = showCamera ? 'block' : 'none'; }
+            if (s.dpadVisible !== undefined) { chkShowDpad.checked = s.dpadVisible; dpadPanel.style.display = s.dpadVisible ? 'flex' : 'none'; }
+            if (s.settingsVisible !== undefined) { settingsVisible = s.settingsVisible; mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none'; toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444'; }
+            if (s.panelMainOpen !== undefined) { panelMainOpen = s.panelMainOpen; if(panelMainOpen){ panelMainSettings.style.display='flex'; btnToggleMainConfig.classList.add('open'); } }
+            if (s.panelAnchorOpen !== undefined) { panelAnchorOpen = s.panelAnchorOpen; if(panelAnchorOpen){ panelAnchorSettings.style.display='flex'; btnToggleAnchorConfig.classList.add('open'); } }
+            if (s.panelMuteOpen !== undefined) { panelMuteOpen = s.panelMuteOpen; if(panelMuteOpen){ panelMuteSettings.style.display='flex'; btnToggleMuteConfig.classList.add('open'); } }
+            if (s.panelSmartOpen !== undefined) { panelSmartOpen = s.panelSmartOpen; if(panelSmartOpen){ panelSmartSettings.style.display='flex'; btnToggleSmartConfig.classList.add('open'); } }
+            
             if (s.localAlarm !== undefined) chkLocalAlarm.checked = s.localAlarm;
             if (s.telegram !== undefined) { chkTelegram.checked = s.telegram; telegramSettingsBox.style.display = s.telegram ? 'flex' : 'none'; }
             if (s.audioGuard !== undefined) chkAudioGuard.checked = s.audioGuard;
-            if (s.tgToken) txtTelegramToken.value = s.tgToken;
-            if (s.tgChat) txtTelegramChatId.value = s.tgChat;
-            if (s.weather) txtWeatherCities.value = s.weather;
+            if (s.tgToken) txtTelegramToken.value = s.tgToken; if (s.tgChat) txtTelegramChatId.value = s.tgChat; if (s.weather) txtWeatherCities.value = s.weather;
+
+            if (s.positions) { s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } }); }
+            if (s.anchor) { anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; anchorBox.active = s.anchor.active; chkAnchorActive.checked = s.anchor.active; }
+            if (s.mute) { muteBox.x = s.mute.x; muteBox.y = s.mute.y; muteBox.active = s.mute.active; chkMuteActive.checked = s.mute.active; }
         }
     } catch(e) {}
-    updateLabels();
-}
-function saveSettings() {
-    localStorage.setItem('pixel_settings_v2', JSON.stringify({
-        sens: slideSens.value, mass: slideMass.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, pulse: slidePulse.value, count: activeBoxCount, 
-        localAlarm: chkLocalAlarm.checked, telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked,
-        tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), weather: txtWeatherCities.value.trim()
-    }));
+    boxCountSelect.value = activeBoxCount; 
+    createZoomDisplays(); updateMaxDeltaLimitRange(); updateLabels(); updateUIVisibility(); updateMonitorButtonUI();
+    boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); b.baseline = null; });
+    anchorBox.w = parseInt(slideAnchorW.value); anchorBox.h = parseInt(slideAnchorH.value);
+    muteBox.w = parseInt(slideMuteW.value); muteBox.h = parseInt(slideMuteH.value);
 }
 loadSettings();
+
+// ---------- DRAG & DROP (V61) ----------
+function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect(); let clientX, clientY;
+    if (e.type.includes('touch')) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; } else { clientX = e.clientX; clientY = e.clientY; }
+    return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+}
+function startDrag(e) {
+    if (!isRunning || !showCamera) return; 
+    const pos = getPointerPos(e); let checkBoxes = boxes.slice(0, activeBoxCount); 
+    if (anchorBox.active) checkBoxes.push(anchorBox); if (muteBox.active) checkBoxes.push(muteBox);
+    let boxHit = false;
+    for (let i = checkBoxes.length - 1; i >= 0; i--) {
+        const box = checkBoxes[i];
+        if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
+            draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
+            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; 
+            if(box !== anchorBox && box !== muteBox) { box.history = []; box.baseline = null; } 
+            else if(box===anchorBox) anchorBox.baseline = null; 
+            else if(box===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+            boxHit = true; break;
+        }
+    }
+    if (boxHit && e.cancelable) e.preventDefault(); 
+}
+function moveDrag(e) {
+    if (!draggingBox || !showCamera) return; 
+    const pos = getPointerPos(e);
+    draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
+    draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
+    if(draggingBox !== anchorBox && draggingBox !== muteBox) { draggingBox.history = []; draggingBox.baseline = null; } 
+    else if(draggingBox===anchorBox) anchorBox.baseline = null; 
+    else if(draggingBox===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+    if (e.cancelable) e.preventDefault(); 
+}
+function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
+canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
+canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.addEventListener('touchmove', moveDrag, { passive: false }); window.addEventListener('touchend', endDrag);
+
+// D-Pad
+function bindTurboButton(btnId, actionFn) {
+    const btn = document.getElementById(btnId); let turboTimeout, turboInterval;
+    const start = (e) => { e.preventDefault(); actionFn(1); turboTimeout = setTimeout(() => { let tick = 0; turboInterval = setInterval(() => { tick++; actionFn(tick>15?3:1); }, 50); }, 600); };
+    const stop = () => { clearTimeout(turboTimeout); clearInterval(turboInterval); };
+    btn.addEventListener('mousedown', start); btn.addEventListener('touchstart', start);
+    btn.addEventListener('mouseup', stop); btn.addEventListener('mouseleave', stop); btn.addEventListener('touchend', stop);
+}
+bindTurboButton('btnUp', (s) => { selectedBox.y -= s; selectedBox.baseline=null; saveSettings(); }); bindTurboButton('btnDown', (s) => { selectedBox.y += s; selectedBox.baseline=null; saveSettings(); });
+bindTurboButton('btnLeft', (s) => { selectedBox.x -= s; selectedBox.baseline=null; saveSettings(); }); bindTurboButton('btnRight', (s) => { selectedBox.x += s; selectedBox.baseline=null; saveSettings(); });
+bindTurboButton('btnWMinus', (s) => { selectedBox.w = Math.max(5, selectedBox.w - s); selectedBox.baseline=null; saveSettings(); if(selectedBox===anchorBox) slideAnchorW.value = selectedBox.w; else if(selectedBox===muteBox) slideMuteW.value = selectedBox.w; else slideWidth.value = selectedBox.w; updateLabels(); });
+bindTurboButton('btnWPlus', (s) => { selectedBox.w = Math.min(100, selectedBox.w + s); selectedBox.baseline=null; saveSettings(); if(selectedBox===anchorBox) slideAnchorW.value = selectedBox.w; else if(selectedBox===muteBox) slideMuteW.value = selectedBox.w; else slideWidth.value = selectedBox.w; updateLabels(); });
+bindTurboButton('btnHMinus', (s) => { selectedBox.h = Math.max(5, selectedBox.h - s); selectedBox.baseline=null; saveSettings(); if(selectedBox===anchorBox) slideAnchorH.value = selectedBox.h; else if(selectedBox===muteBox) slideMuteH.value = selectedBox.h; else slideHeight.value = selectedBox.h; updateLabels(); });
+bindTurboButton('btnHPlus', (s) => { selectedBox.h = Math.min(50, selectedBox.h + s); selectedBox.baseline=null; saveSettings(); if(selectedBox===anchorBox) slideAnchorH.value = selectedBox.h; else if(selectedBox===muteBox) slideMuteH.value = selectedBox.h; else slideHeight.value = selectedBox.h; updateLabels(); });
+
+
+// ---------- AUDIO ECHO BLOCKER & TÖNE ----------
+function setInternalMute(duration) {
+    isMutedInternally = true;
+    if(internalMuteTimeout) clearTimeout(internalMuteTimeout);
+    internalMuteTimeout = setTimeout(() => { isMutedInternally = false; loudFrames = []; }, duration);
+}
+
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+
+function playLocalBeep() { 
+    if(!chkLocalAlarm.checked) return;
+    setInternalMute(1000);
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; 
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25); 
+}
+function playAnchorBeep() { 
+    if(!chkLocalAlarm.checked) return;
+    setInternalMute(1500);
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); 
+}
+function playWarningBeep() { 
+    if(!chkLocalAlarm.checked) return;
+    setInternalMute(1000);
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 800; gain.gain.value = 0.05; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
+}
+function playLoudAlarm() { 
+    if(!chkLocalAlarm.checked) return;
+    setInternalMute(2000);
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
+    gain.gain.value = 0.25; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.8); 
+}
 
 // ---------- WETTER API (Open-Meteo) ----------
 async function fetchWeather() {
     if(!txtWeatherCities.value) { weatherDisplay.innerText = ''; return; }
     let cities = txtWeatherCities.value.split(',').map(c => c.trim()).filter(c => c);
     let output = [];
-    
     for(let city of cities) {
         try {
-            // Geocoding
             let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=de`);
             let geoData = await geoRes.json();
             if(!geoData.results || geoData.results.length === 0) continue;
             let lat = geoData.results[0].latitude; let lon = geoData.results[0].longitude;
-            
-            // Weather
             let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
             let wData = await wRes.json();
-            let code = wData.current_weather.weathercode;
-            let temp = Math.round(wData.current_weather.temperature);
-            
-            // Simple Emoji Mapping
+            let code = wData.current_weather.weathercode; let temp = Math.round(wData.current_weather.temperature);
             let emoji = '☁️';
-            if(code === 0 || code === 1) emoji = '☀️';
-            else if(code === 2 || code === 3) emoji = '⛅';
-            else if(code >= 50 && code <= 69) emoji = '🌧️';
-            else if(code >= 70 && code <= 79) emoji = '❄️';
-            else if(code >= 95) emoji = '⛈️';
-
+            if(code === 0 || code === 1) emoji = '☀️'; else if(code === 2 || code === 3) emoji = '⛅'; else if(code >= 50 && code <= 69) emoji = '🌧️'; else if(code >= 70 && code <= 79) emoji = '❄️'; else if(code >= 95) emoji = '⛈️';
             output.push(`${city}: ${temp}°C ${emoji}`);
-        } catch(e) { console.warn("Wetterfehler für", city); }
+        } catch(e) {}
     }
     weatherDisplay.innerText = output.join(" | ");
 }
 setInterval(fetchWeather, 5 * 60 * 1000); 
 
-// ---------- AUDIO ECHO BLOCKER ----------
-function playLocalBeep() { 
-    if(!chkLocalAlarm.checked) return;
-    
-    // Echo Sperre an (Mikrofon für 1 Sekunde taub)
-    isMutedInternally = true;
-    if(internalMuteTimeout) clearTimeout(internalMuteTimeout);
-    internalMuteTimeout = setTimeout(() => { isMutedInternally = false; loudFrames = []; }, 1000);
-
-    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
-    osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; 
-    osc.connect(gain); gain.connect(audioCtx.destination); 
-    osc.start(); osc.stop(audioCtx.currentTime + 0.25); 
-}
-
 // ---------- AUDIO WÄCHTER (Kadenz & Filter) ----------
 async function restartAudioSystem() {
     if(micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     if(!chkAudioGuard.checked || !isRunning) return;
-
     try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const source = audioCtx.createMediaStreamSource(micStream);
-        
-        // Highpass Filter (Vorblock Killer)
-        const filter = audioCtx.createBiquadFilter();
-        filter.type = 'highpass'; filter.frequency.value = 1000; 
-
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-
+        const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 1000; 
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; dataArray = new Uint8Array(analyser.frequencyBinCount);
         source.connect(filter); filter.connect(analyser);
     } catch(e) { alert("Mikrofon Fehler: " + e.message); chkAudioGuard.checked = false; }
 }
 
 function processAudio() {
     if(!chkAudioGuard.checked || !analyser || !isMonitoring || isMutedInternally) return;
-    
     analyser.getByteFrequencyData(dataArray);
     let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
     let avg = sum / dataArray.length;
-
     let now = Date.now();
-    if(avg > AUDIO_LOUDNESS_THRESHOLD) { loudFrames.push(now); }
     
-    // 2-Sekunden Eimer
-    loudFrames = loudFrames.filter(t => now - t < 2000);
+    if(avg > AUDIO_LOUDNESS_THRESHOLD) loudFrames.push(now);
+    loudFrames = loudFrames.filter(t => now - t < 2000); // 2-Sekunden Eimer
     
-    // Kadenz berechnen (Ca 16ms pro Frame)
-    let loudDurationMs = loudFrames.length * 16.6; 
-
+    let loudDurationMs = loudFrames.length * 66.6; // 15 FPS = ~66ms pro Frame
     if (loudDurationMs >= AUDIO_DENSITY_REQ_MS && (now - lastAcousticAlarm > 10000)) {
-        lastAcousticAlarm = now;
-        loudFrames = []; 
-        console.log("🚨 Akustischer Alarm ausgelöst!");
-        
+        lastAcousticAlarm = now; loudFrames = []; 
         if (chkLocalAlarm.checked) playLocalBeep();
         if (chkTelegram.checked) recordAndSendAudio();
     }
@@ -604,28 +891,18 @@ function processAudio() {
 // ---------- TELEGRAM MEDIEN-FUNKTIONEN ----------
 async function sendTgMessage(text) {
     if(!txtTelegramToken.value || !txtTelegramChatId.value) return;
-    try {
-        await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/sendMessage`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ chat_id: txtTelegramChatId.value.trim(), text: text })
-        });
-    } catch(e) {}
+    try { await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/sendMessage`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ chat_id: txtTelegramChatId.value.trim(), text: text }) }); } catch(e) {}
 }
 
 async function sendTgMedia(endpoint, formData) {
     if(!txtTelegramToken.value || !txtTelegramChatId.value) return;
     formData.append("chat_id", txtTelegramChatId.value.trim());
-    try {
-        await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/${endpoint}`, {
-            method: 'POST', body: formData
-        });
-    } catch(e) { console.error("TG Upload Error", e); }
+    try { await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/${endpoint}`, { method: 'POST', body: formData }); } catch(e) {}
 }
 
 function recordAndSendVideo(boxId) {
     if(isRecordingVideo || !chkTelegram.checked) return;
     isRecordingVideo = true; sendTgMessage("🚨 Alarm Box " + boxId + "! Zeichne 4s Video auf...");
-    
     try {
         let stream = canvas.captureStream(15);
         let recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
@@ -633,55 +910,41 @@ function recordAndSendVideo(boxId) {
         recorder.ondataavailable = e => chunks.push(e.data);
         recorder.onstop = async () => {
             let blob = new Blob(chunks, { type: 'video/webm' });
-            let fd = new FormData(); fd.append("video", blob, "alarm.webm");
-            fd.append("caption", "🎥 Live-Aufnahme Box " + boxId);
+            let fd = new FormData(); fd.append("video", blob, "alarm.webm"); fd.append("caption", "🎥 Live-Aufnahme Box " + boxId);
             await sendTgMedia("sendVideo", fd);
-            setTimeout(() => { isRecordingVideo = false; }, 5000); // 5s Cooldown
+            setTimeout(() => { isRecordingVideo = false; }, 5000); 
         };
-        recorder.start();
-        setTimeout(() => { recorder.stop(); }, 4000); // 4 Sek Aufnehmen
+        recorder.start(); setTimeout(() => { recorder.stop(); }, 4000); 
     } catch(e) {
-        sendTgMessage("Video nicht unterstützt. Sende Foto.");
-        sendTgPhoto("📸 Notfall-Bild Box " + boxId);
-        setTimeout(() => { isRecordingVideo = false; }, 5000);
+        sendTgPhoto("📸 Notfall-Bild Box " + boxId); setTimeout(() => { isRecordingVideo = false; }, 5000);
     }
 }
 
 function recordAndSendAudio() {
     if(isRecordingAudio || !chkTelegram.checked || !micStream) return;
     isRecordingAudio = true; sendTgMessage("🚨 Akustischer Alarm! Zeichne 5s Audio auf...");
-    
     try {
-        let recorder = new MediaRecorder(micStream);
-        let chunks = [];
+        let recorder = new MediaRecorder(micStream); let chunks = [];
         recorder.ondataavailable = e => chunks.push(e.data);
         recorder.onstop = async () => {
             let blob = new Blob(chunks, { type: 'audio/webm' });
-            let fd = new FormData(); fd.append("voice", blob, "alarm.webm");
-            fd.append("caption", "🎙️ Audio-Alarm erkannt");
+            let fd = new FormData(); fd.append("voice", blob, "alarm.webm"); fd.append("caption", "🎙️ Audio-Alarm erkannt");
             await sendTgMedia("sendVoice", fd);
-            setTimeout(() => { isRecordingAudio = false; }, 5000); // Cooldown
+            setTimeout(() => { isRecordingAudio = false; }, 5000); 
         };
-        recorder.start();
-        setTimeout(() => { recorder.stop(); }, 5000); // 5 Sek Aufnehmen
-    } catch(e) {
-        setTimeout(() => { isRecordingAudio = false; }, 5000);
-    }
+        recorder.start(); setTimeout(() => { recorder.stop(); }, 5000); 
+    } catch(e) { setTimeout(() => { isRecordingAudio = false; }, 5000); }
 }
 
 function sendTgPhoto(caption) {
     canvas.toBlob(async (blob) => {
-        let fd = new FormData(); fd.append("photo", blob, "live.jpg");
-        fd.append("caption", caption);
-        await sendTgMedia("sendPhoto", fd);
+        let fd = new FormData(); fd.append("photo", blob, "live.jpg"); fd.append("caption", caption); await sendTgMedia("sendPhoto", fd);
     }, 'image/jpeg', 0.8);
 }
 
-// Long Polling für /foto Befehl
+// Long Polling
 async function pollTelegram() {
-    if (!chkTelegram.checked || !isRunning || !txtTelegramToken.value) {
-        setTimeout(pollTelegram, 5000); return;
-    }
+    if (!chkTelegram.checked || !isRunning || !txtTelegramToken.value) { setTimeout(pollTelegram, 5000); return; }
     try {
         let res = await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/getUpdates?offset=${tgUpdateOffset}&timeout=30`);
         let data = await res.json();
@@ -689,9 +952,7 @@ async function pollTelegram() {
             for (let item of data.result) {
                 tgUpdateOffset = item.update_id + 1;
                 if (item.message && item.message.text === '/foto') {
-                    if(item.message.chat.id.toString() === txtTelegramChatId.value.trim()) {
-                        sendTgPhoto("📸 Remote Live-Bild");
-                    }
+                    if(item.message.chat.id.toString() === txtTelegramChatId.value.trim()) sendTgPhoto("📸 Remote Live-Bild");
                 }
             }
         }
@@ -699,107 +960,292 @@ async function pollTelegram() {
     setTimeout(pollTelegram, 1000);
 }
 
-// ---------- CORE VIDEO ANALYSE (V61 LOGIK) ----------
-function processFrame() {
-    if (!isRunning) return; requestAnimationFrame(processFrame);
-    
-    // Audio Wächter läuft synchron zum Video
-    processAudio();
+// ---------- V61 BILD-ANALYSE (Anker, Mute, Rhythmus) ----------
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const now = Date.now();
-    const pixelSchwelle = parseInt(slideSens.value); 
-    const kritischeMasse = parseInt(slideMass.value); 
-    const targetTakt = parseInt(slideTakt.value);
-    const minCrossings = parseInt(slidePulse.value);
-    let boxAlarmTriggered = false;
-    let alarmBoxId = null;
+function analyzeAnchor(now, fullFrame, imgW, imgH) {
+    if (!anchorBox.active) return false;
+    const ax = Math.floor(anchorBox.x); const ay = Math.floor(anchorBox.y); const aw = Math.floor(anchorBox.w); const ah = Math.floor(anchorBox.h);
+    if (anchorBox.zoomCtx) drawProportional(anchorBox.zoomCtx, canvas, ax, ay, aw, ah, 80, 40);
+
+    let safeAx = Math.max(0, Math.min(ax, imgW - aw)); let safeAy = Math.max(0, Math.min(ay, imgH - ah));
+    let aData = new Uint8ClampedArray(aw * ah * 4);
+    for (let y = 0; y < ah; y++) { let gStart = ((safeAy + y) * imgW + safeAx) * 4; aData.set(fullFrame.data.subarray(gStart, gStart + aw * 4), y * aw * 4); }
+
+    if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) { anchorBox.baseline = new Float32Array(aData); anchorBox.refNeedsDraw = true; }
+    if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
+        try {
+            let imgData = new ImageData(new Uint8ClampedArray(anchorBox.baseline), aw, ah); 
+            let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah; tmpC.getContext('2d').putImageData(imgData, 0, 0);
+            drawProportional(anchorBox.refCtx, tmpC, 0, 0, aw, ah, 80, 40); anchorBox.refNeedsDraw = false;
+        } catch(e) { anchorBox.baseline = null; }
+    }
+
+    let baseTotal = 0; let currTotal = 0; let pCount = 0;
+    for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
+        baseTotal += anchorBox.baseline[j]*0.299 + anchorBox.baseline[j+1]*0.587 + anchorBox.baseline[j+2]*0.114;
+        currTotal += aData[j]*0.299 + aData[j+1]*0.587 + aData[j+2]*0.114; pCount++;
+    }
+    let offset = (currTotal / pCount) - (baseTotal / pCount);
+    let totalDiff = 0; 
+    for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
+        let baseVal = anchorBox.baseline[j]*0.299 + anchorBox.baseline[j+1]*0.587 + anchorBox.baseline[j+2]*0.114;
+        let currVal = aData[j]*0.299 + aData[j+1]*0.587 + aData[j+2]*0.114;
+        totalDiff += Math.abs(currVal - (baseVal + offset)); 
+    }
+    
+    let structuralDiff = Math.round(totalDiff / pCount); let anchorThreshold = parseInt(slideAnchorSens.value);
+
+    if (isMonitoring && structuralDiff > anchorThreshold) { 
+        if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now; else if (now - anchorBox.alarmStart > 1000) anchorBox.isAlarm = true; 
+    } else { 
+        anchorBox.alarmStart = 0; anchorBox.isAlarm = false; 
+        let alpha = parseInt(slideAnchorDrift.value) * 0.001;
+        if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold) {
+            for (let j = 0; j < aData.length; j++) anchorBox.baseline[j] = anchorBox.baseline[j] * (1 - alpha) + aData[j] * alpha;
+            if (frameCounter % 30 === 0) anchorBox.refNeedsDraw = true;
+        }
+    }
+
+    if (anchorBox.zoomBoxDiv) { if (anchorBox.isAlarm && isMonitoring) anchorBox.zoomBoxDiv.classList.add('alarm-zoom'); else anchorBox.zoomBoxDiv.classList.remove('alarm-zoom'); }
+    if (anchorBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+        anchorBox.zoomStatsDiv.innerHTML = `Abw: <span style="color:#00ff88;">${structuralDiff}</span> / Max: ${anchorThreshold}<br>` + (anchorBox.isAlarm && isMonitoring ? `<b style="color:#ffaa00;">VERRUTSCHT!</b>` : `Größe: ${aw}x${ah} px`);
+    }
+
+    if (anchorBox.isAlarm && isMonitoring) playAnchorBeep();
+    return anchorBox.isAlarm; 
+}
+
+function analyzeMute(now, fullFrame, imgW, imgH) {
+    if (!muteBox.active) { muteBox.state = 'IDLE'; muteBox.triggerStart = 0; return; }
+    if (anchorBox.active && anchorBox.isAlarm) { muteBox.state = 'IDLE'; muteBox.continuousStart = 0; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; return; }
+
+    const mx = Math.floor(muteBox.x); const my = Math.floor(muteBox.y); const mw = Math.floor(muteBox.w); const mh = Math.floor(muteBox.h);
+    if (muteBox.zoomCtx) drawProportional(muteBox.zoomCtx, canvas, mx, my, mw, mh, 100, 50);
+    
+    let safeMx = Math.max(0, Math.min(mx, imgW - mw)); let safeMy = Math.max(0, Math.min(my, imgH - mh));
+    let mData = new Uint8ClampedArray(mw * mh * 4);
+    for (let y = 0; y < mh; y++) { let gStart = ((safeMy + y) * imgW + safeMx) * 4; mData.set(fullFrame.data.subarray(gStart, gStart + mw * 4), y * mw * 4); }
+
+    if (muteBox.baseline === null || muteBox.baseline.length !== mData.length) muteBox.baseline = new Float32Array(mData); 
+
+    let baseTotal = 0; let currTotal = 0; let pCount = 0;
+    for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
+        baseTotal += muteBox.baseline[j]*0.299 + muteBox.baseline[j+1]*0.587 + muteBox.baseline[j+2]*0.114;
+        currTotal += mData[j]*0.299 + mData[j+1]*0.587 + mData[j+2]*0.114; pCount++;
+    }
+    let offset = (currTotal / pCount) - (baseTotal / pCount);
+    let totalDiff = 0; 
+    for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
+        let baseVal = muteBox.baseline[j]*0.299 + muteBox.baseline[j+1]*0.587 + muteBox.baseline[j+2]*0.114;
+        let currVal = mData[j]*0.299 + mData[j+1]*0.587 + mData[j+2]*0.114;
+        totalDiff += Math.abs(currVal - (baseVal + offset)); 
+    }
+    
+    let structuralDiff = Math.round(totalDiff / pCount); 
+    let muteThreshold = parseInt(slideMuteSens.value); let muteHoldMs = parseInt(slideMuteHold.value) * 1000;
+
+    if (structuralDiff >= muteThreshold) {
+        muteBox.emptyStartTime = 0; 
+        if (muteBox.triggerStart === 0) muteBox.triggerStart = now; 
+        else if (now - muteBox.triggerStart >= 1000) {
+            if (muteBox.state === 'IDLE') { muteBox.state = 'MUTED'; muteBox.timerStart = now; muteBox.continuousStart = now; muteBox.wasEmpty = false; } 
+            else if (muteBox.state === 'MUTED' && muteBox.wasEmpty) { muteBox.timerStart = now; muteBox.wasEmpty = false; }
+        }
+    } else {
+        muteBox.triggerStart = 0;
+        if (muteBox.emptyStartTime === 0) muteBox.emptyStartTime = now;
+        if (now - muteBox.emptyStartTime >= 1000) { muteBox.wasEmpty = true; if (muteBox.state === 'WAITING_FOR_EMPTY') { muteBox.state = 'IDLE'; muteBox.continuousStart = 0; } }
+        let alpha = parseInt(slideMuteDrift.value) * 0.001; 
+        if (chkMuteDrift.checked && muteBox.state !== 'MUTED' && structuralDiff > 0 && structuralDiff < muteThreshold) {
+            for (let j = 0; j < mData.length; j++) muteBox.baseline[j] = muteBox.baseline[j] * (1 - alpha) + mData[j] * alpha;
+        }
+    }
+    
+    if (muteBox.state === 'MUTED') {
+        if (now - muteBox.timerStart >= muteHoldMs) muteBox.state = 'WAITING_FOR_EMPTY';
+        else {
+            let duration = now - muteBox.continuousStart;
+            if (duration > 600000) playLoudAlarm(); else if (duration > 300000) { if (now - muteBox.lastWarningTime > 5000) { playWarningBeep(); muteBox.lastWarningTime = now; } }
+        }
+    }
+    
+    if (muteBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+        let txt = `Struktur-Abw: ${structuralDiff} / Max: ${muteThreshold}<br>`;
+        if (muteBox.state === 'MUTED') {
+            let duration = now - muteBox.continuousStart;
+            if (duration > 600000) txt += `<b style="color:#ff0000; animation: blink 1s infinite;">⚠ ALARM (>10m)</b>`; 
+            else if (duration > 300000) txt += `<b style="color:#ff8800;">⚠ WARNUNG (>5m)</b>`;
+            else { let rest = Math.ceil((muteHoldMs - (now - muteBox.timerStart)) / 1000); txt += `<b style="color:#ffcc00;">STUMM</b> (${rest}s)`; }
+        } else if (muteBox.state === 'WAITING_FOR_EMPTY') txt += `<span style="color:#aaa;">Wartet auf Freigabe...</span>`;
+        else if (muteBox.triggerStart > 0) txt += `<b style="color:#ffcc00;">Prüfe...</b>`;
+        else txt += `Inaktiv`; 
+        txt += `<br>Größe: ${mw}x${mh} px`; muteBox.zoomStatsDiv.innerHTML = txt;
+    }
+}
+
+function analyzeBoxes(now, fullFrame, imgW, imgH) {
+    let boxAlarmTriggered = false; let alarmBoxId = null;
+    const pixelSchwelle = parseInt(slideSens.value); const kritischeMasse = parseInt(slideMass.value); 
+    const minCrossings = parseInt(slidePulse.value); const holdMs = parseFloat(slideHold.value) * 1000;
+    const targetTakt = parseInt(slideTakt.value); const tolerancePct = parseInt(slideToleranz.value) / 100;
+    const minAllowed = targetTakt * (1 - tolerancePct); const maxAllowed = targetTakt * (1 + tolerancePct);
+    const data = fullFrame.data;
 
     for (let i = 0; i < activeBoxCount; i++) {
-        const box = boxes[i];
-        if (!box.baseline) { box.baseline = new Float32Array(box.w * box.h).fill(-1); }
-        let activePixels = 0; let pIdx = 0;
+        const box = boxes[i]; let diff = 0;
+        const rx = Math.floor(box.x); const ry = Math.floor(box.y); const rw = Math.floor(box.w); const rh = Math.floor(box.h); const pixelCount = rw * rh;
+        if (box.zoomCtx) drawProportional(box.zoomCtx, canvas, rx, ry, rw, rh, 100, 50);
 
-        for (let y = box.y; y < box.y + box.h; y++) {
-            for (let x = box.x; x < box.x + box.w; x++) {
-                if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
-                    let idx = (y * canvas.width + x) * 4;
-                    let curr = fullFrame.data[idx]*0.299 + fullFrame.data[idx+1]*0.587 + fullFrame.data[idx+2]*0.114;
+        if (!box.baseline || box.baseline.length !== pixelCount) { box.baseline = new Float32Array(pixelCount); box.baseline.fill(-1); }
+
+        let activePixels = 0; let pIdx = 0;
+        for (let y = ry; y < ry + rh; y += PIXEL_STEP) {
+            for (let x = rx; x < rx + rw; x += PIXEL_STEP) {
+                if (x >= 0 && x < imgW && y >= 0 && y < imgH) {
+                    let idx = (y * imgW + x) * 4;
+                    let curr = data[idx]*0.299 + data[idx+1]*0.587 + data[idx+2]*0.114;
                     if (box.baseline[pIdx] === -1) box.baseline[pIdx] = curr;
-                    if (curr < box.baseline[pIdx]) box.baseline[pIdx] = curr; 
-                    else box.baseline[pIdx] += Math.min(curr - box.baseline[pIdx], 0.5); 
-                    if (curr - box.baseline[pIdx] > pixelSchwelle) activePixels++;
+                    if (curr < box.baseline[pIdx]) box.baseline[pIdx] = curr; else box.baseline[pIdx] += Math.min(curr - box.baseline[pIdx], 0.5); 
+                    if (curr - box.baseline[pIdx] > pixelSchwelle) activePixels++; 
                 }
                 pIdx++;
             }
         }
         
         box.history.push({ val: activePixels, time: now });
-        while (box.history.length > 0 && now - box.history[0].time > 5000) box.history.shift();
-        
+        while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) box.history.shift();
+
         if (box.history.length > 5) {
-            const vals = box.history.map(v => v.val); 
-            let diff = Math.round(Math.max(...vals) - Math.min(...vals));
+            const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
+            diff = Math.round(maxVal - minVal);
             if (diff < kritischeMasse) box.validCrossings = 0;
 
-            const mid = Math.min(...vals) + diff / 2;
-            let state = (activePixels > mid + diff*0.2) ? 1 : ((activePixels < mid - diff*0.2) ? -1 : 0);
+            const hysteresis = Math.max(diff * 0.2, kritischeMasse * 0.25); const mid = minVal + diff / 2;
+            let currentInstantState = 0; 
+            if (activePixels > mid + hysteresis) currentInstantState = 1; else if (activePixels < mid - hysteresis) currentInstantState = -1;
             
-            if (state === 1 && box.lastState === -1) {
+            if (currentInstantState === 1 && box.lastState === -1) {
                 if (box.lastRisingEdge > 0) {
-                    let cycle = now - box.lastRisingEdge;
-                    if (cycle >= targetTakt*0.8 && cycle <= targetTakt*1.2) { box.validCrossings++; } else { box.validCrossings = 0; }
+                    let cycleDuration = now - box.lastRisingEdge; box.lastMeasuredCycle = cycleDuration; 
+                    if (cycleDuration >= minAllowed && cycleDuration <= maxAllowed) { box.validCrossings++; box.lastValidTime = now; } else { if (cycleDuration > maxAllowed) box.validCrossings = 0; }
                 }
                 box.lastRisingEdge = now;
             }
-            if (state !== 0) box.lastState = state;
+            if (currentInstantState !== 0) box.lastState = currentInstantState; 
+            if (box.validCrossings > 0 && now - box.lastValidTime > (targetTakt * 2.5)) box.validCrossings = 0; 
             if (isMonitoring && diff >= kritischeMasse && box.validCrossings >= minCrossings) { 
-                if(now - box.lastAlarmTime > 10000) { boxAlarmTriggered = true; alarmBoxId = box.id; } // 10s Alarm-Sperre
+                if(now - box.lastAlarmTime > holdMs + 4000) { boxAlarmTriggered = true; alarmBoxId = box.id; } // Verhindert Video-Dauerschleife
                 box.lastAlarmTime = now; 
-                box.validCrossings = 0; 
             }
         }
+
+        if (isMonitoring && now - box.lastAlarmTime < holdMs) box.isAlarm = true; else box.isAlarm = false; 
         
-        // UI Zeichnen
-        ctx.strokeStyle = (now - box.lastAlarmTime < 2000) ? '#ff0000' : '#00ff00';
-        ctx.lineWidth = 2; ctx.strokeRect(box.x, box.y, box.w, box.h);
+        if (box.zoomBoxDiv) { if (box.isAlarm && isMonitoring) box.zoomBoxDiv.classList.add('alarm-zoom'); else box.zoomBoxDiv.classList.remove('alarm-zoom'); }
+        if (box.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+            let txt = `Masse: <span style="color:#00aaff;">${activePixels}</span> px | Pkt: ${box.validCrossings}<br>Max-Delta: ${diff} / Limit: ${kritischeMasse}`;
+            if (box.lastMeasuredCycle > 0) txt += `<br>Letzter: <span style="color:#00ff88;">${box.lastMeasuredCycle} ms</span>`; else txt += `<br>Letzter: --- ms`;
+            if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`; box.zoomStatsDiv.innerHTML = txt;
+        }
+    }
+    if (boxAlarmTriggered && muteBox.state !== 'MUTED') { playLocalBeep(); recordAndSendVideo(alarmBoxId); }
+}
+
+function drawUI() {
+    if (!showCamera) return;
+
+    for (let i = 0; i < activeBoxCount; i++) {
+        const box = boxes[i]; 
+        let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)'; let borderColor = box.isAlarm ? '#ff0000' : '#00ff00';
+        ctx.fillStyle = fillColor; ctx.fillRect(box.x, box.y, box.w, box.h);
+        if (box === selectedBox) { ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
+        ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.lineWidth = box.isAlarm ? 4 : 2; if (!isMonitoring) ctx.setLineDash([4, 4]); ctx.strokeStyle = borderColor; ctx.stroke(); ctx.setLineDash([]);
     }
 
-    if (boxAlarmTriggered) {
-        playLocalBeep();
-        recordAndSendVideo(alarmBoxId);
+    if (anchorBox.active) {
+        let aFillColor = anchorBox.isAlarm ? 'rgba(255,170,0,0.3)' : 'rgba(0,170,255,0.15)'; let aBorderColor = anchorBox.isAlarm ? '#ffaa00' : '#00aaff';
+        ctx.fillStyle = aFillColor; ctx.fillRect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h);
+        if (anchorBox === selectedBox) { ctx.beginPath(); ctx.rect(anchorBox.x - 4, anchorBox.y - 4, anchorBox.w + 8, anchorBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
+        ctx.beginPath(); ctx.rect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h); ctx.lineWidth = anchorBox.isAlarm ? 4 : 2; if (!isMonitoring) ctx.setLineDash([4, 4]); ctx.strokeStyle = aBorderColor; ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    if (muteBox.active) {
+        let mFillColor = muteBox.state === 'MUTED' ? 'rgba(255,204,0,0.5)' : 'rgba(255,204,0,0.15)'; let mBorderColor = '#ffcc00'; 
+        ctx.fillStyle = mFillColor; ctx.fillRect(muteBox.x, muteBox.y, muteBox.w, muteBox.h);
+        if (muteBox === selectedBox) { ctx.beginPath(); ctx.rect(muteBox.x - 4, muteBox.y - 4, muteBox.w + 8, muteBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
+        ctx.beginPath(); ctx.rect(muteBox.x, muteBox.y, muteBox.w, muteBox.h); ctx.lineWidth = muteBox.state === 'MUTED' ? 4 : 2; if (!isMonitoring) ctx.setLineDash([4, 4]); ctx.strokeStyle = mBorderColor; ctx.stroke(); ctx.setLineDash([]);
     }
 }
 
-// ---------- SYSTEM START / STOP ----------
+function processFrame() {
+    if (!isRunning) return; requestAnimationFrame(processFrame);
+    const now = Date.now(); const elapsed = now - lastFrameTime;
+    if (elapsed < FRAME_INTERVAL) return; lastFrameTime = now - (elapsed % FRAME_INTERVAL);
+    frameCounter++; 
+
+    // Audio immer parallel analysieren
+    processAudio();
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const imgW = canvas.width; const imgH = canvas.height;
+    
+    analyzeAnchor(now, fullFrame, imgW, imgH); 
+    analyzeMute(now, fullFrame, imgW, imgH);
+    analyzeBoxes(now, fullFrame, imgW, imgH);
+    
+    drawUI();
+}
+
+// ---------- APP START ----------
+async function loadCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices(); const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        if (videoDevices.length > 0) {
+            cameraSelect.innerHTML = '';
+            videoDevices.forEach((device, index) => { const option = document.createElement('option'); option.value = device.deviceId; option.text = device.label || `Kamera ${index + 1}`; cameraSelect.appendChild(option); });
+            const saved = localStorage.getItem('pixel_settings_v2'); if (saved) { const s = JSON.parse(saved); if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) { cameraSelect.value = s.cameraId; } }
+        }
+    } catch (e) {}
+}
+
 async function startSystem() {
     try {
-        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if(audioCtx.state === 'suspended') audioCtx.resume();
-
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
-        video.srcObject = stream;
-        video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; video.play(); };
+        initAudio();
+        let constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
+        if (cameraSelect.value && cameraSelect.value !== 'default') constraints.video.deviceId = { exact: cameraSelect.value };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints); video.srcObject = stream; currentTrack = stream.getVideoTracks()[0];
         
-        isRunning = true; monitorBtn.classList.remove('off'); monitorBtn.innerText = 'System: AKTIV'; startBtn.innerText = 'Stoppen';
+        setTimeout(() => { try { const caps = currentTrack.getCapabilities(); if (caps.zoom) { slideCamZoom.min = caps.zoom.min; slideCamZoom.max = caps.zoom.max; slideCamZoom.step = caps.zoom.step; slideCamZoom.value = currentTrack.getSettings().zoom || caps.zoom.min; valCamZoom.innerText = parseFloat(slideCamZoom.value).toFixed(1); document.getElementById('slideCamZoom').disabled = false; } } catch(e) {} loadCameras(); }, 500);
+        
+        video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays(); video.play(); };
+        if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
+        
+        isRunning = true; startBtn.innerText = 'Kamera Stoppen'; lastFrameTime = Date.now(); updateMonitorButtonUI();
         
         restartAudioSystem();
         fetchWeather();
         setTimeout(pollTelegram, 2000);
         requestAnimationFrame(processFrame);
-    } catch (e) { alert('Fehler: ' + e.message); }
+    } catch (err) { alert('Kamerafehler: ' + err.message); }
 }
 
-startBtn.addEventListener('click', () => { if(!isRunning) startSystem(); else { isRunning = false; if(video.srcObject) video.srcObject.getTracks().forEach(t=>t.stop()); startBtn.innerText = 'Starten'; monitorBtn.classList.add('off'); monitorBtn.innerText='Offline'; } });
+startBtn.addEventListener('click', () => { initAudio(); if (!isRunning) startSystem(); else stopSystem(); });
+function stopSystem() { isRunning = false; if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop()); if (wakeLock) wakeLock.release(); startBtn.innerText = 'Kamera Start'; updateMonitorButtonUI(); }
+cameraSelect.addEventListener('change', () => { saveSettings(); if (isRunning) { stopSystem(); setTimeout(startSystem, 500); } });
+slideCamZoom.addEventListener('input', (e) => { valCamZoom.innerText = parseFloat(e.target.value).toFixed(1); if (currentTrack) { try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {} } });
 
-// Stealth
-document.getElementById('activateStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'flex'; fetchWeather(); };
-document.getElementById('exitStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'none'; };
-setInterval(() => { let d = new Date(); document.getElementById('hoursHTML').innerText = String(d.getHours()).padStart(2,'0'); document.getElementById('minsHTML').innerText = String(d.getMinutes()).padStart(2,'0'); }, 1000);
+monitorBtn.addEventListener('click', () => { isMonitoring = !isMonitoring; if (!isMonitoring) { boxes.forEach(b => { b.isAlarm = false; b.validCrossings = 0; }); anchorBox.isAlarm = false; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; } updateMonitorButtonUI(); });
 
-// D-Pad Logik (Kurzfassung)
-['btnUp','btnDown','btnLeft','btnRight'].forEach(id => { document.getElementById(id).onclick = () => { if(id==='btnUp') boxes[0].y-=5; if(id==='btnDown') boxes[0].y+=5; if(id==='btnLeft') boxes[0].x-=5; if(id==='btnRight') boxes[0].x+=5; saveSettings(); } });
+document.getElementById('activateStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'flex'; isStealthActive = true; updateStealthClock(); fetchWeather(); };
+document.getElementById('exitStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'none'; isStealthActive = false; };
+function updateStealthClock() {
+    const d = new Date(); hoursHTML.innerText = String(d.getHours()).padStart(2, '0'); minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
+    const dots = document.querySelectorAll('#stealthOverlay div div');
+    if (isStealthActive && muteBox.active && muteBox.state === 'MUTED') { const visible = d.getSeconds() % 2 === 0; dots.forEach(dot => dot.style.opacity = visible ? "1" : "0"); } else { dots.forEach(dot => dot.style.opacity = "1"); }
+    stealthOverlay.style.color = (!isMonitoring || !isRunning) ? '#ffcccc' : 'white';
+}
+setInterval(updateStealthClock, 500);
 </script>
 </body>
 </html>
