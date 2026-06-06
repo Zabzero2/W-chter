@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1e1e1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+
+<title>Pixel-Wächter Pro V2.0 (Labor)</title>
+
+<style>
+    body {
+        margin: 0; padding: 10px; background: #1e1e1e; color: white;
+        font-family: Arial, sans-serif; text-align: center;
+        overflow-x: hidden; user-select: none; padding-bottom: 50vh; 
+    }
+
+    #topPanelContainer { background: #2b2b2b; border-radius: 10px; margin-bottom: 10px; overflow: hidden; width: 100%; }
+    #zoomHeader { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 10px; min-height: 60px; }
+
+    .zoom-box {
+        display: flex; flex-direction: column; align-items: center;
+        background: #444; padding: 5px; border-radius: 6px;
+        border: 2px solid #555; cursor: pointer; width: 110px; 
+        flex-shrink: 0; transition: border-color 0.1s, background 0.1s;
+    }
+    .zoom-box:active { background: #555; }
+    .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
+    .zoom-box.alarm-zoom { border-color: #ff0000 !important; background: #5a1010 !important; }
+
+    .anchor-zoom { width: auto; border-color: #17a2b8; background: #0f4c5c; padding: 5px 10px; }
+    .anchor-zoom.alarm-zoom { border-color: #ffaa00 !important; background: #663300 !important; }
+    
+    .mute-zoom { width: 125px; border-color: #ffcc00; background: #4a3a00; padding: 5px 10px; }
+
+    .zoom-canvas { width: 80px; height: 40px; background: black; border: 1px solid #111; image-rendering: pixelated; }
+    .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
+    .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; width: 100%; word-wrap: break-word; }
+
+    .dpad-container {
+        display: flex; flex-direction: column; align-items: center; gap: 15px;
+        background: #333; padding: 15px 10px; border-radius: 10px; margin-bottom: 10px;
+    }
+    .dpad-grid { display: grid; grid-template-columns: auto auto auto; gap: 15px 25px; justify-content: center; align-items: end; }
+    .dpad-btn { 
+        background: #555; font-size: 18px; padding: 12px 25px; 
+        border-radius: 6px; border: none; color: white; cursor: pointer; touch-action: manipulation;
+    }
+    .dpad-btn:active { background: #777; }
+
+    #ui { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 900px;}
+
+    button {
+        padding: 12px 16px; border: none; border-radius: 8px;
+        background: #555; color: white; font-size: 14px; font-weight: bold;
+        cursor: pointer; touch-action: manipulation; transition: 0.2s;
+    }
+    button:hover { background: #666; }
+    #monitorBtn.off { background: #dc3545; color: white; } 
+
+    .stealth-hint { font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px; }
+
+    #mainSettingsWrapper { display: none; width: 100%; flex-direction: column; align-items: center; }
+
+    .module-section {
+        width: 95%; max-width: 900px; background: #2b2b2b; border-radius: 8px; 
+        padding: 10px; margin-bottom: 5px; text-align: left; border-left: 4px solid #555;
+    }
+    .module-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; }
+    
+    .config-btn { background: #444; padding: 6px 10px; font-size: 14px; border-radius: 6px; }
+    .config-btn:hover { background: #666; }
+    .config-btn.open { background: #777; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
+
+    .module-body { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; }
+
+    .sec-main { border-left-color: #00ff88; }
+    .sec-anchor { border-left-color: #17a2b8; }
+    .sec-mute { border-left-color: #ffcc00; }
+    .sec-smart { border-left-color: #ff00ff; }
+
+    .slider-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .slider-row label { width: 140px; text-align: left; font-size: 13px; }
+    .slider-row input[type="range"] { flex-grow: 1; }
+    .slider-row select, .slider-row input[type="text"] { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; width: 100%; box-sizing: border-box; }
+    .adj-btn { width: 32px; height: 32px; padding: 0; background: #555; font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center; }
+
+    .checkbox-group { display: flex; gap: 15px; font-size: 13px; font-weight: normal; }
+    .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+
+    .reset-btn-small { background: #5a1010; font-size: 12px; padding: 8px 12px; margin-top: 5px; align-self: flex-start; }
+    .reset-btn-small:hover { background: #7a1010; }
+
+    #container { position: relative; margin-top: 10px; display: flex; justify-content: center; width: 100%; }
+    
+    canvas { 
+        width: 100%; max-width: 100%; height: auto; background: black; 
+        border: 2px solid #555; border-radius: 8px; 
+    }
+    video { display: none; }
+
+    .overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: rgba(0,0,0,0.9); display: none; z-index: 9999; 
+        justify-content: center; align-items: center; flex-direction: column;
+        font-family: Arial, sans-serif; color: white; padding: 20px; box-sizing: border-box;
+    }
+    .help-content { background: #222; padding: 25px; border-radius: 12px; max-width: 650px; text-align: left; border: 1px solid #444; max-height: 90vh; overflow-y: auto; }
+    .help-content h2 { margin-top: 0; color: #00aaff; }
+    .help-content p, .help-content li { font-size: 14px; line-height: 1.5; color: #ccc; }
+    .help-content ul, .help-content ol { padding-left: 20px; margin-bottom: 15px; }
+</style>
+</head>
+<body>
+
+<div id="stealthOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 9999; justify-content: center; align-items: center; flex-direction: column; font-family: Arial, sans-serif; box-sizing: border-box; transition: color 0.5s;">
+    <div id="weatherDisplay" style="font-size: 3vw; margin-bottom: 2vw; font-weight: normal; color: #888; text-align: center; min-height: 4vw;"></div>
+    
+    <div style="font-size: 22vw; font-weight: bold; color: white; display: flex; align-items: center; gap: 3vw; color: inherit;">
+        <span id="hoursHTML">00</span>
+        <div style="display: flex; flex-direction: column; justify-content: space-between; height: 14vw; padding: 2.2vw 0; box-sizing: border-box;">
+            <div style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%;"></div>
+            <div id="exitStealthBtn" style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
+        </div>
+        <span id="minsHTML">00</span>
+    </div>
+</div>
+
+<div id="helpOverlay" class="overlay">
+    <div class="help-content">
+        <h2>Hilfe & Anleitung V2.0</h2>
+        <p>Der <b>Pixel-Wächter Pro V2.0</b> beinhaltet neue experimentelle Smart-Features.</p>
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smart-Modem & Warnungen</h3>
+        <ul>
+            <li><b>Telegram-Warnung:</b> Sende Befehle wie <code>/foto</code> an deinen Bot für Live-Bilder. Bei einem Alarm sendet das System vollautomatisch ein 4-Sekunden Beweis-Video der Boxen.</li>
+            <li><b>Audio-Wächter:</b> Ein intelligenter Filter ignoriert tiefes Rauschen (Vorblock) und Tassen-Klappern. Erkennet er eine langanhaltende hohe Frequenz (Telefon/GSMR), nimmt er 5s Audio auf und sendet es via Telegram.</li>
+            <li><b>Wetter-Station:</b> Gebe Orte (z.B. München, Augsburg) in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos alle 5 Minuten aktualisiert.</li>
+        </ul>
+        <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
+    </div>
+</div>
+
+<div style="width: 100%; max-width: 1000px; margin: 0 auto;">
+    <div id="topPanelContainer">
+        <div id="zoomHeader"></div>
+    </div>
+    <div class="dpad-container" id="dpadPanel">
+        <div style="font-size: 13px; color: #00ff88; margin-bottom: 5px;">Ausgewählte Box <span id="selectedBoxId">1</span></div>
+        <div class="dpad-grid">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+                <span style="font-size: 11px; color:#aaa;">Rahmen-Breite</span>
+                <div style="display:flex; gap:5px;">
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnWMinus">-</button>
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnWPlus">+</button>
+                </div>
+            </div>
+            <button class="dpad-btn" id="btnUp" style="padding: 15px 25px;">🔼</button>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+                <span style="font-size: 11px; color:#aaa;">Rahmen-Höhe</span>
+                <div style="display:flex; gap:5px;">
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnHMinus">-</button>
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnHPlus">+</button>
+                </div>
+            </div>
+            <button class="dpad-btn" id="btnLeft" style="padding: 15px 25px;">◀️</button>
+            <button class="dpad-btn" id="btnDown" style="padding: 15px 25px;">🔽</button>
+            <button class="dpad-btn" id="btnRight" style="padding: 15px 25px;">▶️</button>
+        </div>
+    </div>
+</div>
+
+<div id="ui">
+    <div class="button-row">
+        <button id="startBtn">System Starten</button>
+        <button id="monitorBtn" class="off">System offline</button>
+        <button id="activateStealthBtn">Tarnmodus</button>
+        <button id="toggleSettingsBtn" style="background: #444; padding: 12px 18px; font-size: 18px;">⚙️</button>
+        <button id="helpBtn" style="background: #17a2b8; padding: 12px 18px; font-size: 18px;">❓</button>
+    </div>
+
+    <div id="mainSettingsWrapper">
+        <div class="module-section">
+            <div class="module-header">
+                <span>Anzeige & Justierung</span>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="chkExpert"> Experten</label>
+                    <label><input type="checkbox" id="chkShowZoom" checked> Werte</label>
+                    <label><input type="checkbox" id="chkShowCam" checked> Live-Bild</label>
+                    <label><input type="checkbox" id="chkShowDpad" checked> D-Pad</label>
+                </div>
+            </div>
+            <div class="module-body" style="border:none; padding-top: 5px; margin-top: 5px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <select id="cameraSelect" style="background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; flex-grow: 1; max-width: 250px;">
+                    <option value="default">Standard Kamera</option>
+                </select>
+                <button id="btnResetAll" style="background: #dc3545; font-size: 12px; padding: 8px 12px; margin-left: auto;">⚠ Alles Zurücksetzen</button>
+            </div>
+        </div>
+
+        <div class="module-section sec-smart">
+            <div class="module-header">
+                <span style="display: flex; align-items: center; gap: 10px;">Smart-Modem & Warnungen</span>
+                <button class="config-btn" id="btnToggleSmartConfig">⚙️</button>
+            </div>
+            <div class="module-body" id="panelSmartSettings" style="display: none;">
+                <div class="checkbox-group" style="flex-wrap: wrap; margin-bottom: 10px;">
+                    <label><input type="checkbox" id="chkLocalAlarm" checked> Lokaler Ton (Tablet)</label>
+                    <label><input type="checkbox" id="chkTelegram"> Telegram-Warnung (Media)</label>
+                    <label><input type="checkbox" id="chkAudioGuard"> Audio-Wächter (>1kHz)</label>
+                </div>
+                <div id="telegramSettingsBox" style="display:none; flex-direction:column; gap:10px; background:#333; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <div class="slider-row">
+                        <label>Bot Token:</label>
+                        <input type="text" id="txtTelegramToken" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+                    </div>
+                    <div class="slider-row">
+                        <label>Chat ID:</label>
+                        <input type="text" id="txtTelegramChatId" placeholder="123456789">
+                    </div>
+                </div>
+                <div class="slider-row">
+                    <label>Wetter-Orte:</label>
+                    <input type="text" id="txtWeatherCities" placeholder="München, Augsburg">
+                </div>
+            </div>
+        </div>
+
+        <div class="module-section sec-main">
+            <div class="module-header">
+                <span>Mess-Felder (Rhythmus)</span>
+                <button class="config-btn" id="btnToggleMainConfig">⚙️</button>
+            </div>
+            <div class="module-body" id="panelMainSettings" style="display: none;">
+                <div class="slider-row">
+                    <label>Anzahl Felder:</label>
+                    <select id="boxCountSelect">
+                        <option value="1">1 Feld</option>
+                        <option value="2" selected>2 Felder</option> 
+                        <option value="3">3 Felder</option>
+                        <option value="4">4 Felder</option>
+                    </select>
+                </div>
+                <div class="slider-row" id="rowSens">
+                    <label>Pixel-Helligkeit: <span id="valSens">30</span></label>
+                    <button class="adj-btn" id="sensMinus">-</button>
+                    <input type="range" id="slideSens" min="2" max="100" value="30">
+                    <button class="adj-btn" id="sensPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowMass">
+                    <label>Max-Delta Limit: <span id="valMass">60</span> px</label>
+                    <button class="adj-btn" id="massMinus">-</button>
+                    <input type="range" id="slideMass" min="1" max="700" value="60">
+                    <button class="adj-btn" id="massPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowTakt">
+                    <label>Ziel-Zyklus: <span id="valTakt">2000</span>ms</label>
+                    <button class="adj-btn" id="taktMinus">-</button>
+                    <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
+                    <button class="adj-btn" id="taktPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Rahmen-Breite: <span id="valWidth">35</span></label>
+                    <button class="adj-btn" id="widthMinus">-</button>
+                    <input type="range" id="slideWidth" min="5" max="100" value="35">
+                    <button class="adj-btn" id="widthPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Rahmen-Höhe: <span id="valHeight">20</span></label>
+                    <button class="adj-btn" id="heightMinus">-</button>
+                    <input type="range" id="slideHeight" min="5" max="50" value="20">
+                    <button class="adj-btn" id="heightPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowPulse">
+                    <label>Min. Takt-Punkte: <span id="valPulse">3</span></label>
+                    <button class="adj-btn" id="pulseMinus">-</button>
+                    <input type="range" id="slidePulse" min="1" max="10" value="3">
+                    <button class="adj-btn" id="pulsePlus">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="module-section sec-anchor">
+            <div class="module-header">
+                <span style="display: flex; align-items: center; gap: 10px;">Anker-Referenz <label style="font-size:12px; font-weight:normal; cursor:pointer;"><input type="checkbox" id="chkAnchorActive"> Aktiv</label></span>
+                <button class="config-btn" id="btnToggleAnchorConfig">⚙️</button>
+            </div>
+            <div class="module-body" id="panelAnchorSettings" style="display: none;">
+                <div class="slider-row" id="rowAnchorSens">
+                    <label>Toleranz: <span id="valAnchorSens">15</span></label>
+                    <button class="adj-btn" id="anchorSensMinus">-</button>
+                    <input type="range" id="slideAnchorSens" min="5" max="100" value="15">
+                    <button class="adj-btn" id="anchorSensPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Breite: <span id="valAnchorW">10</span></label>
+                    <button class="adj-btn" id="anchorWMinus">-</button>
+                    <input type="range" id="slideAnchorW" min="5" max="100" value="10">
+                    <button class="adj-btn" id="anchorWPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Höhe: <span id="valAnchorH">10</span></label>
+                    <button class="adj-btn" id="anchorHMinus">-</button>
+                    <input type="range" id="slideAnchorH" min="5" max="50" value="10">
+                    <button class="adj-btn" id="anchorHPlus">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="module-section sec-mute">
+            <div class="module-header">
+                <span style="display: flex; align-items: center; gap: 10px;">Mute-Zone <label style="font-size:12px; font-weight:normal; cursor:pointer;"><input type="checkbox" id="chkMuteActive"> Aktiv</label></span>
+                <button class="config-btn" id="btnToggleMuteConfig">⚙️</button>
+            </div>
+            <div class="module-body" id="panelMuteSettings" style="display: none;">
+                <div class="slider-row" id="rowMuteSens">
+                    <label>Toleranz: <span id="valMuteSens">30</span></label>
+                    <button class="adj-btn" id="muteSensMinus">-</button>
+                    <input type="range" id="slideMuteSens" min="5" max="100" value="30">
+                    <button class="adj-btn" id="muteSensPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Breite: <span id="valMuteW">9</span></label>
+                    <button class="adj-btn" id="muteWMinus">-</button>
+                    <input type="range" id="slideMuteW" min="5" max="100" value="9">
+                    <button class="adj-btn" id="muteWPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Höhe: <span id="valMuteH">11</span></label>
+                    <button class="adj-btn" id="muteHMinus">-</button>
+                    <input type="range" id="slideMuteH" min="5" max="50" value="11">
+                    <button class="adj-btn" id="muteHPlus">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="container">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
+</div>
+
+<script>
+// ---------- UI & SETTINGS ----------
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const zoomHeader = document.getElementById('zoomHeader');
+
+// UI Buttons
+const startBtn = document.getElementById('startBtn');
+const monitorBtn = document.getElementById('monitorBtn');
+const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+const mainSettingsWrapper = document.getElementById('mainSettingsWrapper');
+
+// Config Checkboxes
+const chkLocalAlarm = document.getElementById('chkLocalAlarm');
+const chkTelegram = document.getElementById('chkTelegram');
+const chkAudioGuard = document.getElementById('chkAudioGuard');
+const telegramSettingsBox = document.getElementById('telegramSettingsBox');
+const txtTelegramToken = document.getElementById('txtTelegramToken');
+const txtTelegramChatId = document.getElementById('txtTelegramChatId');
+const txtWeatherCities = document.getElementById('txtWeatherCities');
+const weatherDisplay = document.getElementById('weatherDisplay');
+
+// Panels
+const btnToggleMainConfig = document.getElementById('btnToggleMainConfig');
+const btnToggleAnchorConfig = document.getElementById('btnToggleAnchorConfig');
+const btnToggleMuteConfig = document.getElementById('btnToggleMuteConfig');
+const btnToggleSmartConfig = document.getElementById('btnToggleSmartConfig');
+const panelMainSettings = document.getElementById('panelMainSettings');
+const panelAnchorSettings = document.getElementById('panelAnchorSettings');
+const panelMuteSettings = document.getElementById('panelMuteSettings');
+const panelSmartSettings = document.getElementById('panelSmartSettings');
+
+// Modul toggles
+const chkExpert = document.getElementById('chkExpert');
+const chkAnchorActive = document.getElementById('chkAnchorActive');
+const chkMuteActive = document.getElementById('chkMuteActive');
+
+// Sliders (Nur das Nötigste für V2 Labor)
+const slideSens = document.getElementById('slideSens');
+const slideMass = document.getElementById('slideMass');
+const slideTakt = document.getElementById('slideTakt');
+const slideWidth = document.getElementById('slideWidth');
+const slideHeight = document.getElementById('slideHeight');
+const slidePulse = document.getElementById('slidePulse');
+const boxCountSelect = document.getElementById('boxCountSelect');
+
+// Labels
+const valSens = document.getElementById('valSens');
+const valMass = document.getElementById('valMass');
+const valTakt = document.getElementById('valTakt'); 
+const valWidth = document.getElementById('valWidth');
+const valHeight = document.getElementById('valHeight');
+const valPulse = document.getElementById('valPulse');
+
+// Boxen Definitionen
+let boxes = [
+    { id: 1, x: 60, y: 60, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 },
+    { id: 2, x: 60, y: 160, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 },
+    { id: 3, x: 60, y: 260, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 },
+    { id: 4, x: 60, y: 360, w: 35, h: 20, baseline: null, history: [], isAlarm: false, validCrossings: 0, lastAlarmTime: 0 }
+];
+let activeBoxCount = 2;
+let selectedBox = boxes[0];
+let anchorBox = { id: 'Anker', x: 200, y: 100, w: 10, h: 10, active: false, baseline: null, isAlarm: false };
+let muteBox = { id: 'Mute', x: 200, y: 200, w: 9, h: 11, active: false, baseline: null, state: 'IDLE' };
+
+// System States
+let isRunning = false;
+let isMonitoring = true; 
+let showCamera = true;
+let settingsVisible = false; 
+
+// ---------- AUDIO & VIDEO CORE ----------
+let audioCtx, analyser, dataArray;
+let micStream = null;
+let isMutedInternally = false;
+let internalMuteTimeout = null;
+
+// Audio Density Buffer ("Der Eimer")
+let loudFrames = []; 
+const AUDIO_LOUDNESS_THRESHOLD = 25; 
+const AUDIO_DENSITY_REQ_MS = 600; // Eimer muss 600ms laut sein (in 2s)
+let lastAcousticAlarm = 0;
+
+// Recording Locks
+let isRecordingVideo = false;
+let isRecordingAudio = false;
+
+// Telegram Polling
+let tgUpdateOffset = 0;
+
+function setupAdjBtn(minusId, plusId, sliderId) {
+    const slider = document.getElementById(sliderId);
+    document.getElementById(minusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) - (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
+    document.getElementById(plusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) + (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
+}
+setupAdjBtn('sensMinus', 'sensPlus', 'slideSens'); setupAdjBtn('massMinus', 'massPlus', 'slideMass'); 
+setupAdjBtn('taktMinus', 'taktPlus', 'slideTakt'); 
+setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth'); setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
+setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse'); 
+
+function updateMaxDeltaLimitRange() {
+    const w = parseInt(slideWidth.value);
+    const h = parseInt(slideHeight.value);
+    const maxPixels = w * h;
+    slideMass.max = maxPixels;
+    if (parseInt(slideMass.value) > maxPixels) slideMass.value = maxPixels;
+    valMass.innerText = slideMass.value;
+}
+
+function updateLabels() {
+    valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
+    valPulse.innerText = slidePulse.value; valTakt.innerText = slideTakt.value; 
+    updateMaxDeltaLimitRange();
+}
+
+chkTelegram.addEventListener('change', () => { telegramSettingsBox.style.display = chkTelegram.checked ? 'flex' : 'none'; saveSettings(); });
+txtTelegramToken.addEventListener('input', saveSettings); txtTelegramChatId.addEventListener('input', saveSettings);
+txtWeatherCities.addEventListener('input', saveSettings); chkLocalAlarm.addEventListener('change', saveSettings);
+chkAudioGuard.addEventListener('change', () => { saveSettings(); if(isRunning) restartAudioSystem(); });
+
+function togglePanel(btn, panel) {
+    let isOpen = panel.style.display === 'flex';
+    panel.style.display = isOpen ? 'none' : 'flex';
+    isOpen ? btn.classList.remove('open') : btn.classList.add('open');
+}
+btnToggleMainConfig.addEventListener('click', () => togglePanel(btnToggleMainConfig, panelMainSettings));
+btnToggleAnchorConfig.addEventListener('click', () => togglePanel(btnToggleAnchorConfig, panelAnchorSettings));
+btnToggleMuteConfig.addEventListener('click', () => togglePanel(btnToggleMuteConfig, panelMuteSettings));
+btnToggleSmartConfig.addEventListener('click', () => togglePanel(btnToggleSmartConfig, panelSmartSettings));
+toggleSettingsBtn.addEventListener('click', () => { settingsVisible = !settingsVisible; mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none'; toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444'; });
+
+function loadSettings() {
+    try {
+        const saved = localStorage.getItem('pixel_settings_v2');
+        if (saved) {
+            const s = JSON.parse(saved);
+            if (s.sens) slideSens.value = s.sens; if (s.mass) slideMass.value = s.mass; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
+            if (s.pulse) slidePulse.value = s.pulse; if (s.takt) slideTakt.value = s.takt; 
+            if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
+            if (s.localAlarm !== undefined) chkLocalAlarm.checked = s.localAlarm;
+            if (s.telegram !== undefined) { chkTelegram.checked = s.telegram; telegramSettingsBox.style.display = s.telegram ? 'flex' : 'none'; }
+            if (s.audioGuard !== undefined) chkAudioGuard.checked = s.audioGuard;
+            if (s.tgToken) txtTelegramToken.value = s.tgToken;
+            if (s.tgChat) txtTelegramChatId.value = s.tgChat;
+            if (s.weather) txtWeatherCities.value = s.weather;
+        }
+    } catch(e) {}
+    updateLabels();
+}
+function saveSettings() {
+    localStorage.setItem('pixel_settings_v2', JSON.stringify({
+        sens: slideSens.value, mass: slideMass.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, pulse: slidePulse.value, count: activeBoxCount, 
+        localAlarm: chkLocalAlarm.checked, telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked,
+        tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), weather: txtWeatherCities.value.trim()
+    }));
+}
+loadSettings();
+
+// ---------- WETTER API (Open-Meteo) ----------
+async function fetchWeather() {
+    if(!txtWeatherCities.value) { weatherDisplay.innerText = ''; return; }
+    let cities = txtWeatherCities.value.split(',').map(c => c.trim()).filter(c => c);
+    let output = [];
+    
+    for(let city of cities) {
+        try {
+            // Geocoding
+            let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=de`);
+            let geoData = await geoRes.json();
+            if(!geoData.results || geoData.results.length === 0) continue;
+            let lat = geoData.results[0].latitude; let lon = geoData.results[0].longitude;
+            
+            // Weather
+            let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            let wData = await wRes.json();
+            let code = wData.current_weather.weathercode;
+            let temp = Math.round(wData.current_weather.temperature);
+            
+            // Simple Emoji Mapping
+            let emoji = '☁️';
+            if(code === 0 || code === 1) emoji = '☀️';
+            else if(code === 2 || code === 3) emoji = '⛅';
+            else if(code >= 50 && code <= 69) emoji = '🌧️';
+            else if(code >= 70 && code <= 79) emoji = '❄️';
+            else if(code >= 95) emoji = '⛈️';
+
+            output.push(`${city}: ${temp}°C ${emoji}`);
+        } catch(e) { console.warn("Wetterfehler für", city); }
+    }
+    weatherDisplay.innerText = output.join(" | ");
+}
+setInterval(fetchWeather, 5 * 60 * 1000); 
+
+// ---------- AUDIO ECHO BLOCKER ----------
+function playLocalBeep() { 
+    if(!chkLocalAlarm.checked) return;
+    
+    // Echo Sperre an (Mikrofon für 1 Sekunde taub)
+    isMutedInternally = true;
+    if(internalMuteTimeout) clearTimeout(internalMuteTimeout);
+    internalMuteTimeout = setTimeout(() => { isMutedInternally = false; loudFrames = []; }, 1000);
+
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; 
+    osc.connect(gain); gain.connect(audioCtx.destination); 
+    osc.start(); osc.stop(audioCtx.currentTime + 0.25); 
+}
+
+// ---------- AUDIO WÄCHTER (Kadenz & Filter) ----------
+async function restartAudioSystem() {
+    if(micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    if(!chkAudioGuard.checked || !isRunning) return;
+
+    try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioCtx.createMediaStreamSource(micStream);
+        
+        // Highpass Filter (Vorblock Killer)
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'highpass'; filter.frequency.value = 1000; 
+
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        source.connect(filter); filter.connect(analyser);
+    } catch(e) { alert("Mikrofon Fehler: " + e.message); chkAudioGuard.checked = false; }
+}
+
+function processAudio() {
+    if(!chkAudioGuard.checked || !analyser || !isMonitoring || isMutedInternally) return;
+    
+    analyser.getByteFrequencyData(dataArray);
+    let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+    let avg = sum / dataArray.length;
+
+    let now = Date.now();
+    if(avg > AUDIO_LOUDNESS_THRESHOLD) { loudFrames.push(now); }
+    
+    // 2-Sekunden Eimer
+    loudFrames = loudFrames.filter(t => now - t < 2000);
+    
+    // Kadenz berechnen (Ca 16ms pro Frame)
+    let loudDurationMs = loudFrames.length * 16.6; 
+
+    if (loudDurationMs >= AUDIO_DENSITY_REQ_MS && (now - lastAcousticAlarm > 10000)) {
+        lastAcousticAlarm = now;
+        loudFrames = []; 
+        console.log("🚨 Akustischer Alarm ausgelöst!");
+        
+        if (chkLocalAlarm.checked) playLocalBeep();
+        if (chkTelegram.checked) recordAndSendAudio();
+    }
+}
+
+// ---------- TELEGRAM MEDIEN-FUNKTIONEN ----------
+async function sendTgMessage(text) {
+    if(!txtTelegramToken.value || !txtTelegramChatId.value) return;
+    try {
+        await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/sendMessage`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ chat_id: txtTelegramChatId.value.trim(), text: text })
+        });
+    } catch(e) {}
+}
+
+async function sendTgMedia(endpoint, formData) {
+    if(!txtTelegramToken.value || !txtTelegramChatId.value) return;
+    formData.append("chat_id", txtTelegramChatId.value.trim());
+    try {
+        await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/${endpoint}`, {
+            method: 'POST', body: formData
+        });
+    } catch(e) { console.error("TG Upload Error", e); }
+}
+
+function recordAndSendVideo(boxId) {
+    if(isRecordingVideo || !chkTelegram.checked) return;
+    isRecordingVideo = true; sendTgMessage("🚨 Alarm Box " + boxId + "! Zeichne 4s Video auf...");
+    
+    try {
+        let stream = canvas.captureStream(15);
+        let recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        let chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = async () => {
+            let blob = new Blob(chunks, { type: 'video/webm' });
+            let fd = new FormData(); fd.append("video", blob, "alarm.webm");
+            fd.append("caption", "🎥 Live-Aufnahme Box " + boxId);
+            await sendTgMedia("sendVideo", fd);
+            setTimeout(() => { isRecordingVideo = false; }, 5000); // 5s Cooldown
+        };
+        recorder.start();
+        setTimeout(() => { recorder.stop(); }, 4000); // 4 Sek Aufnehmen
+    } catch(e) {
+        sendTgMessage("Video nicht unterstützt. Sende Foto.");
+        sendTgPhoto("📸 Notfall-Bild Box " + boxId);
+        setTimeout(() => { isRecordingVideo = false; }, 5000);
+    }
+}
+
+function recordAndSendAudio() {
+    if(isRecordingAudio || !chkTelegram.checked || !micStream) return;
+    isRecordingAudio = true; sendTgMessage("🚨 Akustischer Alarm! Zeichne 5s Audio auf...");
+    
+    try {
+        let recorder = new MediaRecorder(micStream);
+        let chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = async () => {
+            let blob = new Blob(chunks, { type: 'audio/webm' });
+            let fd = new FormData(); fd.append("voice", blob, "alarm.webm");
+            fd.append("caption", "🎙️ Audio-Alarm erkannt");
+            await sendTgMedia("sendVoice", fd);
+            setTimeout(() => { isRecordingAudio = false; }, 5000); // Cooldown
+        };
+        recorder.start();
+        setTimeout(() => { recorder.stop(); }, 5000); // 5 Sek Aufnehmen
+    } catch(e) {
+        setTimeout(() => { isRecordingAudio = false; }, 5000);
+    }
+}
+
+function sendTgPhoto(caption) {
+    canvas.toBlob(async (blob) => {
+        let fd = new FormData(); fd.append("photo", blob, "live.jpg");
+        fd.append("caption", caption);
+        await sendTgMedia("sendPhoto", fd);
+    }, 'image/jpeg', 0.8);
+}
+
+// Long Polling für /foto Befehl
+async function pollTelegram() {
+    if (!chkTelegram.checked || !isRunning || !txtTelegramToken.value) {
+        setTimeout(pollTelegram, 5000); return;
+    }
+    try {
+        let res = await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/getUpdates?offset=${tgUpdateOffset}&timeout=30`);
+        let data = await res.json();
+        if (data.ok && data.result.length > 0) {
+            for (let item of data.result) {
+                tgUpdateOffset = item.update_id + 1;
+                if (item.message && item.message.text === '/foto') {
+                    if(item.message.chat.id.toString() === txtTelegramChatId.value.trim()) {
+                        sendTgPhoto("📸 Remote Live-Bild");
+                    }
+                }
+            }
+        }
+    } catch(e) {}
+    setTimeout(pollTelegram, 1000);
+}
+
+// ---------- CORE VIDEO ANALYSE (V61 LOGIK) ----------
+function processFrame() {
+    if (!isRunning) return; requestAnimationFrame(processFrame);
+    
+    // Audio Wächter läuft synchron zum Video
+    processAudio();
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const now = Date.now();
+    const pixelSchwelle = parseInt(slideSens.value); 
+    const kritischeMasse = parseInt(slideMass.value); 
+    const targetTakt = parseInt(slideTakt.value);
+    const minCrossings = parseInt(slidePulse.value);
+    let boxAlarmTriggered = false;
+    let alarmBoxId = null;
+
+    for (let i = 0; i < activeBoxCount; i++) {
+        const box = boxes[i];
+        if (!box.baseline) { box.baseline = new Float32Array(box.w * box.h).fill(-1); }
+        let activePixels = 0; let pIdx = 0;
+
+        for (let y = box.y; y < box.y + box.h; y++) {
+            for (let x = box.x; x < box.x + box.w; x++) {
+                if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+                    let idx = (y * canvas.width + x) * 4;
+                    let curr = fullFrame.data[idx]*0.299 + fullFrame.data[idx+1]*0.587 + fullFrame.data[idx+2]*0.114;
+                    if (box.baseline[pIdx] === -1) box.baseline[pIdx] = curr;
+                    if (curr < box.baseline[pIdx]) box.baseline[pIdx] = curr; 
+                    else box.baseline[pIdx] += Math.min(curr - box.baseline[pIdx], 0.5); 
+                    if (curr - box.baseline[pIdx] > pixelSchwelle) activePixels++;
+                }
+                pIdx++;
+            }
+        }
+        
+        box.history.push({ val: activePixels, time: now });
+        while (box.history.length > 0 && now - box.history[0].time > 5000) box.history.shift();
+        
+        if (box.history.length > 5) {
+            const vals = box.history.map(v => v.val); 
+            let diff = Math.round(Math.max(...vals) - Math.min(...vals));
+            if (diff < kritischeMasse) box.validCrossings = 0;
+
+            const mid = Math.min(...vals) + diff / 2;
+            let state = (activePixels > mid + diff*0.2) ? 1 : ((activePixels < mid - diff*0.2) ? -1 : 0);
+            
+            if (state === 1 && box.lastState === -1) {
+                if (box.lastRisingEdge > 0) {
+                    let cycle = now - box.lastRisingEdge;
+                    if (cycle >= targetTakt*0.8 && cycle <= targetTakt*1.2) { box.validCrossings++; } else { box.validCrossings = 0; }
+                }
+                box.lastRisingEdge = now;
+            }
+            if (state !== 0) box.lastState = state;
+            if (isMonitoring && diff >= kritischeMasse && box.validCrossings >= minCrossings) { 
+                if(now - box.lastAlarmTime > 10000) { boxAlarmTriggered = true; alarmBoxId = box.id; } // 10s Alarm-Sperre
+                box.lastAlarmTime = now; 
+                box.validCrossings = 0; 
+            }
+        }
+        
+        // UI Zeichnen
+        ctx.strokeStyle = (now - box.lastAlarmTime < 2000) ? '#ff0000' : '#00ff00';
+        ctx.lineWidth = 2; ctx.strokeRect(box.x, box.y, box.w, box.h);
+    }
+
+    if (boxAlarmTriggered) {
+        playLocalBeep();
+        recordAndSendVideo(alarmBoxId);
+    }
+}
+
+// ---------- SYSTEM START / STOP ----------
+async function startSystem() {
+    try {
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } });
+        video.srcObject = stream;
+        video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; video.play(); };
+        
+        isRunning = true; monitorBtn.classList.remove('off'); monitorBtn.innerText = 'System: AKTIV'; startBtn.innerText = 'Stoppen';
+        
+        restartAudioSystem();
+        fetchWeather();
+        setTimeout(pollTelegram, 2000);
+        requestAnimationFrame(processFrame);
+    } catch (e) { alert('Fehler: ' + e.message); }
+}
+
+startBtn.addEventListener('click', () => { if(!isRunning) startSystem(); else { isRunning = false; if(video.srcObject) video.srcObject.getTracks().forEach(t=>t.stop()); startBtn.innerText = 'Starten'; monitorBtn.classList.add('off'); monitorBtn.innerText='Offline'; } });
+
+// Stealth
+document.getElementById('activateStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'flex'; fetchWeather(); };
+document.getElementById('exitStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'none'; };
+setInterval(() => { let d = new Date(); document.getElementById('hoursHTML').innerText = String(d.getHours()).padStart(2,'0'); document.getElementById('minsHTML').innerText = String(d.getMinutes()).padStart(2,'0'); }, 1000);
+
+// D-Pad Logik (Kurzfassung)
+['btnUp','btnDown','btnLeft','btnRight'].forEach(id => { document.getElementById(id).onclick = () => { if(id==='btnUp') boxes[0].y-=5; if(id==='btnDown') boxes[0].y+=5; if(id==='btnLeft') boxes[0].x-=5; if(id==='btnRight') boxes[0].x+=5; saveSettings(); } });
+</script>
+</body>
+</html>
