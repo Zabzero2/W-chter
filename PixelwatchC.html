@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro v2.1 Smart</title>
+<title>Pixel-Wächter Pro</title>
 
 <style>
     body {
@@ -80,17 +80,12 @@
     .sec-main { border-left-color: #00ff88; }
     .sec-anchor { border-left-color: #17a2b8; }
     .sec-mute { border-left-color: #ffcc00; }
-    
-    /* V2.1 Module Colors */
-    .sec-telegram { border-left-color: #0088cc; }
-    .sec-audio { border-left-color: #e83e8c; }
-    .sec-weather { border-left-color: #fd7e14; }
+    .sec-smart { border-left-color: #ff00ff; }
 
     .slider-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .slider-row label { width: 140px; text-align: left; font-size: 13px; flex-shrink: 0;}
-    .slider-row input[type="range"], .slider-row input[type="text"] { flex-grow: 1; }
-    .slider-row input[type="text"] { background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; }
-    .slider-row select { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; }
+    .slider-row label { width: 140px; text-align: left; font-size: 13px; }
+    .slider-row input[type="range"] { flex-grow: 1; }
+    .slider-row select, .slider-row input[type="text"] { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; box-sizing: border-box; }
     .adj-btn { width: 32px; height: 32px; padding: 0; background: #555; font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center; }
 
     .checkbox-group { display: flex; gap: 15px; font-size: 13px; font-weight: normal; }
@@ -120,57 +115,46 @@
     .help-content ul, .help-content ol { padding-left: 20px; margin-bottom: 15px; }
     .help-content li { margin-bottom: 8px; }
 
-    /* V2.1: Roter Screen für MIC Alarm */
-    #micAlarmOverlay {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(255, 0, 0, 0.85); display: none; z-index: 10000;
-        justify-content: center; align-items: center; font-size: 15vw;
-        font-weight: bold; color: white;
-        animation: flash 0.4s infinite alternate;
+    /* Neues Optisches Alarm-Feedback für Audio */
+    @keyframes blink { 0% {opacity:1;} 50% {opacity:0;} 100% {opacity:1;} }
+    #micAlarmUI {
+        display: none; position: fixed; top: 20px; right: 20px; background: #ff0000; color: white;
+        padding: 10px 20px; border-radius: 8px; z-index: 10000; font-weight: bold; font-size: 18px;
+        box-shadow: 0 0 15px red; animation: blink 1s infinite;
     }
-    @keyframes flash { from { opacity: 1; } to { opacity: 0.3; } }
 </style>
 </head>
 <body>
 
-<div id="micAlarmOverlay">MIC ALARM</div>
+<div id="micAlarmUI">🎤 MIC ALARM</div>
 
-<div id="stealthOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 9999; justify-content: center; align-items: center; font-family: Arial, sans-serif; font-size: 22vw; font-weight: bold; color: white; gap: 3vw; box-sizing: border-box; transition: color 0.5s;">
-    <span id="hoursHTML">00</span>
-    <div style="display: flex; flex-direction: column; justify-content: space-between; height: 14vw; padding: 2.2vw 0; box-sizing: border-box;">
-        <div style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%;"></div>
-        <div id="exitStealthBtn" style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
-    </div>
-    <span id="minsHTML">00</span>
+<div id="stealthOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 9999; justify-content: center; align-items: center; flex-direction: column; font-family: Arial, sans-serif; box-sizing: border-box; transition: color 0.5s;">
+    <div id="weatherDisplay" style="font-size: 3.5vw; margin-bottom: 2vw; font-weight: normal; color: #aaa; text-align: center; min-height: 4vw; line-height: 1.4;"></div>
     
-    <div id="stealthWeather" style="position: absolute; bottom: 8vh; width: 100%; display: flex; justify-content: space-evenly; font-size: 6vw; color: #777;"></div>
+    <div style="font-size: 22vw; font-weight: bold; color: white; display: flex; align-items: center; gap: 3vw; color: inherit;">
+        <span id="hoursHTML">00</span>
+        <div style="display: flex; flex-direction: column; justify-content: space-between; height: 14vw; padding: 2.2vw 0; box-sizing: border-box;">
+            <div style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%;"></div>
+            <div id="exitStealthBtn" style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
+        </div>
+        <span id="minsHTML">00</span>
+    </div>
 </div>
 
 <div id="helpOverlay" class="overlay">
     <div class="help-content">
         <h2>Hilfe & Anleitung</h2>
-        <p>Der <b>Pixel-Wächter Pro</b> ist ein optisches Analysewerkzeug zur Überwachung von Helligkeitsschwankungen und Rhythmen in definierten Bildbereichen.</p>
+        <p>Willkommen beim <b>Pixel-Wächter Pro</b>. Dieses System überwacht optische Helligkeitsschwankungen und akustische Signale im Raum vollautomatisch.</p>
         
-        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Schritt-für-Schritt Einrichtung</h3>
-        <ol>
-            <li><b>Kamera starten:</b> Erlaube den Kamerazugriff und richte das Gerät auf den Bereich.</li>
-            <li><b>Mess-Felder platzieren:</b> Tippe das gewünschte Feld direkt im Live-Bild an und schiebe die Box über den zu überwachenden Bereich. <i>Hinweis: Der Rahmen muss nicht millimetergenau sein, sollte aber keine störenden Nachbar-Elemente erfassen.</i></li>
-            <li><b>Feinjustieren:</b> Nutze das D-Pad für pixelgenaues Ausrichten. Stelle die <i>Pixel-Helligkeit</i> und das <i>Max-Delta Limit</i> so ein, dass sie nur bei der gewünschten Anzahl an blinkenden Ziffern anschlagen.</li>
-            <li><b>Automatische Erkennung:</b> Sobald die blinkende Fläche rhythmisch wechselt, sammelt das System Takt-Punkte. Bei Erreichen der Mindest-Punkte wird der Alarm verlässlich ausgelöst.</li>
-        </ol>
-        
-        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Spezial-Module (Zuschaltbar)</h3>
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smart-Modem & Warnungen</h3>
         <ul>
-            <li><b>Anker-Referenz (Verrutsch-Schutz):</b> Überwacht das Bild strukturell. Verrutscht das Tablet oder die Kamera, schlägt das System sofort Alarm.</li>
-            <li><b>Mute-Zone:</b> Ermöglicht das temporäre Abschalten aller Alarme (ausgenommen Anker), wenn beispielsweise ein Mauszeiger in das Feld bewegt wird. Sobald eine strukturelle Veränderung in dieser Zone erkannt wird, unterdrückt sie Alarme für die voreingestellte Mute-Dauer. Nach Ablauf wird das System sofort wieder scharf geschaltet. Um erneut stummzuschalten, muss die Zone zuerst für mindestens 1 Sekunde komplett aktivitätsfrei sein.</li>
+            <li><b>Telegram-Warnung:</b> Hinterlege einen Bot, um bei Alarmen automatisch Medien aufs Handy zu erhalten.</li>
+            <li><b>Remote-Befehle:</b> Sende <code>/foto</code>, <code>/video</code> oder <code>/audio</code> an deinen Bot, um sofort die aktuelle Lage aus dem Stellwerk abzufragen.</li>
+            <li><b>Anker-Push:</b> Verrutscht das Tablet, ertönt der klassische Warnton und das System sendet ein Vergleichsfoto (Soll vs. Ist) auf dein Handy.</li>
+            <li><b>Audio-Wächter:</b> Misst die reine Lautstärke im Raum. Bei Alarm bleibt das Tablet <b>stumm</b> (um nicht doppelt zum Telefon zu klingeln), blinkt kurz rot auf und sendet 5 Sekunden Audio via Telegram. Stelle die Schwelle über den Live-Pegel im Menü ein!</li>
+            <li><b>Datenspar-Modus:</b> Wähle in den Telegram-Einstellungen, ob du HD-Videos vom ganzen Raum oder nur winzige Lupen-Videos der Alarmbox erhalten willst.</li>
+            <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos aktualisiert.</li>
         </ul>
-        <p style="font-size: 13px;"><i>Sicherheitsnetz: Verfängt sich die Mute-Zone durch extremes Flackern in einem Dauer-Stumm-Zustand, ertönt nach 5 Minuten ein Warn-Beep und nach 10 Minuten ein Alarm.</i></p>
-
-        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Tarnmodus</h3>
-        <p>Der Tarnmodus verdunkelt das Display, um Akku zu sparen und unauffällig zu bleiben, während die Kamera-Analyse im Hintergrund uneingeschränkt weiterläuft.<br>
-        <b>Pausiert-Indikator:</b> Leuchtet die Uhrzeit sanft rötlich, ist die Kamera aus oder die Überwachung im Hintergrund pausiert!<br>
-        <b>Beenden:</b> Tippe auf den <b>unteren Punkt</b> der angezeigten Uhrzeit, um den Tarnmodus zu verlassen.</p>
-
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
 </div>
@@ -237,6 +221,51 @@
                 <button class="adj-btn" id="zoomMinus">-</button>
                 <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
                 <button class="adj-btn" id="zoomPlus">+</button>
+            </div>
+        </div>
+
+        <div class="module-section sec-smart">
+            <div class="module-header">
+                <span style="display: flex; align-items: center; gap: 10px;">Smart-Modem & Warnungen</span>
+                <button class="config-btn" id="btnToggleSmartConfig">⚙️</button>
+            </div>
+            <div class="module-body" id="panelSmartSettings" style="display: none;">
+                <div class="checkbox-group" style="flex-wrap: wrap; margin-bottom: 10px;">
+                    <label><input type="checkbox" id="chkTelegram"> Telegram (Bilder/Media)</label>
+                    <label><input type="checkbox" id="chkAudioGuard"> Audio-Wächter aktiv</label>
+                </div>
+                
+                <div class="slider-row" id="rowAudioThres">
+                    <label style="width:130px;">Audio-Schwelle: <span id="valAudioThreshold">25</span></label>
+                    <button class="adj-btn" id="audioThresMinus">-</button>
+                    <input type="range" id="slideAudioThreshold" min="1" max="100" value="25">
+                    <button class="adj-btn" id="audioThresPlus">+</button>
+                </div>
+                <div style="font-size:13px; color:#aaa; margin-left: 140px; margin-top:-5px; margin-bottom: 10px;">
+                    Live-Pegel: <span id="liveAudioLevel" style="color:#00ff88; font-weight:bold; font-size: 15px;">0</span>
+                </div>
+
+                <div id="telegramSettingsBox" style="display:none; flex-direction:column; gap:10px; background:#333; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <div class="slider-row">
+                        <label style="width: 80px;">Bot Token:</label>
+                        <input type="text" id="txtTelegramToken" placeholder="123456:ABC-DEF1234...">
+                    </div>
+                    <div class="slider-row">
+                        <label style="width: 80px;">Chat ID:</label>
+                        <input type="text" id="txtTelegramChatId" placeholder="123456789">
+                    </div>
+                    <div class="slider-row" style="margin-top: 5px;">
+                        <label style="width: 80px;">Video-Typ:</label>
+                        <select id="selTgVideoMode">
+                            <option value="box" selected>Nur Alarm-Box (Daten sparen)</option>
+                            <option value="full">HD Vollbild (Max. Details)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="slider-row">
+                    <label>Wetter-Orte:</label>
+                    <input type="text" id="txtWeatherCities" placeholder="München, Augsburg">
+                </div>
             </div>
         </div>
 
@@ -390,59 +419,13 @@
                 <button id="btnResetMute" class="reset-btn-small">Modul Reset</button>
             </div>
         </div>
-
-        <div class="module-section sec-telegram">
-            <div class="module-header">
-                <span>Telegram Bot Integration</span>
-                <button class="config-btn" id="btnToggleTgConfig">⚙️</button>
-            </div>
-            <div class="module-body" id="panelTgSettings" style="display: none;">
-                <div class="slider-row"><label>Bot Token:</label><input type="text" id="inpTgToken" placeholder="123456:ABC-DEF..."></div>
-                <div class="slider-row"><label>Chat ID:</label><input type="text" id="inpTgChatId" placeholder="123456789"></div>
-                <div class="slider-row"><label>Alarm-Video:</label>
-                    <select id="selTgVideoMode">
-                        <option value="full">HD-Vollbild</option>
-                        <option value="box">Nur Alarm-Box (Datenspar-Modus)</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="module-section sec-audio">
-            <div class="module-header">
-                <span style="display: flex; align-items: center; gap: 10px;">Audio-Wächter <label style="font-size:12px; font-weight:normal; cursor:pointer;"><input type="checkbox" id="chkAudioActive"> Aktiv</label></span>
-                <button class="config-btn" id="btnToggleAudioConfig">⚙️</button>
-            </div>
-            <div class="module-body" id="panelAudioSettings" style="display: none;">
-                <div class="slider-row">
-                    <label>Audio-Schwelle: <span id="valAudioThr">50</span></label>
-                    <input type="range" id="slideAudioThr" min="1" max="100" value="50">
-                </div>
-                <div style="font-size: 13px; text-align: left; margin-top: 5px;">
-                    Live-Pegel: <progress id="progAudioLive" max="100" value="0" style="width: 100%; height: 15px;"></progress>
-                </div>
-            </div>
-        </div>
-
-        <div class="module-section sec-weather">
-            <div class="module-header">
-                <span>Wetter-Station (Tarnmodus)</span>
-                <button class="config-btn" id="btnToggleWeatherConfig">⚙️</button>
-            </div>
-            <div class="module-body" id="panelWeatherSettings" style="display: none;">
-                <p style="font-size:11px; margin-top:0; color:#aaa;">Leer lassen zum Deaktivieren. Aktualisiert alle 30 Min.</p>
-                <div class="slider-row"><label>Ort 1:</label><input type="text" id="inpCity1" placeholder="Berlin"></div>
-                <div class="slider-row"><label>Ort 2:</label><input type="text" id="inpCity2" placeholder="Hamburg"></div>
-                <div class="slider-row"><label>Ort 3:</label><input type="text" id="inpCity3" placeholder="München"></div>
-            </div>
-        </div>
-
     </div>
 </div>
 
 <div id="container">
     <video id="video" playsinline autoplay muted></video>
     <canvas id="canvas"></canvas>
+    <canvas id="recordCanvas" style="display:none;"></canvas>
 </div>
 
 <script>
@@ -457,152 +440,179 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const zoomHeader = document.getElementById('zoomHeader');
 
+const recordCanvas = document.getElementById('recordCanvas');
+const recordCtx = recordCanvas.getContext('2d');
+
 const startBtn = document.getElementById('startBtn');
 const monitorBtn = document.getElementById('monitorBtn');
 const activateStealthBtn = document.getElementById('activateStealthBtn');
+const stealthOverlay = document.getElementById('stealthOverlay');
 const exitStealthBtn = document.getElementById('exitStealthBtn');
 const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
 const mainSettingsWrapper = document.getElementById('mainSettingsWrapper');
 
-const btnToggleMainConfig = document.getElementById('btnToggleMainConfig');
-const panelMainSettings = document.getElementById('panelMainSettings');
-const btnToggleAnchorConfig = document.getElementById('btnToggleAnchorConfig');
-const panelAnchorSettings = document.getElementById('panelAnchorSettings');
-const btnToggleMuteConfig = document.getElementById('btnToggleMuteConfig');
-const panelMuteSettings = document.getElementById('panelMuteSettings');
+const helpBtn = document.getElementById('helpBtn');
+const helpOverlay = document.getElementById('helpOverlay');
+const closeHelpBtn = document.getElementById('closeHelpBtn');
 
-// V2.1 Config Buttons
-const btnToggleTgConfig = document.getElementById('btnToggleTgConfig');
-const panelTgSettings = document.getElementById('panelTgSettings');
-const btnToggleAudioConfig = document.getElementById('btnToggleAudioConfig');
-const panelAudioSettings = document.getElementById('panelAudioSettings');
-const btnToggleWeatherConfig = document.getElementById('btnToggleWeatherConfig');
-const panelWeatherSettings = document.getElementById('panelWeatherSettings');
-
+const chkExpert = document.getElementById('chkExpert');
 const chkShowZoom = document.getElementById('chkShowZoom');
 const chkShowCam = document.getElementById('chkShowCam');
 const chkShowDpad = document.getElementById('chkShowDpad');
-const dpadPanel = document.getElementById('dpadPanel');
-const selectedBoxIdLabel = document.getElementById('selectedBoxId');
-const chkExpert = document.getElementById('chkExpert');
-const cameraSelect = document.getElementById('cameraSelect');
 
-const boxCountSelect = document.getElementById('boxCountSelect');
+const btnToggleMainConfig = document.getElementById('btnToggleMainConfig');
+const btnToggleAnchorConfig = document.getElementById('btnToggleAnchorConfig');
+const btnToggleMuteConfig = document.getElementById('btnToggleMuteConfig');
+const btnToggleSmartConfig = document.getElementById('btnToggleSmartConfig');
+
+const chkAnchorActive = document.getElementById('chkAnchorActive');
+const chkAnchorDrift = document.getElementById('chkAnchorDrift'); 
+const chkMuteActive = document.getElementById('chkMuteActive');
+const chkMuteDrift = document.getElementById('chkMuteDrift'); 
+
+// Smart Features UI
+const chkTelegram = document.getElementById('chkTelegram');
+const chkAudioGuard = document.getElementById('chkAudioGuard');
+const telegramSettingsBox = document.getElementById('telegramSettingsBox');
+const txtTelegramToken = document.getElementById('txtTelegramToken');
+const txtTelegramChatId = document.getElementById('txtTelegramChatId');
+const selTgVideoMode = document.getElementById('selTgVideoMode');
+const txtWeatherCities = document.getElementById('txtWeatherCities');
+const weatherDisplay = document.getElementById('weatherDisplay');
+const slideAudioThreshold = document.getElementById('slideAudioThreshold');
+const valAudioThreshold = document.getElementById('valAudioThreshold');
+const liveAudioLevel = document.getElementById('liveAudioLevel');
+
+const panelMainSettings = document.getElementById('panelMainSettings');
+const panelAnchorSettings = document.getElementById('panelAnchorSettings');
+const panelMuteSettings = document.getElementById('panelMuteSettings');
+const panelSmartSettings = document.getElementById('panelSmartSettings');
+const dpadPanel = document.getElementById('dpadPanel');
+
+const cameraSelect = document.getElementById('cameraSelect');
+const slideCamZoom = document.getElementById('slideCamZoom');
+const valCamZoom = document.getElementById('valCamZoom');
+
 const slideSens = document.getElementById('slideSens');
 const slideMass = document.getElementById('slideMass');
+const slideTakt = document.getElementById('slideTakt');
+const slideToleranz = document.getElementById('slideToleranz'); 
 const slideWidth = document.getElementById('slideWidth');
 const slideHeight = document.getElementById('slideHeight');
 const slidePulse = document.getElementById('slidePulse');
 const slideHold = document.getElementById('slideHold');
-const slideTakt = document.getElementById('slideTakt');
-const slideToleranz = document.getElementById('slideToleranz');
-
-const chkAnchorActive = document.getElementById('chkAnchorActive');
-const chkAnchorDrift = document.getElementById('chkAnchorDrift');
-const slideAnchorSens = document.getElementById('slideAnchorSens');
-const slideAnchorDrift = document.getElementById('slideAnchorDrift');
-const slideAnchorW = document.getElementById('slideAnchorW');
-const slideAnchorH = document.getElementById('slideAnchorH');
-
-const chkMuteActive = document.getElementById('chkMuteActive');
-const chkMuteDrift = document.getElementById('chkMuteDrift');
-const slideMuteSens = document.getElementById('slideMuteSens');
-const slideMuteDrift = document.getElementById('slideMuteDrift');
-const slideMuteHold = document.getElementById('slideMuteHold');
-const slideMuteW = document.getElementById('slideMuteW');
-const slideMuteH = document.getElementById('slideMuteH');
-const slideCamZoom = document.getElementById('slideCamZoom');
+const boxCountSelect = document.getElementById('boxCountSelect');
 
 const valSens = document.getElementById('valSens');
 const valMass = document.getElementById('valMass');
+const valTakt = document.getElementById('valTakt'); 
+const valToleranz = document.getElementById('valToleranz'); 
 const valWidth = document.getElementById('valWidth');
 const valHeight = document.getElementById('valHeight');
 const valPulse = document.getElementById('valPulse');
 const valHold = document.getElementById('valHold');
-const valTakt = document.getElementById('valTakt');
-const valToleranz = document.getElementById('valToleranz');
+
+const slideAnchorSens = document.getElementById('slideAnchorSens');
 const valAnchorSens = document.getElementById('valAnchorSens');
-const valAnchorDrift = document.getElementById('valAnchorDrift');
+const slideAnchorW = document.getElementById('slideAnchorW');
 const valAnchorW = document.getElementById('valAnchorW');
+const slideAnchorH = document.getElementById('slideAnchorH');
 const valAnchorH = document.getElementById('valAnchorH');
+const slideAnchorDrift = document.getElementById('slideAnchorDrift');
+const valAnchorDrift = document.getElementById('valAnchorDrift');
+const rowAnchorDriftSpeed = document.getElementById('rowAnchorDriftSpeed');
+
+const slideMuteSens = document.getElementById('slideMuteSens');
 const valMuteSens = document.getElementById('valMuteSens');
-const valMuteDrift = document.getElementById('valMuteDrift');
-const valMuteHold = document.getElementById('valMuteHold');
+const slideMuteHold = document.getElementById('slideMuteHold'); 
+const valMuteHold = document.getElementById('valMuteHold'); 
+const slideMuteW = document.getElementById('slideMuteW');
 const valMuteW = document.getElementById('valMuteW');
+const slideMuteH = document.getElementById('slideMuteH');
 const valMuteH = document.getElementById('valMuteH');
-const valCamZoom = document.getElementById('valCamZoom');
+const slideMuteDrift = document.getElementById('slideMuteDrift');
+const valMuteDrift = document.getElementById('valMuteDrift');
+const rowMuteDriftSpeed = document.getElementById('rowMuteDriftSpeed');
+
+const selectedBoxIdLabel = document.getElementById('selectedBoxId');
+const hoursHTML = document.getElementById('hoursHTML');
+const minsHTML = document.getElementById('minsHTML');
 
 let isRunning = false;
-let isMonitoring = false;
+let isMonitoring = true; 
 let showZoomValues = true;
 let showCamera = true;
-let settingsVisible = false;
+
+let settingsVisible = false; 
 let panelMainOpen = false;
 let panelAnchorOpen = false;
 let panelMuteOpen = false;
-
-// V2.1 Panel States
-let panelTgOpen = false;
-let panelAudioOpen = false;
-let panelWeatherOpen = false;
+let panelSmartOpen = false;
 
 let isStealthActive = false;
-let currentTrack = null;
+let currentTrack = null; 
+
 let draggingBox = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let audioCtx = null;
 let wakeLock = null;
+
+// Original V1.0 Sound Debouncers
 let lastBeep = 0;
 let lastAnchorBeep = 0;
 let lastLoudBeep = 0;
-let lastFrameTime = 0;
-let frameCounter = 0;
 
-const TARGET_FPS = 15;
-const FRAME_INTERVAL = 1000 / TARGET_FPS;
-const HIT_PAD = 30;
-const HISTORY_MS = 5000;
-const PIXEL_STEP = 1;
-
-// V2.1 Variablen
-let tgToken = "";
-let tgChatId = "";
-let tgVideoMode = "full";
-let tgOffset = 0;
-let audioMicStream = null;
-let audioAnalyser = null;
-let audioDataArray = null;
-let isRecordingAudio = false;
+// Smart Features Variables
+let analyser, dataArray;
+let micStream = null;
+let isMutedInternally = false;
+let lastAcousticAlarm = 0;
 let isRecordingVideo = false;
-let activeRecBox = null;
-let weatherCities = ["", "", ""];
-let lastAnkerFotoTime = 0;
+let isRecordingAudio = false;
+let isRecordingBoxId = null;
+let tgUpdateOffset = 0;
+let lastAnchorTgAlarm = 0;
 
-const DEFAULTS = {
-    sens: 30, mass: 60, width: 35, height: 20, pulse: 3, hold: 6.0, takt: 2000, toleranz: 10,
-    anchorActive: false, anchorDrift: 1, anchorSens: 15, anchorW: 10, anchorH: 10, anchorDriftCheck: true,
-    muteActive: false, muteDrift: 1, muteSens: 30, muteHold: 60, muteW: 9, muteH: 11, muteDriftCheck: true, camZoom: 1
+let lastFrameTime = 0;
+let frameCounter = 0; 
+const TARGET_FPS = 15; 
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+const HIT_PAD = 30; 
+const HISTORY_MS = 5000; 
+const PIXEL_STEP = 1; 
+
+const DEFAULTS = { 
+    sens: 30, mass: 60, width: 35, height: 20, pulse: 3, hold: 6.0, count: 2, takt: 2000, toleranz: 10,
+    anchorSens: 15, anchorW: 10, anchorH: 10, anchorDrift: true, anchorDriftSpeed: 1,
+    muteSens: 30, muteHold: 60, muteW: 9, muteH: 11, muteDrift: true, muteDriftSpeed: 1,
+    expert: false, audioThreshold: 25, tgVideoMode: 'box'
+};
+
+let boxes = [
+    { id: 1, x: 60, y: 60, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 2, x: 60, y: 160, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 3, x: 60, y: 260, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 },
+    { id: 4, x: 60, y: 360, w: 35, h: 20, baseline: null, history: [], isAlarm: false, lastAlarmTime: 0, zoomCtx: null, zoomBoxDiv: null, lastState: 0, lastRisingEdge: 0, lastMeasuredCycle: 0, validCrossings: 0, lastValidTime: 0 }
+];
+
+let anchorBox = { id: 'Anker', x: 200, y: 100, w: 10, h: 10, active: false, baseline: null, alarmStart: 0, isAlarm: false, zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false };
+
+let muteBox = { 
+    id: 'Mute', x: 200, y: 200, w: 9, h: 11, active: false, baseline: null, 
+    state: 'IDLE', timerStart: 0, continuousStart: 0, wasEmpty: true, lastWarningTime: 0, emptyStartTime: 0,
+    triggerStart: 0, 
+    zoomCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
 };
 
 let activeBoxCount = 2;
-let boxes = [];
-for (let i = 0; i < 4; i++) {
-    boxes.push({ id: i+1, x: 50 + i * 50, y: 50, w: DEFAULTS.width, h: DEFAULTS.height, active: false, validCrossings: 0, history: [], baseline: null, alarmHoldUntil: 0, zoomCtx: null, zoomStatsDiv: null, zoomBoxDiv: null });
-}
-
-let anchorBox = { id: 'ANKER', x: 20, y: 20, w: DEFAULTS.anchorW, h: DEFAULTS.anchorH, active: false, baseline: null, refCtx: null, zoomCtx: null, zoomStatsDiv: null, zoomBoxDiv: null, refNeedsDraw: false };
-let muteBox = { id: 'MUTE', x: 20, y: 80, w: DEFAULTS.muteW, h: DEFAULTS.muteH, active: false, baseline: null, refCtx: null, zoomCtx: null, zoomStatsDiv: null, zoomBoxDiv: null, refNeedsDraw: false, state: 'IDLE', emptyStartTime: 0, triggerStart: 0, continuousStart: 0 };
 let selectedBox = boxes[0];
 
 function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.fillStyle = "black"; ctx.fillRect(0, 0, targetW, targetH);
     let scale = Math.min(targetW / sw, targetH / sh);
-    let drawW = sw * scale;
-    let drawH = sh * scale;
-    let dx = (targetW - drawW) / 2;
-    let dy = (targetH - drawH) / 2;
+    let drawW = sw * scale; let drawH = sh * scale;
+    let dx = (targetW - drawW) / 2; let dy = (targetH - drawH) / 2;
     ctx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, drawW, drawH);
 }
 
@@ -615,21 +625,71 @@ function updateUIVisibility() {
     document.getElementById('rowTakt').style.display = exp ? 'flex' : 'none';
     document.getElementById('rowToleranz').style.display = exp ? 'flex' : 'none';
     document.getElementById('rowPulse').style.display = exp ? 'flex' : 'none';
-    
     document.getElementById('rowAnchorDriftCheck').style.display = exp ? 'block' : 'none';
-    document.getElementById('rowAnchorDriftSpeed').style.display = exp && chkAnchorDrift.checked ? 'flex' : 'none';
     document.getElementById('rowAnchorSens').style.display = exp ? 'flex' : 'none';
-    
     document.getElementById('rowMuteDriftCheck').style.display = exp ? 'block' : 'none';
-    document.getElementById('rowMuteDriftSpeed').style.display = exp && chkMuteDrift.checked ? 'flex' : 'none';
     document.getElementById('rowMuteSens').style.display = exp ? 'flex' : 'none';
+    rowAnchorDriftSpeed.style.display = (exp && chkAnchorDrift.checked) ? 'flex' : 'none';
+    rowMuteDriftSpeed.style.display = (exp && chkMuteDrift.checked) ? 'flex' : 'none';
 }
 
-chkExpert.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
+function updateMaxDeltaLimitRange() {
+    const w = parseInt(slideWidth.value);
+    const h = parseInt(slideHeight.value);
+    const maxPixels = w * h;
+    slideMass.max = maxPixels;
+    if (parseInt(slideMass.value) > maxPixels) {
+        slideMass.value = maxPixels;
+    }
+    valMass.innerText = slideMass.value;
+}
 
+function updateMonitorButtonUI() {
+    if (!isRunning) {
+        monitorBtn.innerText = "Kamera starten zur Überwachung";
+        monitorBtn.style.background = "#dc3545"; 
+        monitorBtn.classList.add("off");
+    } else {
+        if (isMonitoring) {
+            monitorBtn.innerText = "Überwachung: AKTIV";
+            monitorBtn.style.background = ""; 
+            monitorBtn.classList.remove("off");
+        } else {
+            monitorBtn.innerText = "Überwachung: PAUSIERT";
+            monitorBtn.style.background = "#dc3545"; 
+            monitorBtn.classList.add("off");
+        }
+    }
+    updateStealthClock();
+}
+
+toggleSettingsBtn.addEventListener('click', () => {
+    settingsVisible = !settingsVisible;
+    mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none';
+    toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444';
+    saveSettings();
+});
+
+function togglePanel(btn, panel, stateVarName) {
+    let isOpen = panel.style.display === 'flex';
+    panel.style.display = isOpen ? 'none' : 'flex';
+    isOpen ? btn.classList.remove('open') : btn.classList.add('open');
+    if(stateVarName==='main') panelMainOpen = !isOpen;
+    if(stateVarName==='anchor') panelAnchorOpen = !isOpen;
+    if(stateVarName==='mute') panelMuteOpen = !isOpen;
+    if(stateVarName==='smart') panelSmartOpen = !isOpen;
+    saveSettings();
+}
+
+btnToggleMainConfig.addEventListener('click', () => togglePanel(btnToggleMainConfig, panelMainSettings, 'main'));
+btnToggleAnchorConfig.addEventListener('click', () => togglePanel(btnToggleAnchorConfig, panelAnchorSettings, 'anchor'));
+btnToggleMuteConfig.addEventListener('click', () => togglePanel(btnToggleMuteConfig, panelMuteSettings, 'mute'));
+btnToggleSmartConfig.addEventListener('click', () => togglePanel(btnToggleSmartConfig, panelSmartSettings, 'smart'));
+
+chkExpert.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
 chkShowZoom.addEventListener('change', (e) => {
     showZoomValues = e.target.checked;
-    boxes.forEach(b => { if (b.zoomStatsDiv) b.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none'; });
+    for (let i = 0; i < activeBoxCount; i++) { if (boxes[i].zoomStatsDiv) boxes[i].zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none'; }
     if (anchorBox.zoomStatsDiv) anchorBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
     if (muteBox.zoomStatsDiv) muteBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
     saveSettings();
@@ -638,118 +698,119 @@ chkShowZoom.addEventListener('change', (e) => {
 chkShowCam.addEventListener('change', (e) => { showCamera = e.target.checked; canvas.style.display = showCamera ? 'block' : 'none'; saveSettings(); });
 chkShowDpad.addEventListener('change', (e) => { dpadPanel.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 
+chkTelegram.addEventListener('change', () => { telegramSettingsBox.style.display = chkTelegram.checked ? 'flex' : 'none'; saveSettings(); });
+txtTelegramToken.addEventListener('input', saveSettings); txtTelegramChatId.addEventListener('input', saveSettings);
+selTgVideoMode.addEventListener('change', saveSettings);
+txtWeatherCities.addEventListener('input', saveSettings); 
+chkAudioGuard.addEventListener('change', () => { saveSettings(); if(isRunning) restartAudioSystem(); });
+
 chkAnchorDrift.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
 chkMuteDrift.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
 
 chkAnchorActive.addEventListener('change', (e) => {
-    anchorBox.active = e.target.checked;
-    anchorBox.baseline = null;
-    if (anchorBox.active) selectedBox = anchorBox;
-    else if(selectedBox === anchorBox) selectedBox = boxes[0];
-    saveSettings();
-    createZoomDisplays();
+    anchorBox.active = e.target.checked; anchorBox.baseline = null; 
+    if (anchorBox.active) selectedBox = anchorBox; else if(selectedBox === anchorBox) selectedBox = boxes[0];
+    saveSettings(); createZoomDisplays();
 });
 
 chkMuteActive.addEventListener('change', (e) => {
-    muteBox.active = e.target.checked;
-    muteBox.baseline = null;
-    muteBox.state = 'IDLE';
-    muteBox.emptyStartTime = 0;
-    muteBox.triggerStart = 0;
-    if (muteBox.active) selectedBox = muteBox;
-    else if(selectedBox === muteBox) selectedBox = boxes[0];
-    saveSettings();
-    createZoomDisplays();
+    muteBox.active = e.target.checked; muteBox.baseline = null; muteBox.state = 'IDLE'; 
+    muteBox.continuousStart = 0; muteBox.wasEmpty = true; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
+    if (muteBox.active) selectedBox = muteBox; else if(selectedBox === muteBox) selectedBox = boxes[0];
+    saveSettings(); createZoomDisplays();
 });
+
+helpBtn.addEventListener('click', () => helpOverlay.style.display = 'flex');
+closeHelpBtn.addEventListener('click', () => helpOverlay.style.display = 'none');
+
+function setupAdjBtn(minusId, plusId, sliderId) {
+    const slider = document.getElementById(sliderId);
+    document.getElementById(minusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) - (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
+    document.getElementById(plusId).addEventListener('click', (e) => { e.preventDefault(); slider.value = parseFloat(slider.value) + (parseFloat(slider.step) || 1); slider.dispatchEvent(new Event('input')); });
+}
+setupAdjBtn('sensMinus', 'sensPlus', 'slideSens'); setupAdjBtn('massMinus', 'massPlus', 'slideMass'); 
+setupAdjBtn('taktMinus', 'taktPlus', 'slideTakt'); setupAdjBtn('toleranzMinus', 'toleranzPlus', 'slideToleranz'); 
+setupAdjBtn('widthMinus', 'widthPlus', 'slideWidth'); setupAdjBtn('heightMinus', 'heightPlus', 'slideHeight');
+setupAdjBtn('pulseMinus', 'pulsePlus', 'slidePulse'); setupAdjBtn('holdMinus', 'holdPlus', 'slideHold');
+setupAdjBtn('zoomMinus', 'zoomPlus', 'slideCamZoom'); setupAdjBtn('anchorSensMinus', 'anchorSensPlus', 'slideAnchorSens');
+setupAdjBtn('anchorWMinus', 'anchorWPlus', 'slideAnchorW'); setupAdjBtn('anchorHMinus', 'anchorHPlus', 'slideAnchorH');
+setupAdjBtn('anchorDriftMinus', 'anchorDriftPlus', 'slideAnchorDrift');
+setupAdjBtn('muteSensMinus', 'muteSensPlus', 'slideMuteSens'); setupAdjBtn('muteHoldMinus', 'muteHoldPlus', 'slideMuteHold'); 
+setupAdjBtn('muteWMinus', 'muteWPlus', 'slideMuteW'); setupAdjBtn('muteHMinus', 'muteHPlus', 'slideMuteH');
+setupAdjBtn('muteDriftMinus', 'muteDriftPlus', 'slideMuteDrift');
+setupAdjBtn('audioThresMinus', 'audioThresPlus', 'slideAudioThreshold');
+
+async function loadCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        if (videoDevices.length > 0) {
+            cameraSelect.innerHTML = '';
+            videoDevices.forEach((device, index) => {
+                const option = document.createElement('option');
+                option.value = device.deviceId; option.text = device.label || `Kamera ${index + 1}`;
+                cameraSelect.appendChild(option);
+            });
+            const saved = localStorage.getItem('pixel_settings_v2');
+            if (saved) {
+                const s = JSON.parse(saved);
+                if (s.cameraId && [...cameraSelect.options].some(opt => opt.value === s.cameraId)) { cameraSelect.value = s.cameraId; }
+            }
+        }
+    } catch (e) {}
+}
+
+cameraSelect.addEventListener('change', () => { saveSettings(); if (isRunning) { stopSystem(); setTimeout(startSystem, 500); } });
+slideCamZoom.addEventListener('input', (e) => { valCamZoom.innerText = parseFloat(e.target.value).toFixed(1); if (currentTrack) { try { currentTrack.applyConstraints({ advanced: [{ zoom: e.target.value }] }); } catch(err) {} } });
 
 function createZoomDisplays() {
     zoomHeader.innerHTML = '';
     for (let i = 0; i < activeBoxCount; i++) {
-        const div = document.createElement('div');
-        div.className = 'zoom-box';
+        const div = document.createElement('div'); div.className = 'zoom-box';
         div.onclick = () => { selectedBox = boxes[i]; updateZoomSelectionUI(); };
-        
-        const c = document.createElement('canvas');
-        c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
-        
-        const label = document.createElement('div');
-        label.className = 'zoom-label'; label.innerText = 'BOX ' + (i+1);
-        
-        const stats = document.createElement('div');
-        stats.className = 'zoom-stats';
-        stats.style.display = showZoomValues ? 'block' : 'none';
+        const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
+        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'BOX ' + (i+1);
+        const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
         stats.innerHTML = `Masse: 0`;
-        
-        div.appendChild(c); div.appendChild(label); div.appendChild(stats);
-        zoomHeader.appendChild(div);
-        
-        boxes[i].zoomCtx = c.getContext('2d');
-        boxes[i].zoomStatsDiv = stats;
-        boxes[i].zoomBoxDiv = div;
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats); zoomHeader.appendChild(div);
+        boxes[i].zoomCtx = c.getContext('2d'); boxes[i].zoomStatsDiv = stats; boxes[i].zoomBoxDiv = div;
     }
     
     if (anchorBox.active) {
-        const div = document.createElement('div');
-        div.className = 'zoom-box anchor-zoom';
+        const div = document.createElement('div'); div.className = 'zoom-box anchor-zoom';
         div.onclick = () => { selectedBox = anchorBox; updateZoomSelectionUI(); };
-        
-        const row = document.createElement('div');
-        row.style.display = "flex"; row.style.gap = "5px";
-        
-        const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 50; cLive.height = 50;
-        const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 50; cRef.height = 50;
-        
-        row.appendChild(cRef); row.appendChild(cLive);
-        
-        const label = document.createElement('div');
-        label.className = 'zoom-label'; label.innerText = 'ANKER';
-        
-        const stats = document.createElement('div');
-        stats.className = 'zoom-stats';
-        stats.style.display = showZoomValues ? 'block' : 'none';
-        stats.innerHTML = `Diff: 0`;
-        
-        div.appendChild(row); div.appendChild(label); div.appendChild(stats);
-        zoomHeader.appendChild(div);
-        
-        anchorBox.zoomCtx = cLive.getContext('2d');
-        anchorBox.refCtx = cRef.getContext('2d');
-        anchorBox.zoomStatsDiv = stats;
-        anchorBox.zoomBoxDiv = div;
-        anchorBox.refNeedsDraw = true;
+        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'ANKER';
+        const canvasContainer = document.createElement('div'); canvasContainer.style.cssText = "display:flex; gap:5px; margin-top:4px;";
+        const liveWrap = document.createElement('div');
+        const liveLabel = document.createElement('div'); liveLabel.style.cssText="font-size:9px; color:#ccc;"; liveLabel.innerText="LIVE";
+        const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 80; cLive.height = 40;
+        liveWrap.appendChild(liveLabel); liveWrap.appendChild(cLive);
+        const refWrap = document.createElement('div');
+        const refLabel = document.createElement('div'); refLabel.style.cssText="font-size:9px; color:#00aaff;"; refLabel.innerText="REFERENZ";
+        const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 80; cRef.height = 40;
+        refWrap.appendChild(refLabel); refWrap.appendChild(cRef);
+        canvasContainer.appendChild(liveWrap); canvasContainer.appendChild(refWrap);
+        const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Lade...`;
+        const rst = document.createElement('button'); rst.innerText = "🔄 Neu setzen"; rst.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#17a2b8; border-radius:4px;";
+        rst.onclick = (e) => { e.stopPropagation(); anchorBox.baseline = null; playBeep(); };
+        div.appendChild(label); div.appendChild(canvasContainer); div.appendChild(stats); div.appendChild(rst); zoomHeader.appendChild(div);
+        anchorBox.zoomCtx = cLive.getContext('2d'); anchorBox.refCtx = cRef.getContext('2d'); anchorBox.zoomStatsDiv = stats; anchorBox.zoomBoxDiv = div;
+        if (anchorBox.baseline) anchorBox.refNeedsDraw = true;
     }
 
     if (muteBox.active) {
-        const div = document.createElement('div');
-        div.className = 'zoom-box mute-zoom';
+        const div = document.createElement('div'); div.className = 'zoom-box mute-zoom';
         div.onclick = () => { selectedBox = muteBox; updateZoomSelectionUI(); };
-        
-        const row = document.createElement('div');
-        row.style.display = "flex"; row.style.gap = "5px";
-        
-        const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 50; cLive.height = 50;
-        const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 50; cRef.height = 50;
-        
-        row.appendChild(cRef); row.appendChild(cLive);
-        
-        const label = document.createElement('div');
-        label.className = 'zoom-label'; label.innerText = 'MUTE-ZONE';
-        
-        const stats = document.createElement('div');
-        stats.className = 'zoom-stats';
-        stats.style.display = showZoomValues ? 'block' : 'none';
-        stats.innerHTML = `Bereit`;
-        
-        div.appendChild(row); div.appendChild(label); div.appendChild(stats);
-        zoomHeader.appendChild(div);
-        
-        muteBox.zoomCtx = cLive.getContext('2d');
-        muteBox.refCtx = cRef.getContext('2d');
-        muteBox.zoomStatsDiv = stats;
-        muteBox.zoomBoxDiv = div;
-        muteBox.refNeedsDraw = true;
+        const c = document.createElement('canvas'); c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
+        const label = document.createElement('div'); label.className = 'zoom-label'; label.innerText = 'MUTE-ZONE';
+        const stats = document.createElement('div'); stats.className = 'zoom-stats'; stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Lade...`;
+        const rst = document.createElement('button'); rst.innerText = "🔄 Leer setzen"; rst.style.cssText = "font-size:11px; padding:4px 8px; margin-top:5px; background:#28a745; border-radius:4px;";
+        rst.onclick = (e) => { e.stopPropagation(); muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; playBeep(); };
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats); div.appendChild(rst); zoomHeader.appendChild(div);
+        muteBox.zoomCtx = c.getContext('2d'); muteBox.zoomStatsDiv = stats; muteBox.zoomBoxDiv = div;
     }
-    
     updateZoomSelectionUI();
 }
 
@@ -757,368 +818,247 @@ function updateZoomSelectionUI() {
     let allDivs = [...boxes.map(b => b.zoomBoxDiv)];
     if (anchorBox.active) allDivs.push(anchorBox.zoomBoxDiv);
     if (muteBox.active) allDivs.push(muteBox.zoomBoxDiv);
-    
     allDivs.forEach((div) => { if (div) div.classList.remove('active-zoom'); });
-    if (selectedBox && selectedBox.zoomBoxDiv) {
-        selectedBox.zoomBoxDiv.classList.add('active-zoom');
-        selectedBoxIdLabel.innerText = selectedBox.id;
-    }
+    if (selectedBox && selectedBox.zoomBoxDiv) { selectedBox.zoomBoxDiv.classList.add('active-zoom'); selectedBoxIdLabel.innerText = selectedBox.id; }
 }
 
 function updateLabels() {
-    valSens.innerText = slideSens.value;
-    valWidth.innerText = slideWidth.value;
-    valHeight.innerText = slideHeight.value;
-    valPulse.innerText = slidePulse.value;
-    valHold.innerText = parseFloat(slideHold.value).toFixed(1);
-    valTakt.innerText = slideTakt.value;
-    valToleranz.innerText = slideToleranz.value;
-    
-    valAnchorSens.innerText = slideAnchorSens.value;
-    valAnchorW.innerText = slideAnchorW.value;
-    valAnchorH.innerText = slideAnchorH.value;
+    valSens.innerText = slideSens.value; valWidth.innerText = slideWidth.value; valHeight.innerText = slideHeight.value; 
+    valPulse.innerText = slidePulse.value; valHold.innerText = slideHold.value; valTakt.innerText = slideTakt.value; 
+    valToleranz.innerText = slideToleranz.value; 
+    valAnchorSens.innerText = slideAnchorSens.value; valAnchorW.innerText = slideAnchorW.value; valAnchorH.innerText = slideAnchorH.value;
     valAnchorDrift.innerText = slideAnchorDrift.value;
-
-    valMuteSens.innerText = slideMuteSens.value;
-    valMuteW.innerText = slideMuteW.value;
-    valMuteH.innerText = slideMuteH.value;
-    valMuteHold.innerText = slideMuteHold.value;
+    valMuteSens.innerText = slideMuteSens.value; valMuteHold.innerText = slideMuteHold.value; 
+    valMuteW.innerText = slideMuteW.value; valMuteH.innerText = slideMuteH.value;
     valMuteDrift.innerText = slideMuteDrift.value;
-    
-    valCamZoom.innerText = parseFloat(slideCamZoom.value).toFixed(1);
-}
-
-function setSliderValue(slider, valLabel, step, max, min, offset) {
-    let val = parseFloat(slider.value) + offset * step;
-    if (val > max) val = max;
-    if (val < min) val = min;
-    slider.value = val;
-    valLabel.innerText = slider.step.includes('.') ? val.toFixed(1) : Math.round(val);
-    saveSettings();
-}
-
-document.getElementById('zoomMinus').onclick = () => { setSliderValue(slideCamZoom, valCamZoom, 0.1, 10, 1, -1); applyZoom(); };
-document.getElementById('zoomPlus').onclick = () => { setSliderValue(slideCamZoom, valCamZoom, 0.1, 10, 1, 1); applyZoom(); };
-document.getElementById('sensMinus').onclick = () => setSliderValue(slideSens, valSens, 1, 100, 2, -1);
-document.getElementById('sensPlus').onclick = () => setSliderValue(slideSens, valSens, 1, 100, 2, 1);
-document.getElementById('massMinus').onclick = () => setSliderValue(slideMass, valMass, 1, 700, 1, -1);
-document.getElementById('massPlus').onclick = () => setSliderValue(slideMass, valMass, 1, 700, 1, 1);
-document.getElementById('taktMinus').onclick = () => setSliderValue(slideTakt, valTakt, 100, 4000, 200, -1);
-document.getElementById('taktPlus').onclick = () => setSliderValue(slideTakt, valTakt, 100, 4000, 200, 1);
-document.getElementById('toleranzMinus').onclick = () => setSliderValue(slideToleranz, valToleranz, 5, 100, 5, -1);
-document.getElementById('toleranzPlus').onclick = () => setSliderValue(slideToleranz, valToleranz, 5, 100, 5, 1);
-
-document.getElementById('widthMinus').onclick = () => { setSliderValue(slideWidth, valWidth, 1, 100, 5, -1); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.baseline=null; }); };
-document.getElementById('widthPlus').onclick = () => { setSliderValue(slideWidth, valWidth, 1, 100, 5, 1); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.baseline=null; }); };
-document.getElementById('heightMinus').onclick = () => { setSliderValue(slideHeight, valHeight, 1, 50, 5, -1); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.baseline=null; }); };
-document.getElementById('heightPlus').onclick = () => { setSliderValue(slideHeight, valHeight, 1, 50, 5, 1); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.baseline=null; }); };
-
-document.getElementById('pulseMinus').onclick = () => setSliderValue(slidePulse, valPulse, 1, 10, 1, -1);
-document.getElementById('pulsePlus').onclick = () => setSliderValue(slidePulse, valPulse, 1, 10, 1, 1);
-document.getElementById('holdMinus').onclick = () => setSliderValue(slideHold, valHold, 0.5, 10, 0.5, -1);
-document.getElementById('holdPlus').onclick = () => setSliderValue(slideHold, valHold, 0.5, 10, 0.5, 1);
-
-document.getElementById('anchorSensMinus').onclick = () => setSliderValue(slideAnchorSens, valAnchorSens, 1, 100, 5, -1);
-document.getElementById('anchorSensPlus').onclick = () => setSliderValue(slideAnchorSens, valAnchorSens, 1, 100, 5, 1);
-document.getElementById('anchorDriftMinus').onclick = () => setSliderValue(slideAnchorDrift, valAnchorDrift, 1, 10, 1, -1);
-document.getElementById('anchorDriftPlus').onclick = () => setSliderValue(slideAnchorDrift, valAnchorDrift, 1, 10, 1, 1);
-document.getElementById('anchorWMinus').onclick = () => { setSliderValue(slideAnchorW, valAnchorW, 1, 100, 5, -1); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; };
-document.getElementById('anchorWPlus').onclick = () => { setSliderValue(slideAnchorW, valAnchorW, 1, 100, 5, 1); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; };
-document.getElementById('anchorHMinus').onclick = () => { setSliderValue(slideAnchorH, valAnchorH, 1, 50, 5, -1); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; };
-document.getElementById('anchorHPlus').onclick = () => { setSliderValue(slideAnchorH, valAnchorH, 1, 50, 5, 1); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; };
-
-document.getElementById('muteSensMinus').onclick = () => setSliderValue(slideMuteSens, valMuteSens, 1, 100, 5, -1);
-document.getElementById('muteSensPlus').onclick = () => setSliderValue(slideMuteSens, valMuteSens, 1, 100, 5, 1);
-document.getElementById('muteHoldMinus').onclick = () => setSliderValue(slideMuteHold, valMuteHold, 1, 120, 10, -1);
-document.getElementById('muteHoldPlus').onclick = () => setSliderValue(slideMuteHold, valMuteHold, 1, 120, 10, 1);
-document.getElementById('muteDriftMinus').onclick = () => setSliderValue(slideMuteDrift, valMuteDrift, 1, 10, 1, -1);
-document.getElementById('muteDriftPlus').onclick = () => setSliderValue(slideMuteDrift, valMuteDrift, 1, 10, 1, 1);
-document.getElementById('muteWMinus').onclick = () => { setSliderValue(slideMuteW, valMuteW, 1, 100, 5, -1); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; };
-document.getElementById('muteWPlus').onclick = () => { setSliderValue(slideMuteW, valMuteW, 1, 100, 5, 1); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; };
-document.getElementById('muteHMinus').onclick = () => { setSliderValue(slideMuteH, valMuteH, 1, 50, 5, -1); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; };
-document.getElementById('muteHPlus').onclick = () => { setSliderValue(slideMuteH, valMuteH, 1, 50, 5, 1); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; };
-
-function resetToDefaults(modul) {
-    if (modul === 'main' || modul === 'all') {
-        slideSens.value = DEFAULTS.sens; slideMass.value = DEFAULTS.mass;
-        slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height;
-        slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold;
-        slideTakt.value = DEFAULTS.takt; slideToleranz.value = DEFAULTS.toleranz;
-        boxes.forEach(b => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.baseline = null; });
-    }
-    if (modul === 'anchor' || modul === 'all') {
-        slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorDrift.value = DEFAULTS.anchorDrift;
-        slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH;
-        chkAnchorDrift.checked = DEFAULTS.anchorDriftCheck;
-        anchorBox.w = DEFAULTS.anchorW; anchorBox.h = DEFAULTS.anchorH; anchorBox.baseline = null;
-    }
-    if (modul === 'mute' || modul === 'all') {
-        slideMuteSens.value = DEFAULTS.muteSens; slideMuteDrift.value = DEFAULTS.muteDrift;
-        slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH;
-        slideMuteHold.value = DEFAULTS.muteHold; chkMuteDrift.checked = DEFAULTS.muteDriftCheck;
-        muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null;
-        muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
-    }
-    if (modul === 'all') {
-        slideCamZoom.value = DEFAULTS.camZoom; applyZoom();
-        chkExpert.checked = false; chkShowZoom.checked = true; chkShowCam.checked = true; chkShowDpad.checked = true;
-        chkAnchorActive.checked = DEFAULTS.anchorActive; anchorBox.active = DEFAULTS.anchorActive;
-        chkMuteActive.checked = DEFAULTS.muteActive; muteBox.active = DEFAULTS.muteActive;
-        boxCountSelect.value = "2"; activeBoxCount = 2;
-        showZoomValues = true; showCamera = true;
-        canvas.style.display = 'block'; dpadPanel.style.display = 'flex';
-        createZoomDisplays(); updateUIVisibility();
-    }
-    updateLabels(); saveSettings();
-}
-
-document.getElementById('btnResetMain').onclick = () => resetToDefaults('main');
-document.getElementById('btnResetAnchor').onclick = () => resetToDefaults('anchor');
-document.getElementById('btnResetMute').onclick = () => resetToDefaults('mute');
-document.getElementById('btnResetAll').onclick = () => { if(confirm("Möchtest du wirklich ALLE Einstellungen und Modul-Werte auf die Werkseinstellungen zurücksetzen?")) resetToDefaults('all'); };
-
-function loadSettings() {
-    const sStr = localStorage.getItem('pixelwachter_pro_settings');
-    if (sStr) {
-        try {
-            const s = JSON.parse(sStr);
-            if (s.sens) slideSens.value = s.sens;
-            if (s.mass) slideMass.value = s.mass;
-            if (s.width) { slideWidth.value = s.width; boxes.forEach(b => b.w = s.width); }
-            if (s.height) { slideHeight.value = s.height; boxes.forEach(b => b.h = s.height); }
-            if (s.pulse) slidePulse.value = s.pulse;
-            if (s.hold) slideHold.value = s.hold;
-            if (s.takt) slideTakt.value = s.takt;
-            if (s.toleranz) slideToleranz.value = s.toleranz;
-            if (s.anchorSens) slideAnchorSens.value = s.anchorSens;
-            if (s.anchorDrift) slideAnchorDrift.value = s.anchorDrift;
-            if (s.anchorW) { slideAnchorW.value = s.anchorW; anchorBox.w = s.anchorW; }
-            if (s.anchorH) { slideAnchorH.value = s.anchorH; anchorBox.h = s.anchorH; }
-            if (s.muteSens) slideMuteSens.value = s.muteSens;
-            if (s.muteDrift) slideMuteDrift.value = s.muteDrift;
-            if (s.muteHold) slideMuteHold.value = s.muteHold;
-            if (s.muteW) { slideMuteW.value = s.muteW; muteBox.w = s.muteW; }
-            if (s.muteH) { slideMuteH.value = s.muteH; muteBox.h = s.muteH; }
-            if (s.camZoom) { slideCamZoom.value = s.camZoom; }
-            
-            if (s.boxCount) { boxCountSelect.value = s.boxCount; activeBoxCount = parseInt(s.boxCount); }
-            if (s.chkExpert !== undefined) chkExpert.checked = s.chkExpert;
-            if (s.chkShowZoom !== undefined) { showZoomValues = s.chkShowZoom; chkShowZoom.checked = s.chkShowZoom; }
-            if (s.chkShowCam !== undefined) { showCamera = s.chkShowCam; chkShowCam.checked = s.chkShowCam; canvas.style.display = showCamera ? 'block' : 'none'; }
-            if (s.chkShowDpad !== undefined) { chkShowDpad.checked = s.chkShowDpad; dpadPanel.style.display = s.chkShowDpad ? 'flex' : 'none'; }
-            if (s.anchorActive !== undefined) { anchorBox.active = s.anchorActive; chkAnchorActive.checked = s.anchorActive; }
-            if (s.muteActive !== undefined) { muteBox.active = s.muteActive; chkMuteActive.checked = s.muteActive; }
-            if (s.anchorDriftCheck !== undefined) chkAnchorDrift.checked = s.anchorDriftCheck;
-            if (s.muteDriftCheck !== undefined) chkMuteDrift.checked = s.muteDriftCheck;
-
-            if (s.settingsVisible !== undefined) {
-                settingsVisible = s.settingsVisible;
-                mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none';
-                toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444';
-            }
-            if (s.panelMainOpen !== undefined) { panelMainOpen = s.panelMainOpen; togglePanel(btnToggleMainConfig, panelMainSettings, !panelMainOpen); }
-            if (s.panelAnchorOpen !== undefined) { panelAnchorOpen = s.panelAnchorOpen; togglePanel(btnToggleAnchorConfig, panelAnchorSettings, !panelAnchorOpen); }
-            if (s.panelMuteOpen !== undefined) { panelMuteOpen = s.panelMuteOpen; togglePanel(btnToggleMuteConfig, panelMuteSettings, !panelMuteOpen); }
-            
-            // V2.1 Panels
-            if (s.panelTgOpen !== undefined) { panelTgOpen = s.panelTgOpen; togglePanel(btnToggleTgConfig, panelTgSettings, !panelTgOpen); }
-            if (s.panelAudioOpen !== undefined) { panelAudioOpen = s.panelAudioOpen; togglePanel(btnToggleAudioConfig, panelAudioSettings, !panelAudioOpen); }
-            if (s.panelWeatherOpen !== undefined) { panelWeatherOpen = s.panelWeatherOpen; togglePanel(btnToggleWeatherConfig, panelWeatherSettings, !panelWeatherOpen); }
-            
-            // V2.1 Settings
-            if (s.tgToken !== undefined) { tgToken = s.tgToken; document.getElementById('inpTgToken').value = tgToken; }
-            if (s.tgChatId !== undefined) { tgChatId = s.tgChatId; document.getElementById('inpTgChatId').value = tgChatId; }
-            if (s.tgVideoMode !== undefined) { tgVideoMode = s.tgVideoMode; document.getElementById('selTgVideoMode').value = tgVideoMode; }
-            if (s.audioActive !== undefined) { document.getElementById('chkAudioActive').checked = s.audioActive; if(s.audioActive) toggleAudioWächter(); }
-            if (s.audioThr !== undefined) { document.getElementById('slideAudioThr').value = s.audioThr; document.getElementById('valAudioThr').innerText = s.audioThr; }
-            if (s.weatherCities) { 
-                weatherCities = s.weatherCities; 
-                document.getElementById('inpCity1').value = weatherCities[0];
-                document.getElementById('inpCity2').value = weatherCities[1];
-                document.getElementById('inpCity3').value = weatherCities[2];
-            }
-
-            if (s.positions) { s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } }); }
-            if (s.anchor) { anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; }
-            if (s.mute) { muteBox.x = s.mute.x; muteBox.y = s.mute.y; }
-            
-        } catch(e) { console.error("Fehler beim Laden:", e); resetToDefaults('all'); }
-    }
-    updateLabels();
-    updateUIVisibility();
+    valAudioThreshold.innerText = slideAudioThreshold.value;
+    updateMaxDeltaLimitRange();
 }
 
 function saveSettings() {
-    const s = {
-        sens: parseInt(slideSens.value),
-        mass: parseInt(slideMass.value),
-        width: parseInt(slideWidth.value),
-        height: parseInt(slideHeight.value),
-        pulse: parseInt(slidePulse.value),
-        hold: parseFloat(slideHold.value),
-        takt: parseInt(slideTakt.value),
-        toleranz: parseInt(slideToleranz.value),
-        anchorSens: parseInt(slideAnchorSens.value),
-        anchorDrift: parseInt(slideAnchorDrift.value),
-        anchorW: parseInt(slideAnchorW.value),
-        anchorH: parseInt(slideAnchorH.value),
-        muteSens: parseInt(slideMuteSens.value),
-        muteDrift: parseInt(slideMuteDrift.value),
-        muteHold: parseInt(slideMuteHold.value),
-        muteW: parseInt(slideMuteW.value),
-        muteH: parseInt(slideMuteH.value),
-        camZoom: parseFloat(slideCamZoom.value),
-        chkExpert: chkExpert.checked,
-        chkShowZoom: chkShowZoom.checked,
-        chkShowCam: chkShowCam.checked,
-        chkShowDpad: chkShowDpad.checked,
-        boxCount: boxCountSelect.value,
-        positions: boxes.map(b => ({x: b.x, y: b.y})),
-        anchor: {x: anchorBox.x, y: anchorBox.y},
-        mute: {x: muteBox.x, y: muteBox.y},
-        anchorActive: anchorBox.active,
-        muteActive: muteBox.active,
-        anchorDriftCheck: chkAnchorDrift.checked,
-        muteDriftCheck: chkMuteDrift.checked,
-        settingsVisible: settingsVisible,
-        panelMainOpen: panelMainOpen,
-        panelAnchorOpen: panelAnchorOpen,
-        panelMuteOpen: panelMuteOpen,
-        
-        // V2.1 Persistence
-        panelTgOpen: panelTgOpen,
-        panelAudioOpen: panelAudioOpen,
-        panelWeatherOpen: panelWeatherOpen,
-        tgToken: tgToken,
-        tgChatId: tgChatId,
-        tgVideoMode: tgVideoMode,
-        audioActive: document.getElementById('chkAudioActive').checked,
-        audioThr: document.getElementById('slideAudioThr').value,
-        weatherCities: weatherCities
+    const settings = {
+        expert: chkExpert.checked,
+        sens: slideSens.value, mass: slideMass.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, toleranz: slideToleranz.value,
+        pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
+        anchorSens: slideAnchorSens.value, anchorW: slideAnchorW.value, anchorH: slideAnchorH.value, anchorDrift: chkAnchorDrift.checked, anchorDriftSpeed: slideAnchorDrift.value,
+        muteSens: slideMuteSens.value, muteHold: slideMuteHold.value, muteW: slideMuteW.value, muteH: slideMuteH.value, muteDrift: chkMuteDrift.checked, muteDriftSpeed: slideMuteDrift.value,
+        showZoomValues: showZoomValues, showCamera: showCamera, dpadVisible: chkShowDpad.checked, 
+        settingsVisible: settingsVisible, panelMainOpen: panelMainOpen, panelAnchorOpen: panelAnchorOpen, panelMuteOpen: panelMuteOpen, panelSmartOpen: panelSmartOpen,
+        cameraId: cameraSelect.value, positions: boxes.map(b => ({ x: b.x, y: b.y })),
+        anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
+        mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active },
+        telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked, tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), 
+        tgVideoMode: selTgVideoMode.value, audioThreshold: slideAudioThreshold.value, weather: txtWeatherCities.value.trim()
     };
-    localStorage.setItem('pixelwachter_pro_settings', JSON.stringify(s));
+    // V2 nutzt neuen Save-State um V1 nicht zu überschreiben
+    localStorage.setItem('pixel_settings_v2', JSON.stringify(settings));
 }
 
-slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideMass.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.baseline=null; }); });
-slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.baseline=null; }); });
-slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+function loadSettings() {
+    try {
+        const saved = localStorage.getItem('pixel_settings_v2') || localStorage.getItem('pixel_settings_pro');
+        if (saved) {
+            const s = JSON.parse(saved);
+            if (s.expert !== undefined) chkExpert.checked = s.expert;
+            if (s.sens) slideSens.value = s.sens; if (s.mass) slideMass.value = s.mass; if (s.width) slideWidth.value = s.width; if (s.height) slideHeight.value = s.height; 
+            if (s.pulse) slidePulse.value = s.pulse; if (s.hold) slideHold.value = s.hold; 
+            if (s.takt) slideTakt.value = s.takt; if (s.toleranz) slideToleranz.value = s.toleranz; 
+            
+            if (s.anchorSens) slideAnchorSens.value = s.anchorSens; if (s.anchorW) slideAnchorW.value = s.anchorW; if (s.anchorH) slideAnchorH.value = s.anchorH;
+            if (s.anchorDrift !== undefined) chkAnchorDrift.checked = s.anchorDrift;
+            if (s.anchorDriftSpeed) slideAnchorDrift.value = s.anchorDriftSpeed;
+            
+            if (s.muteSens) slideMuteSens.value = s.muteSens; if (s.muteHold) slideMuteHold.value = s.muteHold; 
+            if (s.muteW) slideMuteW.value = s.muteW; if (s.muteH) slideMuteH.value = s.muteH;
+            if (s.muteDrift !== undefined) chkMuteDrift.checked = s.muteDrift;
+            if (s.muteDriftSpeed) slideMuteDrift.value = s.muteDriftSpeed;
+            
+            if (s.count) { activeBoxCount = parseInt(s.count); boxCountSelect.value = activeBoxCount; }
+            
+            if (s.showZoomValues !== undefined) { showZoomValues = s.showZoomValues; chkShowZoom.checked = s.showZoomValues; }
+            if (s.showCamera !== undefined) { showCamera = s.showCamera; chkShowCam.checked = s.showCamera; canvas.style.display = showCamera ? 'block' : 'none'; }
+            if (s.dpadVisible !== undefined) { chkShowDpad.checked = s.dpadVisible; dpadPanel.style.display = s.dpadVisible ? 'flex' : 'none'; }
+            
+            if (s.settingsVisible !== undefined) { settingsVisible = s.settingsVisible; mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none'; toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444'; }
+            
+            if (s.panelMainOpen !== undefined) { panelMainOpen = s.panelMainOpen; if(panelMainOpen) togglePanel(btnToggleMainConfig, panelMainSettings, false); }
+            if (s.panelAnchorOpen !== undefined) { panelAnchorOpen = s.panelAnchorOpen; if(panelAnchorOpen) togglePanel(btnToggleAnchorConfig, panelAnchorSettings, false); }
+            if (s.panelMuteOpen !== undefined) { panelMuteOpen = s.panelMuteOpen; if(panelMuteOpen) togglePanel(btnToggleMuteConfig, panelMuteSettings, false); }
+            if (s.panelSmartOpen !== undefined) { panelSmartOpen = s.panelSmartOpen; if(panelSmartOpen) togglePanel(btnToggleSmartConfig, panelSmartSettings, false); }
+
+            if (s.positions) { s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } }); }
+            if (s.anchor) { anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; anchorBox.active = s.anchor.active; chkAnchorActive.checked = s.anchor.active; }
+            if (s.mute) { muteBox.x = s.mute.x; muteBox.y = s.mute.y; muteBox.active = s.mute.active; chkMuteActive.checked = s.mute.active; }
+            
+            if (s.telegram !== undefined) { chkTelegram.checked = s.telegram; telegramSettingsBox.style.display = s.telegram ? 'flex' : 'none'; }
+            if (s.audioGuard !== undefined) chkAudioGuard.checked = s.audioGuard;
+            if (s.tgToken) txtTelegramToken.value = s.tgToken; if (s.tgChat) txtTelegramChatId.value = s.tgChat; 
+            if (s.tgVideoMode) selTgVideoMode.value = s.tgVideoMode;
+            if (s.audioThreshold) slideAudioThreshold.value = s.audioThreshold;
+            if (s.weather) txtWeatherCities.value = s.weather;
+        } else {
+            chkExpert.checked = DEFAULTS.expert;
+            chkAnchorActive.checked = false;
+            chkMuteActive.checked = false;
+        }
+    } catch(e) {}
+    
+    boxCountSelect.value = activeBoxCount; 
+    createZoomDisplays(); updateMaxDeltaLimitRange(); updateLabels(); updateUIVisibility(); updateMonitorButtonUI();
+    boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); b.baseline = null; });
+    anchorBox.w = parseInt(slideAnchorW.value); anchorBox.h = parseInt(slideAnchorH.value);
+    muteBox.w = parseInt(slideMuteW.value); muteBox.h = parseInt(slideMuteH.value);
+}
+loadSettings();
+
+function updateStealthClock() {
+    const d = new Date();
+    hoursHTML.innerText = String(d.getHours()).padStart(2, '0'); minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
+    const dots = document.querySelectorAll('#stealthOverlay div div');
+    
+    if (isStealthActive && muteBox.active && muteBox.state === 'MUTED') {
+        const visible = d.getSeconds() % 2 === 0; dots.forEach(dot => dot.style.opacity = visible ? "1" : "0");
+    } else { dots.forEach(dot => dot.style.opacity = "1"); }
+    
+    if (!isMonitoring || !isRunning) {
+        stealthOverlay.style.color = '#ffcccc'; 
+    } else {
+        stealthOverlay.style.color = 'white';
+    }
+}
+setInterval(updateStealthClock, 500);
+
+activateStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'flex'; isStealthActive = true; updateStealthClock(); fetchWeather(); });
+exitStealthBtn.addEventListener('click', () => { stealthOverlay.style.display = 'none'; isStealthActive = false; });
+
+slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); }); 
+slideMass.addEventListener('input', () => { valMass.innerText = slideMass.value; saveSettings(); });
 slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideToleranz.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideCamZoom.addEventListener('input', () => { updateLabels(); saveSettings(); applyZoom(); });
+slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideWidth.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; b.baseline = null; }); });
+slideHeight.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; b.baseline = null; }); });
+slideAudioThreshold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+
 slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideAnchorW.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; });
 slideAnchorH.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; });
 slideAnchorDrift.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideMuteSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
-slideMuteHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+
+slideMuteSens.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideMuteHold.addEventListener('input', () => { updateLabels(); saveSettings(); }); 
 slideMuteW.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; });
 slideMuteH.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; });
 slideMuteDrift.addEventListener('input', () => { updateLabels(); saveSettings(); });
 
 boxCountSelect.addEventListener('change', (e) => {
-    activeBoxCount = parseInt(e.target.value);
-    createZoomDisplays();
-    if (selectedBox !== anchorBox && selectedBox !== muteBox && selectedBox.id > activeBoxCount) {
-        selectedBox = boxes[0];
-        updateZoomSelectionUI();
+    activeBoxCount = parseInt(e.target.value); createZoomDisplays();
+    if (selectedBox !== anchorBox && selectedBox !== muteBox && selectedBox.id > activeBoxCount) { selectedBox = boxes[0]; updateZoomSelectionUI(); }
+    updateLabels(); saveSettings();
+});
+
+document.getElementById('btnResetMain').addEventListener('click', () => {
+    slideSens.value = DEFAULTS.sens; slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height; 
+    updateMaxDeltaLimitRange(); slideMass.value = DEFAULTS.mass;
+    slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold; slideTakt.value = DEFAULTS.takt; slideToleranz.value = DEFAULTS.toleranz;
+    boxCountSelect.value = DEFAULTS.count; activeBoxCount = DEFAULTS.count;
+    boxes.forEach((b, idx) => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.x = 60; b.y = 60 + (idx * 100); b.history = []; b.baseline = null; b.validCrossings=0; b.lastState=0; b.lastMeasuredCycle=0; });
+    if (selectedBox !== anchorBox && selectedBox !== muteBox) selectedBox = boxes[0];
+    createZoomDisplays(); updateLabels(); saveSettings();
+});
+
+document.getElementById('btnResetAnchor').addEventListener('click', () => {
+    slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH; 
+    chkAnchorDrift.checked = DEFAULTS.anchorDrift; slideAnchorDrift.value = DEFAULTS.anchorDriftSpeed;
+    anchorBox.w = DEFAULTS.anchorW; anchorBox.h = DEFAULTS.anchorH; anchorBox.baseline = null; anchorBox.x = 200; anchorBox.y = 100;
+    chkAnchorActive.checked = false; anchorBox.active = false;
+    updateLabels(); updateUIVisibility(); saveSettings(); createZoomDisplays();
+});
+
+document.getElementById('btnResetMute').addEventListener('click', () => {
+    slideMuteSens.value = DEFAULTS.muteSens; slideMuteHold.value = DEFAULTS.muteHold; slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH; 
+    chkMuteDrift.checked = DEFAULTS.muteDrift; slideMuteDrift.value = DEFAULTS.muteDriftSpeed;
+    muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null; muteBox.x = 200; muteBox.y = 200; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
+    chkMuteActive.checked = false; muteBox.active = false;
+    updateLabels(); updateUIVisibility(); saveSettings(); createZoomDisplays();
+});
+
+document.getElementById('btnResetAll').addEventListener('click', () => {
+    if(confirm("⚠ Achtung!\nSollen alle Positionen, Zähler und Modul-Einstellungen auf die Werkseinstellungen zurückgesetzt werden?")) {
+        chkExpert.checked = DEFAULTS.expert;
+        document.getElementById('btnResetMain').click(); document.getElementById('btnResetAnchor').click(); document.getElementById('btnResetMute').click();
+        chkShowZoom.checked = true; chkShowZoom.dispatchEvent(new Event('change'));
+        chkShowCam.checked = true; chkShowCam.dispatchEvent(new Event('change'));
+        chkShowDpad.checked = true; chkShowDpad.dispatchEvent(new Event('change'));
+        slideCamZoom.value = 1; slideCamZoom.dispatchEvent(new Event('input'));
+        updateUIVisibility();
     }
-    saveSettings();
 });
 
-// V2.1 Bindings
-document.getElementById('inpTgToken').addEventListener('change', (e) => { tgToken = e.target.value; saveSettings(); });
-document.getElementById('inpTgChatId').addEventListener('change', (e) => { tgChatId = e.target.value; saveSettings(); });
-document.getElementById('selTgVideoMode').addEventListener('change', (e) => { tgVideoMode = e.target.value; saveSettings(); });
-document.getElementById('chkAudioActive').addEventListener('change', () => { toggleAudioWächter(); saveSettings(); });
-document.getElementById('slideAudioThr').addEventListener('input', (e) => { document.getElementById('valAudioThr').innerText = e.target.value; saveSettings(); });
-['inpCity1', 'inpCity2', 'inpCity3'].forEach((id, i) => {
-    document.getElementById(id).addEventListener('change', (e) => { weatherCities[i] = e.target.value; saveSettings(); updateWeather(); });
+monitorBtn.addEventListener('click', () => {
+    isMonitoring = !isMonitoring;
+    if (!isMonitoring) { 
+        boxes.forEach(b => { b.isAlarm = false; b.validCrossings = 0; }); 
+        anchorBox.isAlarm = false; 
+        muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; 
+    }
+    updateMonitorButtonUI();
 });
 
-let turboInterval = null;
-let turboTimeout = null;
-
+let turboTimeout = null; let turboInterval = null;
 function startTurboAction(actionFn) {
-    if (!selectedBox) return;
-    actionFn(1);
-    
-    if(selectedBox === anchorBox) anchorBox.baseline = null;
-    else if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+    if (!selectedBox) return; actionFn(1);
+    if(selectedBox === anchorBox) anchorBox.baseline = null; 
+    else if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; } 
     else { selectedBox.baseline = null; }
-    
     saveSettings();
     turboTimeout = setTimeout(() => {
         let speed = 1; let tick = 0;
         turboInterval = setInterval(() => {
-            tick++;
-            if (tick > 15) speed = 3;
-            if (tick > 35) speed = 8;
-            actionFn(speed);
-            if(selectedBox === anchorBox) anchorBox.baseline = null;
-            else if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+            tick++; if (tick > 15) speed = 3; if (tick > 35) speed = 8; actionFn(speed);
+            if(selectedBox === anchorBox) anchorBox.baseline = null; 
+            else if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; } 
             else { selectedBox.baseline = null; }
+            saveSettings();
         }, 50);
-    }, 400);
+    }, 600); 
 }
-
-function stopTurboAction() {
-    clearTimeout(turboTimeout);
-    clearInterval(turboInterval);
-}
+function stopTurboAction() { if (turboTimeout) clearTimeout(turboTimeout); if (turboInterval) clearInterval(turboInterval); turboTimeout = null; turboInterval = null; }
 
 function bindTurboButton(btnId, actionFn) {
     const btn = document.getElementById(btnId);
-    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startTurboAction(actionFn); }, {passive: false});
-    btn.addEventListener('touchend', (e) => { e.preventDefault(); stopTurboAction(); }, {passive: false});
-    btn.addEventListener('mousedown', (e) => { e.preventDefault(); startTurboAction(actionFn); });
-    btn.addEventListener('mouseup', (e) => { e.preventDefault(); stopTurboAction(); });
-    btn.addEventListener('mouseleave', () => { stopTurboAction(); });
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); startTurboAction(actionFn); }); btn.addEventListener('touchstart', (e) => { e.preventDefault(); startTurboAction(actionFn); });
+    btn.addEventListener('mouseup', stopTurboAction); btn.addEventListener('mouseleave', stopTurboAction); btn.addEventListener('touchend', stopTurboAction); btn.addEventListener('touchcancel', stopTurboAction);
 }
 
-bindTurboButton('btnUp', (s) => { selectedBox.y = Math.max(0, selectedBox.y - s); });
-bindTurboButton('btnDown', (s) => { selectedBox.y = Math.min(canvas.height - selectedBox.h, selectedBox.y + s); });
-bindTurboButton('btnLeft', (s) => { selectedBox.x = Math.max(0, selectedBox.x - s); });
-bindTurboButton('btnRight', (s) => { selectedBox.x = Math.min(canvas.width - selectedBox.w, selectedBox.x + s); });
+bindTurboButton('btnUp', (s) => selectedBox.y -= s); bindTurboButton('btnDown', (s) => selectedBox.y += s);
+bindTurboButton('btnLeft', (s) => selectedBox.x -= s); bindTurboButton('btnRight', (s) => selectedBox.x += s);
 
-bindTurboButton('btnWMinus', (s) => { 
-    selectedBox.w = Math.max(5, selectedBox.w - s); 
-    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideWidth.value = selectedBox.w; boxes.forEach(b => b.w = selectedBox.w); }
-    else if (selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; }
-    else if (selectedBox === muteBox) { slideMuteW.value = selectedBox.w; }
-    updateLabels(); 
+bindTurboButton('btnWMinus', (s) => {
+    selectedBox.w = Math.max(5, selectedBox.w - s);
+    if(selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; slideAnchorW.dispatchEvent(new Event('input')); } else if(selectedBox === muteBox) { slideMuteW.value = selectedBox.w; slideMuteW.dispatchEvent(new Event('input')); } else { slideWidth.value = selectedBox.w; slideWidth.dispatchEvent(new Event('input')); }
 });
-bindTurboButton('btnWPlus', (s) => { 
-    selectedBox.w = Math.min(canvas.width - selectedBox.x, selectedBox.w + s); 
-    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideWidth.value = selectedBox.w; boxes.forEach(b => b.w = selectedBox.w); }
-    else if (selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; }
-    else if (selectedBox === muteBox) { slideMuteW.value = selectedBox.w; }
-    updateLabels(); 
+bindTurboButton('btnWPlus', (s) => {
+    selectedBox.w = Math.min(100, selectedBox.w + s);
+    if(selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; slideAnchorW.dispatchEvent(new Event('input')); } else if(selectedBox === muteBox) { slideMuteW.value = selectedBox.w; slideMuteW.dispatchEvent(new Event('input')); } else { slideWidth.value = selectedBox.w; slideWidth.dispatchEvent(new Event('input')); }
 });
-bindTurboButton('btnHMinus', (s) => { 
-    selectedBox.h = Math.max(5, selectedBox.h - s); 
-    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideHeight.value = selectedBox.h; boxes.forEach(b => b.h = selectedBox.h); }
-    else if (selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; }
-    else if (selectedBox === muteBox) { slideMuteH.value = selectedBox.h; }
-    updateLabels(); 
+bindTurboButton('btnHMinus', (s) => {
+    selectedBox.h = Math.max(5, selectedBox.h - s);
+    if(selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; slideAnchorH.dispatchEvent(new Event('input')); } else if(selectedBox === muteBox) { slideMuteH.value = selectedBox.h; slideMuteH.dispatchEvent(new Event('input')); } else { slideHeight.value = selectedBox.h; slideHeight.dispatchEvent(new Event('input')); }
 });
-bindTurboButton('btnHPlus', (s) => { 
-    selectedBox.h = Math.min(canvas.height - selectedBox.y, selectedBox.h + s); 
-    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideHeight.value = selectedBox.h; boxes.forEach(b => b.h = selectedBox.h); }
-    else if (selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; }
-    else if (selectedBox === muteBox) { slideMuteH.value = selectedBox.h; }
-    updateLabels(); 
+bindTurboButton('btnHPlus', (s) => {
+    selectedBox.h = Math.min(50, selectedBox.h + s);
+    if(selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; slideAnchorH.dispatchEvent(new Event('input')); } else if(selectedBox === muteBox) { slideMuteH.value = selectedBox.h; slideMuteH.dispatchEvent(new Event('input')); } else { slideHeight.value = selectedBox.h; slideHeight.dispatchEvent(new Event('input')); }
 });
 
 function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
     let clientX, clientY;
-    if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+    if (e.type.includes('touch')) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
     } else {
-        clientX = e.clientX; clientY = e.clientY;
+        clientX = e.clientX;
+        clientY = e.clientY;
     }
     return {
         x: (clientX - rect.left) * (canvas.width / rect.width),
@@ -1127,273 +1067,648 @@ function getPointerPos(e) {
 }
 
 function startDrag(e) {
-    if (!isRunning || !showCamera) return;
+    if (!isRunning || !showCamera) return; 
     const pos = getPointerPos(e);
-    let checkBoxes = boxes.slice(0, activeBoxCount);
-    if (anchorBox.active) checkBoxes.push(anchorBox);
+    let checkBoxes = boxes.slice(0, activeBoxCount); 
+    if (anchorBox.active) checkBoxes.push(anchorBox); 
     if (muteBox.active) checkBoxes.push(muteBox);
     
     let boxHit = false;
     for (let i = checkBoxes.length - 1; i >= 0; i--) {
         const box = checkBoxes[i];
         if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
-            draggingBox = box;
-            selectedBox = box;
-            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y;
-            updateZoomSelectionUI();
+            draggingBox = box; selectedBox = box; updateZoomSelectionUI(); updateLabels();
+            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y; 
+            if(box !== anchorBox && box !== muteBox) { box.history = []; box.baseline = null; } 
+            else if(box===anchorBox) anchorBox.baseline = null; 
+            else if(box===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
             boxHit = true;
             break;
         }
     }
-    
-    if (boxHit && e.type === 'mousedown') {
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', endDrag);
-    }
+
+    if (boxHit && e.cancelable) { e.preventDefault(); }
 }
 
-function drag(e) {
-    if (!draggingBox) return;
-    e.preventDefault();
+function moveDrag(e) {
+    if (!draggingBox || !showCamera) return; 
     const pos = getPointerPos(e);
     draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
     draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
-    if(draggingBox === anchorBox) anchorBox.baseline = null;
-    else if(draggingBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
-    else draggingBox.baseline = null;
+    if(draggingBox !== anchorBox && draggingBox !== muteBox) { draggingBox.history = []; draggingBox.baseline = null; } 
+    else if(draggingBox===anchorBox) anchorBox.baseline = null; 
+    else if(draggingBox===muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+    
+    if (e.cancelable) { e.preventDefault(); }
+}
+function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
+canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
+canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.addEventListener('touchmove', moveDrag, { passive: false }); window.addEventListener('touchend', endDrag);
+
+// --- ORIGINAL V1.0 AUDIO TÖNE ---
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+
+function playBeep() { 
+    const now = Date.now(); if (now - lastBeep < 1000) return; lastBeep = now; 
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; 
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25); 
 }
 
-function endDrag() {
-    draggingBox = null;
-    saveSettings();
-    document.removeEventListener('mousemove', drag);
-    document.removeEventListener('mouseup', endDrag);
+function playAnchorBeep() { 
+    const now = Date.now(); if (now - lastAnchorBeep < 1500) return; lastAnchorBeep = now; 
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; 
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); 
 }
 
-canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e); }, {passive: false});
-canvas.addEventListener('touchmove', drag, {passive: false});
-canvas.addEventListener('touchend', endDrag);
-canvas.addEventListener('mousedown', startDrag);
-
-function initAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+function playWarningBeep() { 
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'sine'; osc.frequency.value = 800; gain.gain.value = 0.05; 
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
 }
 
-function beep() {
-    const now = Date.now();
-    if (now - lastBeep < 150) return;
-    lastBeep = now;
-    initAudio();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine'; osc.frequency.value = 1200;
-    gain.gain.value = 0.05;
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+function playLoudAlarm() { 
+    const now = Date.now(); if (now - lastLoudBeep < 1000) return; lastLoudBeep = now; 
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
+    gain.gain.value = 0.25; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.8); 
 }
 
-function beepMuteZone() {
-    initAudio();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine'; osc.frequency.value = 250;
-    gain.gain.value = 0.1;
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+// --- WETTER API (Nur Emoji & Temp, vergrößerter Abstand) ---
+async function fetchWeather() {
+    if(!txtWeatherCities.value) { weatherDisplay.innerHTML = ''; return; }
+    let cities = txtWeatherCities.value.split(',').map(c => c.trim()).filter(c => c);
+    let output = [];
+    for(let city of cities) {
+        try {
+            let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=de`);
+            let geoData = await geoRes.json();
+            if(!geoData.results || geoData.results.length === 0) continue;
+            let lat = geoData.results[0].latitude; let lon = geoData.results[0].longitude;
+            let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            let wData = await wRes.json();
+            let code = wData.current_weather.weathercode; let temp = Math.round(wData.current_weather.temperature);
+            
+            let emoji = '☁️';
+            if(code === 0 || code === 1) emoji = '☀️';
+            else if(code === 2 || code === 3) emoji = '⛅';
+            else if(code === 45 || code === 48) emoji = '🌫️';
+            else if(code >= 51 && code <= 67) emoji = '🌧️';
+            else if(code >= 71 && code <= 77) emoji = '❄️';
+            else if(code >= 80 && code <= 82) emoji = '🌧️';
+            else if(code >= 95) emoji = '⛈️';
+            
+            output.push(`<b>${city}</b>: ${temp}°C ${emoji}`);
+        } catch(e) {}
+    }
+    weatherDisplay.innerHTML = output.join("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
 }
+setInterval(fetchWeather, 5 * 60 * 1000); 
 
-function playWarningBeep() {
-    initAudio();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine'; osc.frequency.value = 800;
-    gain.gain.value = 0.05;
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-}
-
-function playLoudAlarm() {
-    const now = Date.now();
-    if (now - lastLoudBeep < 1000) return;
-    lastLoudBeep = now;
-    initAudio();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-    osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.1);
-    osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
-    osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.3);
-    gain.gain.value = 1.0;
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-}
-
-// --- V2.1: TELEGRAM & MEDIEN FUNKTIONEN ---
-async function sendTgMedia(endpoint, fieldName, blob, filename) {
-    if (!tgToken || !tgChatId) return;
-    let formData = new FormData();
-    formData.append('chat_id', tgChatId);
-    formData.append(fieldName, blob, filename);
+// --- AUDIO WÄCHTER (Reiner Pegel, Kein Lokaler Ton) ---
+async function restartAudioSystem() {
+    if(micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    if(!chkAudioGuard.checked || !isRunning) return;
     try {
-        await fetch(`https://api.telegram.org/bot${tgToken}/${endpoint}`, { method: 'POST', body: formData });
-    } catch(e) { console.error("Telegram Sende-Fehler:", e); }
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioCtx.createMediaStreamSource(micStream);
+        analyser = audioCtx.createAnalyser(); 
+        analyser.fftSize = 256; 
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        source.connect(analyser); // Direkte Verbindung, ohne Frequenzfilter
+    } catch(e) { alert("Mikrofon Fehler: " + e.message); chkAudioGuard.checked = false; }
 }
 
-async function pollTelegramCommands() {
-    if (!tgToken || !tgChatId) return;
+function processAudio() {
+    if(!chkAudioGuard.checked || !analyser || !isMonitoring) return;
+    analyser.getByteFrequencyData(dataArray);
+    let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+    let avg = Math.round(sum / dataArray.length);
+    let now = Date.now();
+    let threshold = parseInt(slideAudioThreshold.value);
+
+    if (panelSmartOpen && frameCounter % 5 === 0) {
+        liveAudioLevel.innerText = avg;
+        liveAudioLevel.style.color = avg > threshold ? "#ff0000" : "#00ff88";
+    }
+    
+    if(avg > threshold && (now - lastAcousticAlarm > 10000)) {
+        lastAcousticAlarm = now; 
+        const micUi = document.getElementById('micAlarmUI');
+        micUi.style.display = 'block';
+        setTimeout(() => micUi.style.display = 'none', 4000);
+
+        if (chkTelegram.checked) recordAndSendAudio(false);
+    }
+}
+
+// --- TELEGRAM MEDIEN-FUNKTIONEN ---
+async function sendTgMessage(text) {
+    if(!txtTelegramToken.value || !txtTelegramChatId.value) return;
+    try { await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/sendMessage`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ chat_id: txtTelegramChatId.value.trim(), text: text }) }); } catch(e) {}
+}
+
+async function sendTgMedia(endpoint, formData) {
+    if(!txtTelegramToken.value || !txtTelegramChatId.value) return;
+    formData.append("chat_id", txtTelegramChatId.value.trim());
+    try { await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/${endpoint}`, { method: 'POST', body: formData }); } catch(e) {}
+}
+
+function recordAndSendVideo(boxId, isRemote = false) {
+    if(isRecordingVideo || !chkTelegram.checked) return;
+    isRecordingVideo = true; 
+    let caption = isRemote ? "🎥 Remote Live-Video" : "🎥 Alarm Box " + boxId;
+    sendTgMessage(caption + " (Wird aufgezeichnet...)");
+    
     try {
-        let res = await fetch(`https://api.telegram.org/bot${tgToken}/getUpdates?offset=${tgOffset}&timeout=5`);
+        let stream;
+        const mode = isRemote ? 'full' : selTgVideoMode.value;
+        if(mode === 'box' && boxId !== null) {
+            isRecordingBoxId = boxId;
+            let b = boxes.find(x => x.id === boxId);
+            recordCanvas.width = b.w * 3; recordCanvas.height = b.h * 3;
+            stream = recordCanvas.captureStream(15);
+        } else {
+            stream = canvas.captureStream(15);
+        }
+
+        let recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        let chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = async () => {
+            let blob = new Blob(chunks, { type: 'video/webm' });
+            let fd = new FormData(); fd.append("video", blob, "video.webm"); fd.append("caption", caption);
+            await sendTgMedia("sendVideo", fd);
+            isRecordingBoxId = null;
+            setTimeout(() => { isRecordingVideo = false; }, 5000); 
+        };
+        recorder.start(); setTimeout(() => { recorder.stop(); }, 4000); 
+    } catch(e) {
+        sendTgPhoto(isRemote ? "📸 Remote Live-Bild" : "📸 Notfall-Bild Box " + boxId); 
+        isRecordingBoxId = null; setTimeout(() => { isRecordingVideo = false; }, 5000);
+    }
+}
+
+function recordAndSendAudio(isRemote = false) {
+    if(isRecordingAudio || !chkTelegram.checked || !micStream) return;
+    isRecordingAudio = true; 
+    let caption = isRemote ? "🎙️ Remote Live-Audio" : "🎙️ Audio-Alarm im Raum";
+    if (isRemote) sendTgMessage(caption + " (Wird aufgezeichnet...)");
+
+    try {
+        let recorder = new MediaRecorder(micStream); let chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = async () => {
+            let blob = new Blob(chunks, { type: 'audio/webm' });
+            let fd = new FormData(); fd.append("voice", blob, "audio.webm"); fd.append("caption", caption);
+            await sendTgMedia("sendVoice", fd);
+            setTimeout(() => { isRecordingAudio = false; }, 5000); 
+        };
+        recorder.start(); setTimeout(() => { recorder.stop(); }, 5000); 
+    } catch(e) { setTimeout(() => { isRecordingAudio = false; }, 5000); }
+}
+
+function sendTgPhoto(caption) {
+    if(!chkTelegram.checked) return;
+    canvas.toBlob(async (blob) => {
+        let fd = new FormData(); fd.append("photo", blob, "live.jpg"); fd.append("caption", caption); await sendTgMedia("sendPhoto", fd);
+    }, 'image/jpeg', 0.8);
+}
+
+function sendAnchorTgPhoto() {
+    if(!chkTelegram.checked || !anchorBox.baseline) return;
+    let scale = 3; 
+    let tmpC = document.createElement('canvas');
+    tmpC.width = (anchorBox.w * 2 + 10) * scale;
+    tmpC.height = anchorBox.h * scale;
+    let tCtx = tmpC.getContext('2d');
+    tCtx.fillStyle = '#111'; tCtx.fillRect(0,0,tmpC.width,tmpC.height);
+
+    let imgData = new ImageData(new Uint8ClampedArray(anchorBox.baseline), anchorBox.w, anchorBox.h);
+    let refC = document.createElement('canvas'); refC.width = anchorBox.w; refC.height = anchorBox.h;
+    refC.getContext('2d').putImageData(imgData, 0, 0);
+    
+    tCtx.imageSmoothingEnabled = false;
+    tCtx.drawImage(refC, 0, 0, anchorBox.w, anchorBox.h, 0, 0, anchorBox.w * scale, anchorBox.h * scale);
+    tCtx.drawImage(canvas, anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h, (anchorBox.w + 10) * scale, 0, anchorBox.w * scale, anchorBox.h * scale);
+
+    tmpC.toBlob(async (blob) => {
+        let fd = new FormData(); fd.append("photo", blob, "anchor.jpg");
+        fd.append("caption", "🚨 WARNUNG: Anker verrutscht!\nLinks: Referenzbild | Rechts: Live-Bild");
+        await sendTgMedia("sendPhoto", fd);
+    }, 'image/jpeg', 0.9);
+}
+
+async function pollTelegram() {
+    if (!chkTelegram.checked || !isRunning || !txtTelegramToken.value) { setTimeout(pollTelegram, 5000); return; }
+    try {
+        let res = await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/getUpdates?offset=${tgUpdateOffset}&timeout=30`);
         let data = await res.json();
         if (data.ok && data.result.length > 0) {
-            for (let r of data.result) {
-                tgOffset = r.update_id + 1;
-                let text = r.message?.text;
-                let cid = r.message?.chat?.id;
-                if (text && cid == tgChatId) {
-                    if (text === '/foto') {
-                        canvas.toBlob(blob => sendTgMedia('sendPhoto', 'photo', blob, 'live.jpg'), 'image/jpeg', 0.8);
-                    }
-                    if (text === '/video') {
-                        recordAndSendVideo('full', 5); 
-                    }
-                    if (text === '/audio') {
-                        triggerAudioAlarm();
-                    }
+            for (let item of data.result) {
+                tgUpdateOffset = item.update_id + 1;
+                if (item.message && item.message.chat.id.toString() === txtTelegramChatId.value.trim()) {
+                    let text = item.message.text;
+                    if (text === '/foto') sendTgPhoto("📸 Remote Live-Bild");
+                    else if (text === '/video') recordAndSendVideo(null, true);
+                    else if (text === '/audio') recordAndSendAudio(true);
                 }
             }
         }
     } catch(e) {}
+    setTimeout(pollTelegram, 1000);
 }
 
-function recordAndSendVideo(mode, durationSec, boxObj = null) {
-    if (!tgToken || !tgChatId || isRecordingVideo) return;
-    isRecordingVideo = true;
-    let stream;
+// --- BILD ANALYSE ---
+function adjustCanvas() { if (!video.videoWidth) return; canvas.width = video.videoWidth; canvas.height = video.videoHeight; createZoomDisplays(); }
+async function startSystem() {
+    try {
+        let constraints = { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } };
+        if (cameraSelect.value && cameraSelect.value !== 'default') { constraints.video = { deviceId: { exact: cameraSelect.value }, width: { ideal: 1280 }, height: { ideal: 720 } }; }
+        const stream = await navigator.mediaDevices.getUserMedia(constraints); video.srcObject = stream; currentTrack = stream.getVideoTracks()[0];
+        setTimeout(() => {
+            try {
+                const caps = currentTrack.getCapabilities();
+                if (caps.zoom) { slideCamZoom.min = caps.zoom.min; slideCamZoom.max = caps.zoom.max; slideCamZoom.step = caps.zoom.step; slideCamZoom.value = currentTrack.getSettings().zoom || caps.zoom.min; valCamZoom.innerText = parseFloat(slideCamZoom.value).toFixed(1); document.getElementById('slideCamZoom').disabled = false; }
+            } catch(e) {}
+            loadCameras();
+        }, 500);
+        video.onloadedmetadata = () => { adjustCanvas(); video.play(); };
+        if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
+        isRunning = true; startBtn.innerText = 'Kamera Stoppen'; lastFrameTime = Date.now(); 
+        updateMonitorButtonUI();
+        
+        initAudio(); 
+        restartAudioSystem();
+        fetchWeather();
+        setTimeout(pollTelegram, 2000);
+
+        requestAnimationFrame(processFrame);
+    } catch (err) { alert('Kamerafehler: ' + err.message); }
+}
+startBtn.addEventListener('click', () => { 
+    if (!isRunning) startSystem(); else stopSystem(); 
+});
+function stopSystem() { 
+    isRunning = false; 
+    if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop()); 
+    if (wakeLock) wakeLock.release(); 
+    startBtn.innerText = 'Kamera Start'; 
+    updateMonitorButtonUI();
+}
+
+function analyzeMute(now, fullFrame, imgW, imgH) {
+    if (!muteBox.active) { muteBox.state = 'IDLE'; muteBox.triggerStart = 0; return; }
     
-    if (mode === 'box' && boxObj) {
-        let recCanvas = document.createElement('canvas');
-        recCanvas.width = boxObj.w; recCanvas.height = boxObj.h;
-        stream = recCanvas.captureStream(TARGET_FPS);
-        activeRecBox = { canvas: recCanvas, ctx: recCanvas.getContext('2d'), srcBox: boxObj };
-    } else {
-        stream = canvas.captureStream(TARGET_FPS);
-        activeRecBox = null;
+    if (anchorBox.active && anchorBox.isAlarm) {
+        muteBox.state = 'IDLE';
+        muteBox.continuousStart = 0;
+        muteBox.emptyStartTime = 0;
+        muteBox.triggerStart = 0;
+        return;
     }
 
-    let recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-    let chunks = [];
-    recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-        let blob = new Blob(chunks, { type: 'video/webm' });
-        sendTgMedia('sendVideo', 'video', blob, 'alarm.webm');
-        isRecordingVideo = false; activeRecBox = null;
-    };
-    recorder.start();
-    setTimeout(() => { if(recorder.state === "recording") recorder.stop() }, durationSec * 1000);
-}
-
-function triggerAnkerAlarmFoto() {
-    if (!tgToken || !tgChatId || !anchorBox.baseline) return;
-    const now = Date.now();
-    if (now - lastAnkerFotoTime < 10000) return; // 10s Rate Limit
-    lastAnkerFotoTime = now;
+    const mx = Math.floor(muteBox.x); const my = Math.floor(muteBox.y); const mw = Math.floor(muteBox.w); const mh = Math.floor(muteBox.h);
+    if (muteBox.zoomCtx) { drawProportional(muteBox.zoomCtx, canvas, mx, my, mw, mh, 100, 50); }
     
-    let compCanvas = document.createElement('canvas');
-    compCanvas.width = anchorBox.w * 2; compCanvas.height = anchorBox.h;
-    let cCtx = compCanvas.getContext('2d');
-    
-    let drawData = new Uint8ClampedArray(anchorBox.baseline);
-    let imgData = new ImageData(drawData, anchorBox.w, anchorBox.h);
-    let tmpC = document.createElement('canvas');
-    tmpC.width = anchorBox.w; tmpC.height = anchorBox.h;
-    tmpC.getContext('2d').putImageData(imgData, 0, 0);
-    
-    cCtx.drawImage(tmpC, 0, 0);
-    cCtx.drawImage(canvas, anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h, anchorBox.w, 0, anchorBox.w, anchorBox.h);
-    
-    compCanvas.toBlob(blob => sendTgMedia('sendPhoto', 'photo', blob, 'anker.jpg'), 'image/jpeg', 0.8);
-}
-
-function triggerAudioAlarm() {
-    if (isRecordingAudio || !audioMicStream) return;
-    isRecordingAudio = true;
-    
-    document.getElementById('micAlarmOverlay').style.display = 'flex';
-    
-    let recorder = new MediaRecorder(audioMicStream);
-    let chunks = [];
-    recorder.ondataavailable = e => chunks.push(e.data);
-    recorder.onstop = () => {
-        let blob = new Blob(chunks, { type: 'audio/webm' });
-        sendTgMedia('sendVoice', 'voice', blob, 'mic.webm');
-        isRecordingAudio = false;
-        document.getElementById('micAlarmOverlay').style.display = 'none';
-    };
-    recorder.start();
-    setTimeout(() => { if(recorder.state === "recording") recorder.stop() }, 5000);
-}
-
-async function toggleAudioWächter() {
-    if (document.getElementById('chkAudioActive').checked) {
-        try {
-            audioMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            const micCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const source = micCtx.createMediaStreamSource(audioMicStream);
-            audioAnalyser = micCtx.createAnalyser();
-            audioAnalyser.fftSize = 256;
-            source.connect(audioAnalyser);
-            audioDataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
-        } catch(e) {
-            console.error(e);
-            alert("Mikrofon-Zugriff verweigert!");
-            document.getElementById('chkAudioActive').checked = false;
-        }
-    } else {
-        if (audioMicStream) {
-            audioMicStream.getTracks().forEach(t => t.stop());
-            audioMicStream = null; audioAnalyser = null;
-        }
+    let safeMx = Math.max(0, Math.min(mx, imgW - mw));
+    let safeMy = Math.max(0, Math.min(my, imgH - mh));
+    let mData = new Uint8ClampedArray(mw * mh * 4);
+    for (let y = 0; y < mh; y++) {
+        let gStart = ((safeMy + y) * imgW + safeMx) * 4;
+        mData.set(fullFrame.data.subarray(gStart, gStart + mw * 4), y * mw * 4);
     }
-}
 
-// --- V2.1: WETTER STATION ---
-function getWmoEmoji(code) {
-    if ([0].includes(code)) return '☀️';
-    if ([1,2,3].includes(code)) return '⛅';
-    if ([45,48].includes(code)) return '🌫️';
-    if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return '🌧️';
-    if ([71,73,75,77,85,86].includes(code)) return '❄️';
-    if ([95,96,99].includes(code)) return '⛈️';
-    return '☁️';
-}
+    if (muteBox.baseline === null || muteBox.baseline.length !== mData.length) { 
+        muteBox.baseline = new Float32Array(mData); 
+    }
 
-async function updateWeather() {
-    let container = document.getElementById('stealthWeather');
-    if (!container) return;
-    container.innerHTML = ''; 
-    for (let city of weatherCities) {
-        if (!city.trim()) continue;
-        try {
-            let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
-            let geo = await geoRes.json();
-            if (geo.results && geo.results[0]) {
-                let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.results[0].latitude}&longitude=${geo.results[0].longitude}&current_weather=true`);
-                let wData = await wRes.json();
-                let temp = Math.round(wData.current_weather.temperature);
-                let emoji = getWmoEmoji(wData.current_weather.weathercode);
-                
-                let div = document.createElement('div');
-                div.innerText = `${emoji} ${temp}°C`;
-                container.appendChild(div);
+    let baseTotal = 0; let currTotal = 0; let pCount = 0;
+    
+    for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
+        baseTotal += muteBox.baseline[j]*0.299 + muteBox.baseline[j+1]*0.587 + muteBox.baseline[j+2]*0.114;
+        currTotal += mData[j]*0.299 + mData[j+1]*0.587 + mData[j+2]*0.114; pCount++;
+    }
+    let offset = (currTotal / pCount) - (baseTotal / pCount);
+    let totalDiff = 0; 
+    for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
+        let baseVal = muteBox.baseline[j]*0.299 + muteBox.baseline[j+1]*0.587 + muteBox.baseline[j+2]*0.114;
+        let currVal = mData[j]*0.299 + mData[j+1]*0.587 + mData[j+2]*0.114;
+        totalDiff += Math.abs(currVal - (baseVal + offset)); 
+    }
+    
+    let structuralDiff = Math.round(totalDiff / pCount); 
+    let muteThreshold = parseInt(slideMuteSens.value);
+    let muteHoldMs = parseInt(slideMuteHold.value) * 1000;
+
+    if (structuralDiff >= muteThreshold) {
+        muteBox.emptyStartTime = 0; 
+        
+        if (muteBox.triggerStart === 0) {
+            muteBox.triggerStart = now; 
+        } else if (now - muteBox.triggerStart >= 1000) {
+            if (muteBox.state === 'IDLE') {
+                muteBox.state = 'MUTED';
+                muteBox.timerStart = now;
+                muteBox.continuousStart = now;
+                muteBox.wasEmpty = false;
+            } else if (muteBox.state === 'MUTED' && muteBox.wasEmpty) {
+                muteBox.timerStart = now; 
+                muteBox.wasEmpty = false;
             }
-        } catch(e) {}
+        }
+    } else {
+        muteBox.triggerStart = 0;
+        
+        if (muteBox.emptyStartTime === 0) {
+            muteBox.emptyStartTime = now;
+        }
+        if (now - muteBox.emptyStartTime >= 1000) {
+            muteBox.wasEmpty = true;
+            if (muteBox.state === 'WAITING_FOR_EMPTY') {
+                muteBox.state = 'IDLE';
+                muteBox.continuousStart = 0;
+            }
+        }
+
+        let alpha = parseInt(slideMuteDrift.value) * 0.001; 
+        if (chkMuteDrift.checked && muteBox.state !== 'MUTED' && structuralDiff > 0 && structuralDiff < muteThreshold) {
+            for (let j = 0; j < mData.length; j++) {
+                muteBox.baseline[j] = muteBox.baseline[j] * (1 - alpha) + mData[j] * alpha;
+            }
+        }
+    }
+    
+    if (muteBox.state === 'MUTED') {
+        if (now - muteBox.timerStart >= muteHoldMs) {
+            muteBox.state = 'WAITING_FOR_EMPTY';
+        } else {
+            let duration = now - muteBox.continuousStart;
+            if (duration > 600000) {
+                playLoudAlarm();
+            } else if (duration > 300000) {
+                if (now - muteBox.lastWarningTime > 5000) {
+                    playWarningBeep();
+                    muteBox.lastWarningTime = now;
+                }
+            }
+        }
+    }
+    
+    if (muteBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+        let txt = `Struktur-Abw: ${structuralDiff} / Max: ${muteThreshold}<br>`;
+        if (muteBox.state === 'MUTED') {
+            let duration = now - muteBox.continuousStart;
+            if (duration > 600000) { 
+                txt += `<b style="color:#ff0000; animation: blink 1s infinite;">⚠ ALARM (>10m)</b>`; 
+            } else if (duration > 300000) {
+                txt += `<b style="color:#ff8800;">⚠ WARNUNG (>5m)</b>`;
+            } else {
+                let rest = Math.ceil((muteHoldMs - (now - muteBox.timerStart)) / 1000);
+                txt += `<b style="color:#ffcc00;">STUMM</b> (${rest}s)`;
+            }
+        } else if (muteBox.state === 'WAITING_FOR_EMPTY') {
+            txt += `<span style="color:#aaa;">Wartet auf Freigabe...</span>`;
+        } else if (muteBox.triggerStart > 0) {
+            txt += `<b style="color:#ffcc00;">Prüfe...</b>`;
+        } else { 
+            txt += `Inaktiv`; 
+        }
+        txt += `<br>Größe: ${mw}x${mh} px`;
+        muteBox.zoomStatsDiv.innerHTML = txt;
     }
 }
 
+function analyzeBoxes(now, fullFrame, imgW, imgH) {
+    let boxAlarmTriggered = false;
+    let alarmBoxId = null;
+    
+    const pixelSchwelle = parseInt(slideSens.value); 
+    const kritischeMasse = parseInt(slideMass.value); 
+    
+    const minCrossings = parseInt(slidePulse.value); 
+    const holdMs = parseFloat(slideHold.value) * 1000;
+    const targetTakt = parseInt(slideTakt.value);
+    
+    const tolerancePct = parseInt(slideToleranz.value) / 100;
+    const minAllowed = targetTakt * (1 - tolerancePct); 
+    const maxAllowed = targetTakt * (1 + tolerancePct);
 
-function drawMuteZoneBox(ctx) {
+    const data = fullFrame.data;
+
+    for (let i = 0; i < activeBoxCount; i++) {
+        const box = boxes[i]; let diff = 0;
+        const rx = Math.floor(box.x); const ry = Math.floor(box.y); const rw = Math.floor(box.w); const rh = Math.floor(box.h);
+        const pixelCount = rw * rh;
+        
+        if (box.zoomCtx) { drawProportional(box.zoomCtx, canvas, rx, ry, rw, rh, 100, 50); }
+
+        if (!box.baseline || box.baseline.length !== pixelCount) {
+            box.baseline = new Float32Array(pixelCount);
+            box.baseline.fill(-1); 
+        }
+
+        let activePixels = 0; 
+        let pIdx = 0;
+        
+        for (let y = ry; y < ry + rh; y += PIXEL_STEP) {
+            for (let x = rx; x < rx + rw; x += PIXEL_STEP) {
+                if (x >= 0 && x < imgW && y >= 0 && y < imgH) {
+                    let idx = (y * imgW + x) * 4;
+                    let curr = data[idx]*0.299 + data[idx+1]*0.587 + data[idx+2]*0.114;
+
+                    if (box.baseline[pIdx] === -1) box.baseline[pIdx] = curr;
+
+                    if (curr < box.baseline[pIdx]) {
+                        box.baseline[pIdx] = curr; 
+                    } else {
+                        box.baseline[pIdx] += Math.min(curr - box.baseline[pIdx], 0.5); 
+                    }
+
+                    if (curr - box.baseline[pIdx] > pixelSchwelle) {
+                        activePixels++; 
+                    }
+                }
+                pIdx++;
+            }
+        }
+        
+        box.history.push({ val: activePixels, time: now });
+        while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) { box.history.shift(); }
+
+        if (box.history.length > 5) {
+            const values = box.history.map(v => v.val); const maxVal = Math.max(...values); const minVal = Math.min(...values);
+            diff = Math.round(maxVal - minVal);
+            
+            if (diff < kritischeMasse) { box.validCrossings = 0; }
+
+            const hysteresis = Math.max(diff * 0.2, kritischeMasse * 0.25); const mid = minVal + diff / 2;
+            let currentInstantState = 0; 
+            if (activePixels > mid + hysteresis) currentInstantState = 1;
+            else if (activePixels < mid - hysteresis) currentInstantState = -1;
+            
+            if (currentInstantState === 1 && box.lastState === -1) {
+                if (box.lastRisingEdge > 0) {
+                    let cycleDuration = now - box.lastRisingEdge;
+                    box.lastMeasuredCycle = cycleDuration; 
+                    if (cycleDuration >= minAllowed && cycleDuration <= maxAllowed) {
+                        box.validCrossings++; box.lastValidTime = now;
+                    } else { if (cycleDuration > maxAllowed) box.validCrossings = 0; }
+                }
+                box.lastRisingEdge = now;
+            }
+            if (currentInstantState !== 0) { box.lastState = currentInstantState; }
+            if (box.validCrossings > 0 && now - box.lastValidTime > (targetTakt * 2.5)) { box.validCrossings = 0; }
+            if (isMonitoring && diff >= kritischeMasse && box.validCrossings >= minCrossings) { 
+                if(now - box.lastAlarmTime > holdMs + 4000) { boxAlarmTriggered = true; alarmBoxId = box.id; }
+                box.lastAlarmTime = now; 
+            }
+        }
+
+        if (isMonitoring && now - box.lastAlarmTime < holdMs) { box.isAlarm = true; } else { box.isAlarm = false; }
+        
+        if (box.zoomBoxDiv) {
+            if (box.isAlarm && isMonitoring) box.zoomBoxDiv.classList.add('alarm-zoom'); else box.zoomBoxDiv.classList.remove('alarm-zoom');
+        }
+        
+        if (box.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+            let txt = `Masse: <span style="color:#00aaff;">${activePixels}</span> px | Pkt: ${box.validCrossings}`;
+            txt += `<br>Max-Delta: ${diff} / Limit: ${kritischeMasse}`;
+            if (box.lastMeasuredCycle > 0) txt += `<br>Letzter: <span style="color:#00ff88;">${box.lastMeasuredCycle} ms</span>`; else txt += `<br>Letzter: --- ms`;
+            if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`;
+            box.zoomStatsDiv.innerHTML = txt;
+        }
+    }
+    
+    if (boxAlarmTriggered && muteBox.state !== 'MUTED') {
+        playBeep();
+        if (chkTelegram.checked) recordAndSendVideo(alarmBoxId, false);
+    }
+}
+
+function analyzeAnchor(now, fullFrame, imgW, imgH) {
+    if (!anchorBox.active) return false;
+    
+    const ax = Math.floor(anchorBox.x); const ay = Math.floor(anchorBox.y); const aw = Math.floor(anchorBox.w); const ah = Math.floor(anchorBox.h);
+    if (anchorBox.zoomCtx) { drawProportional(anchorBox.zoomCtx, canvas, ax, ay, aw, ah, 80, 40); }
+
+    let safeAx = Math.max(0, Math.min(ax, imgW - aw));
+    let safeAy = Math.max(0, Math.min(ay, imgH - ah));
+    let aData = new Uint8ClampedArray(aw * ah * 4);
+    for (let y = 0; y < ah; y++) {
+        let gStart = ((safeAy + y) * imgW + safeAx) * 4;
+        aData.set(fullFrame.data.subarray(gStart, gStart + aw * 4), y * aw * 4);
+    }
+
+    if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) { 
+        anchorBox.baseline = new Float32Array(aData); 
+        anchorBox.refNeedsDraw = true; 
+    }
+
+    if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
+        try {
+            let drawData = new Uint8ClampedArray(anchorBox.baseline);
+            let imgData = new ImageData(drawData, aw, ah); 
+            let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah; tmpC.getContext('2d').putImageData(imgData, 0, 0);
+            drawProportional(anchorBox.refCtx, tmpC, 0, 0, aw, ah, 80, 40);
+            anchorBox.refNeedsDraw = false;
+        } catch(e) { anchorBox.baseline = null; }
+    }
+
+    let baseTotal = 0; let currTotal = 0; let pCount = 0;
+    
+    for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
+        baseTotal += anchorBox.baseline[j]*0.299 + anchorBox.baseline[j+1]*0.587 + anchorBox.baseline[j+2]*0.114;
+        currTotal += aData[j]*0.299 + aData[j+1]*0.587 + aData[j+2]*0.114; pCount++;
+    }
+    let offset = (currTotal / pCount) - (baseTotal / pCount);
+    let totalDiff = 0; 
+    for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
+        let baseVal = anchorBox.baseline[j]*0.299 + anchorBox.baseline[j+1]*0.587 + anchorBox.baseline[j+2]*0.114;
+        let currVal = aData[j]*0.299 + aData[j+1]*0.587 + aData[j+2]*0.114;
+        totalDiff += Math.abs(currVal - (baseVal + offset)); 
+    }
+    
+    let structuralDiff = Math.round(totalDiff / pCount); let anchorThreshold = parseInt(slideAnchorSens.value);
+
+    if (isMonitoring && structuralDiff > anchorThreshold) { 
+        if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now; else if (now - anchorBox.alarmStart > 1000) {
+            anchorBox.isAlarm = true;
+            playAnchorBeep();
+            
+            if(chkTelegram.checked && (!anchorBox.lastTgAlarm || now - anchorBox.lastTgAlarm > 60000)) {
+                anchorBox.lastTgAlarm = now;
+                sendAnchorTgPhoto();
+            }
+        }
+    } else { 
+        anchorBox.alarmStart = 0; anchorBox.isAlarm = false; 
+
+        let alpha = parseInt(slideAnchorDrift.value) * 0.001;
+        if (chkAnchorDrift.checked && isMonitoring && structuralDiff > 0 && structuralDiff < anchorThreshold) {
+            for (let j = 0; j < aData.length; j++) {
+                anchorBox.baseline[j] = anchorBox.baseline[j] * (1 - alpha) + aData[j] * alpha;
+            }
+            if (frameCounter % 30 === 0) anchorBox.refNeedsDraw = true;
+        }
+    }
+
+    if (anchorBox.zoomBoxDiv) {
+        if (anchorBox.isAlarm && isMonitoring) anchorBox.zoomBoxDiv.classList.add('alarm-zoom'); else anchorBox.zoomBoxDiv.classList.remove('alarm-zoom');
+    }
+    
+    if (anchorBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+        let txt = `Abw: <span style="color:#00ff88;">${structuralDiff}</span> / Max: ${anchorThreshold}`;
+        if (anchorBox.isAlarm && isMonitoring) {
+            txt += `<br><b style="color:#ffaa00;">VERRUTSCHT!</b>`;
+        } else {
+            txt += `<br>Größe: ${aw}x${ah} px`;
+        }
+        anchorBox.zoomStatsDiv.innerHTML = txt;
+    }
+
+    return anchorBox.isAlarm; 
+}
+
+function drawUI() {
+    if (isRecordingBoxId !== null) {
+        let b = boxes.find(x => x.id === isRecordingBoxId);
+        if (b) {
+            recordCtx.fillStyle = 'black'; recordCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+            recordCtx.drawImage(canvas, b.x, b.y, b.w, b.h, 0, 0, recordCanvas.width, recordCanvas.height);
+        }
+    }
+
+    if (!showCamera) return;
+
+    for (let i = 0; i < activeBoxCount; i++) {
+        const box = boxes[i]; 
+        let fillColor = box.isAlarm ? 'rgba(255,0,0,0.3)' : 'rgba(0,255,0,0.15)'; 
+        let borderColor = box.isAlarm ? '#ff0000' : '#00ff00';
+        
+        ctx.fillStyle = fillColor; ctx.fillRect(box.x, box.y, box.w, box.h);
+        if (box === selectedBox) { ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
+        
+        ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); 
+        ctx.lineWidth = box.isAlarm ? 4 : 2; 
+        if (!isMonitoring) ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = borderColor; ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    if (anchorBox.active) {
+        let aFillColor = anchorBox.isAlarm ? 'rgba(255,170,0,0.3)' : 'rgba(0,170,255,0.15)'; 
+        let aBorderColor = anchorBox.isAlarm ? '#ffaa00' : '#00aaff';
+        
+        ctx.fillStyle = aFillColor; ctx.fillRect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h);
+        if (anchorBox === selectedBox) { ctx.beginPath(); ctx.rect(anchorBox.x - 4, anchorBox.y - 4, anchorBox.w + 8, anchorBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
+        
+        ctx.beginPath(); ctx.rect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h); 
+        ctx.lineWidth = anchorBox.isAlarm ? 4 : 2; 
+        if (!isMonitoring) ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = aBorderColor; ctx.stroke(); ctx.setLineDash([]);
+    }
+
     if (muteBox.active) {
         let mFillColor = muteBox.state === 'MUTED' ? 'rgba(255,204,0,0.5)' : 'rgba(255,204,0,0.15)';
         let mBorderColor = '#ffcc00'; 
@@ -1415,576 +1730,20 @@ function processFrame() {
     
     frameCounter++; 
 
+    processAudio();
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // V2.1: Datenspar-Modus Video Capture Hook
-    if (isRecordingVideo && activeRecBox) {
-        activeRecBox.ctx.drawImage(canvas, activeRecBox.srcBox.x, activeRecBox.srcBox.y, activeRecBox.srcBox.w, activeRecBox.srcBox.h, 0, 0, activeRecBox.srcBox.w, activeRecBox.srcBox.h);
-    }
-
-    // V2.1: Audio Hook
-    if (audioAnalyser && isMonitoring) {
-        audioAnalyser.getByteFrequencyData(audioDataArray);
-        let sum = 0;
-        for(let i=0; i<audioDataArray.length; i++) sum += audioDataArray[i];
-        let vol = Math.min(100, Math.round(((sum / audioDataArray.length) / 255) * 100 * 2.5));
-        
-        let prog = document.getElementById('progAudioLive');
-        if (prog) prog.value = vol;
-        
-        let thr = parseInt(document.getElementById('slideAudioThr').value) || 50;
-        if (vol >= thr && !isRecordingAudio) {
-            triggerAudioAlarm();
-        }
-    }
-
-    let isGlobalMute = false;
-
-    if (isMonitoring && muteBox.active && muteBox.baseline && muteBox.refCtx) {
-        const mw = Math.max(1, muteBox.w); const mh = Math.max(1, muteBox.h);
-        const muteThreshold = parseInt(slideMuteSens.value);
-        const muteDriftSpeed = parseInt(slideMuteDrift.value);
-        const muteDriftCheck = chkMuteDrift.checked;
-        const muteHoldMs = parseInt(slideMuteHold.value) * 1000;
-        
-        let safeMx = Math.max(0, Math.min(canvas.width - mw, muteBox.x));
-        let safeMy = Math.max(0, Math.min(canvas.height - mh, muteBox.y));
-        let fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let imgW = fullFrame.width;
-        
-        let mData = new Uint8ClampedArray(mw * mh * 4);
-        for (let y = 0; y < mh; y++) {
-            let gStart = ((safeMy + y) * imgW + safeMx) * 4;
-            mData.set(fullFrame.data.subarray(gStart, gStart + mw * 4), y * mw * 4);
-        }
-        
-        if (muteBox.baseline === null || muteBox.baseline.length !== mData.length) {
-            muteBox.baseline = new Float32Array(mData);
-        }
-        
-        let baseTotal = 0; let currTotal = 0; let pCount = 0;
-        for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
-            let r = mData[j], g = mData[j+1], b = mData[j+2];
-            currTotal += (r + g + b) / 3;
-            let br = muteBox.baseline[j], bg = muteBox.baseline[j+1], bb = muteBox.baseline[j+2];
-            baseTotal += (br + bg + bb) / 3;
-            pCount++;
-        }
-        let globalDiff = (currTotal / pCount) - (baseTotal / pCount);
-        
-        let diffSum = 0;
-        for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
-            let r = mData[j], g = mData[j+1], b = mData[j+2];
-            let lum = (r + g + b) / 3;
-            
-            let br = muteBox.baseline[j], bg = muteBox.baseline[j+1], bb = muteBox.baseline[j+2];
-            let bLum = (br + bg + bb) / 3;
-            
-            let adjustedLum = lum - globalDiff;
-            diffSum += Math.abs(adjustedLum - bLum);
-            
-            if (muteDriftCheck) {
-                muteBox.baseline[j] += (r - muteBox.baseline[j]) * 0.01 * muteDriftSpeed;
-                muteBox.baseline[j+1] += (g - muteBox.baseline[j+1]) * 0.01 * muteDriftSpeed;
-                muteBox.baseline[j+2] += (b - muteBox.baseline[j+2]) * 0.01 * muteDriftSpeed;
-            }
-        }
-        let structuralDiff = Math.round(diffSum / pCount);
-
-        if (muteBox.zoomCtx) {
-            let imgData = new ImageData(mData, mw, mh);
-            let tmpC = document.createElement('canvas'); tmpC.width = mw; tmpC.height = mh;
-            tmpC.getContext('2d').putImageData(imgData, 0, 0);
-            drawProportional(muteBox.zoomCtx, tmpC, 0, 0, mw, mh, 50, 50);
-        }
-
-        if (structuralDiff > muteThreshold) {
-            if (muteBox.state === 'IDLE') {
-                muteBox.state = 'MUTED';
-                muteBox.triggerStart = now;
-                muteBox.continuousStart = now;
-            } else if (muteBox.state === 'MUTED') {
-                muteBox.triggerStart = now;
-            }
-        } else {
-            if (muteBox.state === 'MUTED') {
-                if (now - muteBox.triggerStart > muteHoldMs) {
-                    muteBox.state = 'EMPTY';
-                    muteBox.emptyStartTime = now;
-                }
-            } else if (muteBox.state === 'EMPTY') {
-                if (now - muteBox.emptyStartTime > 1000) muteBox.state = 'IDLE';
-            }
-        }
-
-        isGlobalMute = (muteBox.state === 'MUTED');
-
-        if (muteBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
-            let txt = `Struktur-Abw: ${structuralDiff} / Max: ${muteThreshold}<br>`;
-            if (muteBox.state === 'MUTED') {
-                let duration = now - muteBox.continuousStart;
-                if (duration > 600000) {
-                    txt += `<b style="color:#ff0000; animation: blink 1s infinite;">⚠ ALARM (>10m)</b>`;
-                } else if (duration > 300000) {
-                    txt += `<b style="color:#ff8800;">⚠ WARNUNG (>5m)</b>`;
-                } else {
-                    let rest = Math.ceil((muteHoldMs - (now - muteBox.triggerStart)) / 1000);
-                    txt += `<b style="color:#ffcc00;">STUMM (${rest}s)</b>`;
-                }
-            } else if (muteBox.state === 'EMPTY') {
-                txt += `<span style="color:#00ff88;">Warte auf Reset...</span>`;
-            } else {
-                txt += `Bereit (Scharf)`;
-            }
-            muteBox.zoomStatsDiv.innerHTML = txt;
-        }
-
-        if (muteBox.state === 'MUTED' && (now - muteBox.continuousStart > 600000)) {
-            playLoudAlarm();
-            isGlobalMute = false;
-        } else if (muteBox.state === 'MUTED' && (now - muteBox.continuousStart > 300000)) {
-            if (now - lastBeep > 5000) beepMuteZone();
-        }
-    }
-
-    if (!showCamera) {
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        drawMuteZoneBox(ctx);
-    }
-
-    const triggerLimit = parseInt(slideSens.value);
-    const kritischeMasse = parseInt(slideMass.value);
-    const targetCrossings = parseInt(slidePulse.value);
-    const userTakt = parseInt(slideTakt.value);
-    const taktToleranzProzent = parseInt(slideToleranz.value) / 100;
-
-    const currentActiveBoxes = boxes.slice(0, activeBoxCount);
-
-    currentActiveBoxes.forEach(box => {
-        let activePixels = 0;
-        const w = Math.max(1, box.w); const h = Math.max(1, box.h);
-        let safeX = Math.max(0, Math.min(canvas.width - w, box.x));
-        let safeY = Math.max(0, Math.min(canvas.height - h, box.y));
-
-        let frameData = ctx.getImageData(safeX, safeY, w, h).data;
-        let diff = 0;
-
-        for (let i = 0; i < frameData.length; i += 4 * PIXEL_STEP) {
-            let brightness = (frameData[i] + frameData[i+1] + frameData[i+2]) / 3;
-            if (brightness > triggerLimit) activePixels++;
-        }
-
-        if (isMonitoring) {
-            box.history.push({ time: now, val: activePixels });
-            while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) {
-                box.history.shift();
-            }
-
-            if (box.history.length > 5) {
-                const values = box.history.map(v => v.val);
-                const maxVal = Math.max(...values);
-                const minVal = Math.min(...values);
-                diff = Math.round(maxVal - minVal);
-                
-                if (diff < kritischeMasse) {
-                    box.validCrossings = 0;
-                }
-                
-                const hysteresis = Math.max(diff * 0.2, kritischeMasse * 0.25);
-                const mid = minVal + diff / 2;
-                
-                let currentInstantState = 0;
-                if (activePixels > mid + hysteresis) currentInstantState = 1;
-                else if (activePixels < mid - hysteresis) currentInstantState = -1;
-
-                if (currentInstantState !== 0 && currentInstantState !== box.lastState) {
-                    if (box.lastState !== 0) {
-                        let duration = now - box.lastCrossTime;
-                        if (box.lastCrossTime > 0) {
-                            let expectedDuration = userTakt / 2;
-                            let maxDev = expectedDuration * taktToleranzProzent;
-                            if (Math.abs(duration - expectedDuration) <= maxDev) {
-                                box.validCrossings++;
-                                beep();
-                            } else {
-                                box.validCrossings = Math.max(0, box.validCrossings - 1);
-                            }
-                        }
-                    }
-                    box.lastState = currentInstantState;
-                    box.lastCrossTime = now;
-                }
-
-                if (box.validCrossings >= targetCrossings && !box.alarmHoldUntil) {
-                    box.alarmHoldUntil = now + Math.floor(parseFloat(slideHold.value) * 1000);
-                    box.validCrossings = 0;
-                    if (!isGlobalMute) {
-                        playLoudAlarm();
-                        recordAndSendVideo(tgVideoMode, 5, box); // V2.1 Trigger
-                    }
-                }
-            }
-        } else {
-            box.validCrossings = 0;
-            box.history = [];
-        }
-
-        if (box.alarmHoldUntil && now < box.alarmHoldUntil) {
-            if (!isGlobalMute && now - lastLoudBeep >= 500) { playLoudAlarm(); }
-            if (box.zoomBoxDiv) box.zoomBoxDiv.classList.add('alarm-zoom');
-        } else {
-            box.alarmHoldUntil = 0;
-            if (box.zoomBoxDiv) box.zoomBoxDiv.classList.remove('alarm-zoom');
-        }
-
-        if (showCamera && box.zoomCtx) {
-            const zc = box.zoomCtx.canvas;
-            let imgData = new ImageData(w, h);
-            imgData.data.set(frameData);
-            let tmpC = document.createElement('canvas'); tmpC.width = w; tmpC.height = h;
-            tmpC.getContext('2d').putImageData(imgData, 0, 0);
-            drawProportional(box.zoomCtx, tmpC, 0, 0, w, h, 100, 50);
-        }
-
-        if (box.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
-            box.zoomStatsDiv.innerHTML = `Masse: ${diff} <span style="font-size:9px;color:#888;">/ ${kritischeMasse}</span><br>` + 
-                                         `Takt-Punkte: <span style="color:${box.validCrossings > 0 ? '#00ff88' : '#ccc'};">${box.validCrossings}</span> / ${targetCrossings}`;
-        }
-
-        let fillColor = 'rgba(255,255,255,0.1)';
-        let borderColor = 'red';
-        if (box.alarmHoldUntil) {
-            fillColor = 'rgba(255,0,0,0.5)';
-            borderColor = '#ff0000';
-        } else if (box.validCrossings > 0) {
-            fillColor = 'rgba(0,255,136,0.3)';
-            borderColor = '#00ff88';
-        }
-        
-        ctx.fillStyle = fillColor; ctx.fillRect(box.x, box.y, box.w, box.h);
-        if (box === selectedBox) {
-            ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
-        }
-        
-        ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); 
-        ctx.lineWidth = 2; if (!isMonitoring) ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = borderColor; ctx.stroke(); ctx.setLineDash([]);
-        
-        ctx.fillStyle = "white"; ctx.font = "12px Arial"; ctx.fillText(box.id, box.x + 4, box.y + 14);
-    });
-
-    if (showCamera) drawMuteZoneBox(ctx);
-
-    if (isMonitoring && anchorBox.active && anchorBox.baseline && anchorBox.refCtx) {
-        const aw = Math.max(1, anchorBox.w); const ah = Math.max(1, anchorBox.h);
-        const anchorThreshold = parseInt(slideAnchorSens.value);
-        const driftSpeed = parseInt(slideAnchorDrift.value);
-        const anchorDriftCheck = chkAnchorDrift.checked;
-        
-        let safeAx = Math.max(0, Math.min(canvas.width - aw, anchorBox.x));
-        let safeAy = Math.max(0, Math.min(canvas.height - ah, anchorBox.y));
-        let fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let imgW = fullFrame.width;
-        
-        let aData = new Uint8ClampedArray(aw * ah * 4);
-        for (let y = 0; y < ah; y++) {
-            let gStart = ((safeAy + y) * imgW + safeAx) * 4;
-            aData.set(fullFrame.data.subarray(gStart, gStart + aw * 4), y * aw * 4);
-        }
-        
-        if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) {
-            anchorBox.baseline = new Float32Array(aData);
-            anchorBox.refNeedsDraw = true;
-        }
-
-        if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
-            try {
-                let drawData = new Uint8ClampedArray(anchorBox.baseline);
-                let imgData = new ImageData(drawData, aw, ah);
-                let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah;
-                tmpC.getContext('2d').putImageData(imgData, 0, 0);
-                drawProportional(anchorBox.refCtx, tmpC, 0, 0, aw, ah, 50, 50);
-                anchorBox.refNeedsDraw = false;
-            } catch(e) {}
-        }
-        
-        let baseTotal = 0; let currTotal = 0; let pCount = 0;
-        for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
-            let r = aData[j], g = aData[j+1], b = aData[j+2];
-            currTotal += (r + g + b) / 3;
-            let br = anchorBox.baseline[j], bg = anchorBox.baseline[j+1], bb = anchorBox.baseline[j+2];
-            baseTotal += (br + bg + bb) / 3;
-            pCount++;
-        }
-        let globalDiff = (currTotal / pCount) - (baseTotal / pCount);
-        
-        let diffSum = 0;
-        for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
-            let r = aData[j], g = aData[j+1], b = aData[j+2];
-            let lum = (r + g + b) / 3;
-            
-            let br = anchorBox.baseline[j], bg = anchorBox.baseline[j+1], bb = anchorBox.baseline[j+2];
-            let bLum = (br + bg + bb) / 3;
-            
-            let adjustedLum = lum - globalDiff;
-            diffSum += Math.abs(adjustedLum - bLum);
-            
-            if (anchorDriftCheck) {
-                anchorBox.baseline[j] += (r - anchorBox.baseline[j]) * 0.01 * driftSpeed;
-                anchorBox.baseline[j+1] += (g - anchorBox.baseline[j+1]) * 0.01 * driftSpeed;
-                anchorBox.baseline[j+2] += (b - anchorBox.baseline[j+2]) * 0.01 * driftSpeed;
-            }
-        }
-        let structuralDiff = Math.round(diffSum / pCount);
-        
-        if (anchorBox.zoomCtx) {
-            let imgData = new ImageData(aData, aw, ah);
-            let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah;
-            tmpC.getContext('2d').putImageData(imgData, 0, 0);
-            drawProportional(anchorBox.zoomCtx, tmpC, 0, 0, aw, ah, 50, 50);
-        }
-
-        if (structuralDiff > anchorThreshold) {
-            if (now - lastAnchorBeep > 500) {
-                lastAnchorBeep = now;
-                playWarningBeep();
-                triggerAnkerAlarmFoto(); // V2.1 Trigger
-            }
-            anchorBox.zoomBoxDiv.classList.add('alarm-zoom');
-        } else {
-            anchorBox.zoomBoxDiv.classList.remove('alarm-zoom');
-        }
-
-        if (anchorBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
-            anchorBox.zoomStatsDiv.innerHTML = `Struktur-Abw: <span style="color:${structuralDiff>anchorThreshold?'red':'#00ff88'};">${structuralDiff}</span> / ${anchorThreshold}`;
-        }
-    } else if (anchorBox.active && (!isMonitoring || !anchorBox.baseline)) {
-        if (anchorBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
-            anchorBox.zoomStatsDiv.innerHTML = `Warte auf Aktivierung...`;
-        }
-    }
-
-    if (anchorBox.active) {
-        ctx.fillStyle = 'rgba(23, 162, 184, 0.15)'; ctx.fillRect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h);
-        if (anchorBox === selectedBox) {
-            ctx.beginPath(); ctx.rect(anchorBox.x - 4, anchorBox.y - 4, anchorBox.w + 8, anchorBox.h + 8);
-            ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
-        }
-        ctx.beginPath(); ctx.rect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h); 
-        ctx.lineWidth = 2; if (!isMonitoring) ctx.setLineDash([4, 4]); ctx.strokeStyle = '#17a2b8'; ctx.stroke(); ctx.setLineDash([]);
-    }
-
-    if (isGlobalMute) {
-        ctx.fillStyle = "rgba(255, 204, 0, 0.2)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = "#ffcc00";
-        ctx.font = "bold 20px Arial";
-        ctx.textAlign = "center";
-        let rest = Math.ceil((parseInt(slideMuteHold.value) * 1000 - (now - muteBox.triggerStart)) / 1000);
-        ctx.fillText(`STUMMGESCHALTET (${rest}s)`, canvas.width / 2, 30);
-        ctx.textAlign = "left";
-    }
-}
-
-async function requestWakeLock() {
-    try {
-        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-    } catch (err) {}
-}
-
-async function getCameras() {
-    try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        cameraSelect.innerHTML = '';
-        videoDevices.forEach((device, index) => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.text = device.label || `Kamera ${index + 1}`;
-            cameraSelect.appendChild(option);
-        });
-        if (videoDevices.length === 0) {
-            const option = document.createElement('option');
-            option.value = 'default';
-            option.text = 'Standard Kamera (Keine Auswahl möglich)';
-            cameraSelect.appendChild(option);
-        }
-    } catch (e) {
-        const option = document.createElement('option');
-        option.value = 'default';
-        option.text = 'Kamera-Zugriff blockiert';
-        cameraSelect.appendChild(option);
-    }
-}
-
-async function startCamera() {
-    if (currentTrack) { currentTrack.stop(); }
-    const constraints = { video: { facingMode: 'environment' } };
-    if (cameraSelect.value !== 'default' && cameraSelect.value !== '') {
-        constraints.video = { deviceId: { exact: cameraSelect.value } };
-    }
     
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = stream;
-        currentTrack = stream.getVideoTracks()[0];
-        
-        video.onloadedmetadata = () => {
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            applyZoom();
-            if (!isRunning) {
-                isRunning = true;
-                processFrame();
-            }
-        };
-        requestWakeLock();
-    } catch(e) {
-        alert("Kamera-Fehler: " + e.message);
-    }
-}
-
-function applyZoom() {
-    if (!currentTrack) return;
-    const capabilities = currentTrack.getCapabilities();
-    if (capabilities.zoom) {
-        let maxZoom = capabilities.zoom.max;
-        let minZoom = capabilities.zoom.min;
-        let step = capabilities.zoom.step || 0.1;
-        let val = parseFloat(slideCamZoom.value);
-        if (val > maxZoom) val = maxZoom;
-        if (val < minZoom) val = minZoom;
-        currentTrack.applyConstraints({ advanced: [{ zoom: val }] }).catch(e => {});
-    }
-}
-
-function togglePanel(btn, panel, forceOpenState) {
-    let open = forceOpenState !== undefined ? forceOpenState : panel.style.display !== 'none';
-    panel.style.display = open ? 'none' : 'flex';
-    btn.classList.toggle('open', !open);
-}
-
-btnToggleMainConfig.addEventListener('click', () => {
-    panelMainOpen = !panelMainOpen;
-    togglePanel(btnToggleMainConfig, panelMainSettings, !panelMainOpen);
-    saveSettings();
-});
-
-btnToggleAnchorConfig.addEventListener('click', () => {
-    panelAnchorOpen = !panelAnchorOpen;
-    togglePanel(btnToggleAnchorConfig, panelAnchorSettings, !panelAnchorOpen);
-    saveSettings();
-});
-
-btnToggleMuteConfig.addEventListener('click', () => {
-    panelMuteOpen = !panelMuteOpen;
-    togglePanel(btnToggleMuteConfig, panelMuteSettings, !panelMuteOpen);
-    saveSettings();
-});
-
-// V2.1 Toggles
-btnToggleTgConfig.addEventListener('click', () => {
-    panelTgOpen = !panelTgOpen;
-    togglePanel(btnToggleTgConfig, panelTgSettings, !panelTgOpen);
-    saveSettings();
-});
-btnToggleAudioConfig.addEventListener('click', () => {
-    panelAudioOpen = !panelAudioOpen;
-    togglePanel(btnToggleAudioConfig, panelAudioSettings, !panelAudioOpen);
-    saveSettings();
-});
-btnToggleWeatherConfig.addEventListener('click', () => {
-    panelWeatherOpen = !panelWeatherOpen;
-    togglePanel(btnToggleWeatherConfig, panelWeatherSettings, !panelWeatherOpen);
-    saveSettings();
-});
-
-startBtn.onclick = async () => {
-    initAudio();
-    await getCameras();
-    startCamera();
-    startBtn.style.display = 'none';
+    const fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const imgW = canvas.width;
+    const imgH = canvas.height;
     
-    if (!settingsVisible) {
-        settingsVisible = true;
-        mainSettingsWrapper.style.display = 'flex';
-        toggleSettingsBtn.style.background = '#666';
-        saveSettings();
-    }
-};
-
-cameraSelect.addEventListener('change', () => { startCamera(); });
-
-monitorBtn.onclick = () => {
-    isMonitoring = !isMonitoring;
-    monitorBtn.innerText = isMonitoring ? 'ÜBERWACHUNG LÄUFT' : 'Kamera starten zur Überwachung';
-    monitorBtn.className = isMonitoring ? '' : 'off';
+    analyzeAnchor(now, fullFrame, imgW, imgH); 
+    analyzeMute(now, fullFrame, imgW, imgH);
+    analyzeBoxes(now, fullFrame, imgW, imgH);
     
-    if (isMonitoring) {
-        anchorBox.baseline = null;
-        muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
-        boxes.forEach(b => { b.history = []; b.validCrossings = 0; b.alarmHoldUntil = 0; });
-        requestWakeLock();
-    }
-};
-
-const hoursHTML = document.getElementById('hoursHTML');
-const minsHTML = document.getElementById('minsHTML');
-
-function updateClock() {
-    const d = new Date();
-    hoursHTML.innerText = String(d.getHours()).padStart(2, '0');
-    minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
-    if (isStealthActive) {
-        if (!isMonitoring || !isRunning) {
-            document.getElementById('stealthOverlay').style.color = '#aa3333';
-        } else {
-            document.getElementById('stealthOverlay').style.color = '#444';
-        }
-    }
+    drawUI();
 }
-setInterval(updateClock, 1000);
-
-activateStealthBtn.onclick = () => {
-    isStealthActive = true;
-    updateClock();
-    document.getElementById('stealthOverlay').style.display = 'flex';
-    document.documentElement.requestFullscreen().catch(()=>{});
-};
-
-exitStealthBtn.onclick = () => {
-    isStealthActive = false;
-    document.getElementById('stealthOverlay').style.display = 'none';
-    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-};
-
-toggleSettingsBtn.onclick = () => {
-    settingsVisible = !settingsVisible;
-    mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none';
-    toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444';
-    saveSettings();
-};
-
-document.getElementById('helpBtn').onclick = () => {
-    document.getElementById('helpOverlay').style.display = 'flex';
-};
-document.getElementById('closeHelpBtn').onclick = () => {
-    document.getElementById('helpOverlay').style.display = 'none';
-};
-
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && isMonitoring) requestWakeLock();
-});
-
-window.addEventListener('load', () => { 
-    loadSettings(); 
-    updateWeather(); 
-    setInterval(updateWeather, 1800000);
-    pollTelegramCommands();
-    setInterval(pollTelegramCommands, 5000);
-});
-
 </script>
 </body>
 </html>
