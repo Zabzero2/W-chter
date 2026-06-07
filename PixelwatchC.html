@@ -18,6 +18,19 @@
         transition: background-color 0.5s ease;
     }
 
+    #topPanelContainer, .dpad-container, .module-section {
+        transition: background-color 0.5s ease, border-color 0.5s ease;
+    }
+
+    /* Kräftiges Blau wenn Audio-Wächter an ist */
+    body.audio-guard-on { background-color: #0d1b2a; }
+    body.audio-guard-on #topPanelContainer, 
+    body.audio-guard-on .dpad-container, 
+    body.audio-guard-on .module-section { 
+        background-color: #1b263b; 
+        border-color: #415a77; 
+    }
+
     #topPanelContainer { background: #2b2b2b; border-radius: 10px; margin-bottom: 10px; overflow: hidden; width: 100%; }
     #zoomHeader { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 10px; min-height: 60px; }
 
@@ -157,8 +170,8 @@
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smart-Modem & Warnungen</h3>
         <ul>
             <li><b>Telegram-Warnung:</b> Hinterlege einen Bot, um bei Alarmen automatisch Medien (Bilder/Videos) aufs Handy zu erhalten.</li>
-            <li><b>Remote-Befehle:</b> Sende <code>/foto</code>, <code>/video</code> oder <code>/audio</code> an deinen Bot, um jederzeit die aktuelle Lage abzufragen.</li>
-            <li><b>Audio-Wächter:</b> Misst die Lautstärke im Raum. Ist er aktiv, bleibt das Tablet bei Alarmen <b>komplett stumm</b> (kein lokaler Ton, nur Telegram-Media). Der Audio-Wächter lässt sich nur aktivieren, wenn Telegram konfiguriert ist.</li>
+            <li><b>Remote-Befehle:</b> Sende <code>/foto</code>, <code>/video</code> oder <code>/audio</code> an deinen Bot. Für längere Aufnahmen nutze z.B. <code>/audio 30</code> (nimmt 30s auf, max 60s).</li>
+            <li><b>Audio-Wächter:</b> Misst die Lautstärke im Raum. Ist er aktiv, färbt sich das Menü tiefblau und das Tablet bleibt bei Alarmen <b>komplett stumm</b> (nur Telegram-Media). Der Audio-Wächter lässt sich nur aktivieren, wenn Telegram konfiguriert ist.</li>
             <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos, nebeneinander in Spalten aktualisiert.</li>
         </ul>
 
@@ -662,7 +675,11 @@ function updateMaxDeltaLimitRange() {
 }
 
 function updateAppVisuals() {
-    document.body.style.backgroundColor = chkAudioGuard.checked ? '#1a2530' : '#1e1e1e';
+    if (chkAudioGuard.checked) {
+        document.body.classList.add('audio-guard-on');
+    } else {
+        document.body.classList.remove('audio-guard-on');
+    }
     updateStealthClock();
 }
 
@@ -961,7 +978,7 @@ function updateStealthClock() {
     if (!isMonitoring || !isRunning) {
         stealthOverlay.style.color = '#ffcccc'; 
     } else if (chkAudioGuard.checked) {
-        stealthOverlay.style.color = '#ccccff';
+        stealthOverlay.style.color = '#88ccff'; // Dezent bläulich im Tarnmodus
     } else {
         stealthOverlay.style.color = 'white';
     }
@@ -1257,13 +1274,18 @@ function processAudio() {
     if (!isMonitoring) return;
 
     let now = Date.now();
-    if(avg > threshold && (now - lastAcousticAlarm > 10000)) {
+    // 15 Sekunden Sperrzeit (10s Aufnahme + 5s Pause)
+    if(avg > threshold && (now - lastAcousticAlarm > 15000)) {
         lastAcousticAlarm = now; 
-        const micUi = document.getElementById('micAlarmUI');
-        micUi.style.display = 'block';
-        setTimeout(() => micUi.style.display = 'none', 4000);
+        
+        // Kein optisches Pop-Up im Tarnmodus!
+        if (!isStealthActive) {
+            const micUi = document.getElementById('micAlarmUI');
+            micUi.style.display = 'block';
+            setTimeout(() => micUi.style.display = 'none', 4000);
+        }
 
-        if (chkTelegram.checked) recordAndSendAudio(false);
+        if (chkTelegram.checked) recordAndSendAudio(false, 10000); // 10 Sekunden Aufnahme
     }
 }
 
@@ -1314,14 +1336,16 @@ function recordAndSendVideo(boxId, isRemote = false) {
     }
 }
 
-function recordAndSendAudio(isRemote = false) {
+function recordAndSendAudio(isRemote = false, durationMs = 10000) {
     if(isRecordingAudio || !chkTelegram.checked || !micStream) return;
     isRecordingAudio = true; 
-    let caption = isRemote ? "🎙️ Remote Live-Audio" : "🎙️ Audio-Alarm im Raum";
+    let sec = durationMs / 1000;
+    let caption = isRemote ? `🎙️ Remote Live-Audio (${sec}s)` : "🎙️ Audio-Alarm im Raum (10s)";
     if (isRemote) sendTgMessage(caption + " (Wird aufgezeichnet...)");
 
     try {
-        let recorder = new MediaRecorder(micStream); let chunks = [];
+        let recorder = new MediaRecorder(micStream); 
+        let chunks = [];
         recorder.ondataavailable = e => chunks.push(e.data);
         recorder.onstop = async () => {
             let blob = new Blob(chunks, { type: 'audio/webm' });
@@ -1329,7 +1353,10 @@ function recordAndSendAudio(isRemote = false) {
             await sendTgMedia("sendVoice", fd);
             setTimeout(() => { isRecordingAudio = false; }, 5000); 
         };
-        recorder.start(); setTimeout(() => { recorder.stop(); }, 5000); 
+        recorder.start(); 
+        setTimeout(() => { 
+            if(recorder.state !== 'inactive') recorder.stop(); 
+        }, durationMs); 
     } catch(e) { setTimeout(() => { isRecordingAudio = false; }, 5000); }
 }
 
@@ -1373,10 +1400,18 @@ async function pollTelegram() {
             for (let item of data.result) {
                 tgUpdateOffset = item.update_id + 1;
                 if (item.message && item.message.chat.id.toString() === txtTelegramChatId.value.trim()) {
-                    let text = item.message.text;
+                    let text = item.message.text.trim();
                     if (text === '/foto') sendTgPhoto("📸 Remote Live-Bild");
                     else if (text === '/video') recordAndSendVideo(null, true);
-                    else if (text === '/audio') recordAndSendAudio(true);
+                    else if (text.startsWith('/audio')) {
+                        let parts = text.split(' ');
+                        let durationSec = 10; // Default: 10 Sekunden
+                        if(parts.length > 1 && !isNaN(parts[1])) {
+                            durationSec = parseInt(parts[1]);
+                            if (durationSec > 60) durationSec = 60; // Deckelung auf max 60s
+                        }
+                        recordAndSendAudio(true, durationSec * 1000);
+                    }
                 }
             }
         }
