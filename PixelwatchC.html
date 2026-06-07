@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro V2.0 (Labor)</title>
+<title>Pixel-Wächter Pro V2.1 (Labor)</title>
 
 <style>
     body {
@@ -114,12 +114,21 @@
     .help-content p, .help-content li { font-size: 14px; line-height: 1.5; color: #ccc; }
     .help-content ul, .help-content ol { padding-left: 20px; margin-bottom: 15px; }
     .help-content li { margin-bottom: 8px; }
+
+    @keyframes blink { 0% {opacity:1;} 50% {opacity:0;} 100% {opacity:1;} }
+    #micAlarmUI {
+        display: none; position: fixed; top: 20px; right: 20px; background: #ff0000; color: white;
+        padding: 10px 20px; border-radius: 8px; z-index: 10000; font-weight: bold; font-size: 18px;
+        box-shadow: 0 0 10px red; animation: blink 1s infinite;
+    }
 </style>
 </head>
 <body>
 
+<div id="micAlarmUI">🎤 MIC ALARM</div>
+
 <div id="stealthOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 9999; justify-content: center; align-items: center; flex-direction: column; font-family: Arial, sans-serif; box-sizing: border-box; transition: color 0.5s;">
-    <div id="weatherDisplay" style="font-size: 3vw; margin-bottom: 2vw; font-weight: normal; color: #888; text-align: center; min-height: 4vw;"></div>
+    <div id="weatherDisplay" style="font-size: 3vw; margin-bottom: 2vw; font-weight: normal; color: #aaa; text-align: center; min-height: 4vw; line-height: 1.4;"></div>
     
     <div style="font-size: 22vw; font-weight: bold; color: white; display: flex; align-items: center; gap: 3vw; color: inherit;">
         <span id="hoursHTML">00</span>
@@ -133,14 +142,15 @@
 
 <div id="helpOverlay" class="overlay">
     <div class="help-content">
-        <h2>Hilfe & Anleitung V2.0 (Labor)</h2>
-        <p>Der <b>Pixel-Wächter Pro V2.0</b> vereint V61 mit Smart-Features.</p>
+        <h2>Hilfe & Anleitung V2.1 (Labor)</h2>
+        <p>Der <b>Pixel-Wächter Pro V2.1</b> vereint V1.0-Stabilität mit Smart-Features.</p>
         
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smart-Modem & Warnungen</h3>
         <ul>
-            <li><b>Telegram-Warnung:</b> Sende Befehle wie <code>/foto</code> an deinen Bot für Live-Bilder. Bei einem Alarm sendet das System vollautomatisch ein 4-Sekunden Beweis-Video der Boxen.</li>
-            <li><b>Audio-Wächter:</b> Ein intelligenter Filter ignoriert tiefes Rauschen (Vorblock). Erkennt er im Takt hohe Frequenzen (Telefon/GSMR), sendet er 5s Audio via Telegram.</li>
-            <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos alle 5 Minuten aktualisiert.</li>
+            <li><b>Telegram-Warnung:</b> Sende Befehle wie <code>/foto</code> an deinen Bot für Live-Bilder. Wähle im Menü zwischen Datenspar-Video (Nur Box) und HD-Vollbild.</li>
+            <li><b>Anker-Push:</b> Verrutscht die Kamera, piept das Tablet wie gewohnt und sendet sofort ein Warn-Foto per Telegram.</li>
+            <li><b>Audio-Wächter:</b> Das Tablet bleibt stumm! Bei langer hoher Frequenz blinkt es kurz auf und sendet das Audio lautlos per Telegram. Nutze den Live-Pegel im Menü zur Kalibrierung!</li>
+            <li><b>Wetter-Station:</b> Zeigt jetzt auch Nebel und Regenintensität mit großzügigem Abstand im Tarnmodus an.</li>
         </ul>
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
@@ -222,6 +232,17 @@
                     <label><input type="checkbox" id="chkTelegram"> Telegram (Bilder/Media)</label>
                     <label><input type="checkbox" id="chkAudioGuard"> Audio-Wächter (>1kHz)</label>
                 </div>
+                
+                <div class="slider-row" id="rowAudioThres">
+                    <label style="width:130px;">Audio-Schwelle: <span id="valAudioThreshold">25</span></label>
+                    <button class="adj-btn" id="audioThresMinus">-</button>
+                    <input type="range" id="slideAudioThreshold" min="1" max="100" value="25">
+                    <button class="adj-btn" id="audioThresPlus">+</button>
+                </div>
+                <div style="font-size:13px; color:#aaa; margin-left: 140px; margin-top:-5px; margin-bottom: 10px;">
+                    Live-Pegel: <span id="liveAudioLevel" style="color:#00ff88; font-weight:bold; font-size: 15px;">0</span>
+                </div>
+
                 <div id="telegramSettingsBox" style="display:none; flex-direction:column; gap:10px; background:#333; padding:10px; border-radius:6px; margin-bottom:10px;">
                     <div class="slider-row">
                         <label style="width: 80px;">Bot Token:</label>
@@ -230,6 +251,13 @@
                     <div class="slider-row">
                         <label style="width: 80px;">Chat ID:</label>
                         <input type="text" id="txtTelegramChatId" placeholder="123456789">
+                    </div>
+                    <div class="slider-row" style="margin-top: 5px;">
+                        <label style="width: 80px;">Video-Typ:</label>
+                        <select id="selTgVideoMode">
+                            <option value="box" selected>Nur Alarm-Box (Daten sparen)</option>
+                            <option value="full">HD Vollbild (Max. Details)</option>
+                        </select>
                     </div>
                 </div>
                 <div class="slider-row">
@@ -395,6 +423,7 @@
 <div id="container">
     <video id="video" playsinline autoplay muted></video>
     <canvas id="canvas"></canvas>
+    <canvas id="recordCanvas" style="display:none;"></canvas>
 </div>
 
 <script>
@@ -403,6 +432,8 @@ const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const zoomHeader = document.getElementById('zoomHeader');
+const recordCanvas = document.getElementById('recordCanvas');
+const recordCtx = recordCanvas.getContext('2d');
 
 // UI Buttons
 const startBtn = document.getElementById('startBtn');
@@ -440,6 +471,9 @@ const chkAudioGuard = document.getElementById('chkAudioGuard');
 const telegramSettingsBox = document.getElementById('telegramSettingsBox');
 const txtTelegramToken = document.getElementById('txtTelegramToken');
 const txtTelegramChatId = document.getElementById('txtTelegramChatId');
+const selTgVideoMode = document.getElementById('selTgVideoMode');
+const slideAudioThreshold = document.getElementById('slideAudioThreshold');
+const valAudioThreshold = document.getElementById('valAudioThreshold');
 const txtWeatherCities = document.getElementById('txtWeatherCities');
 const weatherDisplay = document.getElementById('weatherDisplay');
 
@@ -495,13 +529,13 @@ let micStream = null;
 let isMutedInternally = false;
 let internalMuteTimeout = null;
 let loudFrames = []; 
-const AUDIO_LOUDNESS_THRESHOLD = 25; 
-const AUDIO_DENSITY_REQ_MS = 600; // Eimer
+const AUDIO_DENSITY_REQ_MS = 600; 
 let lastAcousticAlarm = 0;
 
 // V2 Telegram Variables
 let isRecordingVideo = false;
 let isRecordingAudio = false;
+let isRecordingBoxId = null;
 let tgUpdateOffset = 0;
 
 // Boxen Setup (V61)
@@ -514,7 +548,7 @@ let boxes = [
 let activeBoxCount = 2;
 let selectedBox = boxes[0];
 
-let anchorBox = { id: 'Anker', x: 200, y: 100, w: 10, h: 10, active: false, baseline: null, alarmStart: 0, isAlarm: false, zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false };
+let anchorBox = { id: 'Anker', x: 200, y: 100, w: 10, h: 10, active: false, baseline: null, alarmStart: 0, isAlarm: false, lastTgAlarm: 0, zoomCtx: null, refCtx: null, zoomBoxDiv: null, zoomStatsDiv: null, refNeedsDraw: false };
 
 let muteBox = { 
     id: 'Mute', x: 200, y: 200, w: 9, h: 11, active: false, baseline: null, 
@@ -546,6 +580,7 @@ function updateLabels() {
     valMuteSens.innerText = slideMuteSens.value; valMuteHold.innerText = slideMuteHold.value; 
     valMuteW.innerText = slideMuteW.value; valMuteH.innerText = slideMuteH.value;
     valMuteDrift.innerText = slideMuteDrift.value;
+    valAudioThreshold.innerText = slideAudioThreshold.value;
     updateMaxDeltaLimitRange();
 }
 
@@ -591,6 +626,7 @@ setupAdjBtn('anchorDriftMinus', 'anchorDriftPlus', 'slideAnchorDrift');
 setupAdjBtn('muteSensMinus', 'muteSensPlus', 'slideMuteSens'); setupAdjBtn('muteHoldMinus', 'muteHoldPlus', 'slideMuteHold'); 
 setupAdjBtn('muteWMinus', 'muteWPlus', 'slideMuteW'); setupAdjBtn('muteHMinus', 'muteHPlus', 'slideMuteH');
 setupAdjBtn('muteDriftMinus', 'muteDriftPlus', 'slideMuteDrift');
+setupAdjBtn('audioThresMinus', 'audioThresPlus', 'slideAudioThreshold');
 
 // ---------- EVENT LISTENERS ----------
 toggleSettingsBtn.addEventListener('click', () => { settingsVisible = !settingsVisible; mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none'; toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444'; saveSettings(); });
@@ -616,6 +652,7 @@ chkShowDpad.addEventListener('change', (e) => { dpadPanel.style.display = e.targ
 
 chkTelegram.addEventListener('change', () => { telegramSettingsBox.style.display = chkTelegram.checked ? 'flex' : 'none'; saveSettings(); });
 txtTelegramToken.addEventListener('input', saveSettings); txtTelegramChatId.addEventListener('input', saveSettings);
+selTgVideoMode.addEventListener('change', saveSettings);
 txtWeatherCities.addEventListener('input', saveSettings); 
 chkLocalAlarm.addEventListener('change', saveSettings);
 chkAudioGuard.addEventListener('change', () => { saveSettings(); if(isRunning) restartAudioSystem(); });
@@ -632,6 +669,7 @@ slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); }); 
 slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); }); slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 slideWidth.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.history = []; b.baseline = null; }); });
 slideHeight.addEventListener('input', () => { updateMaxDeltaLimitRange(); updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.history = []; b.baseline = null; }); });
+slideAudioThreshold.addEventListener('input', () => { updateLabels(); saveSettings(); });
 
 boxCountSelect.addEventListener('change', (e) => { activeBoxCount = parseInt(e.target.value); createZoomDisplays(); if (selectedBox !== anchorBox && selectedBox !== muteBox && selectedBox.id > activeBoxCount) { selectedBox = boxes[0]; updateZoomSelectionUI(); } updateLabels(); saveSettings(); });
 
@@ -703,7 +741,8 @@ function saveSettings() {
         showZoomValues: showZoomValues, showCamera: showCamera, dpadVisible: chkShowDpad.checked, settingsVisible: settingsVisible, 
         panelMainOpen: panelMainOpen, panelAnchorOpen: panelAnchorOpen, panelMuteOpen: panelMuteOpen, panelSmartOpen: panelSmartOpen,
         cameraId: cameraSelect.value, positions: boxes.map(b => ({ x: b.x, y: b.y })), anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active }, mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active },
-        localAlarm: chkLocalAlarm.checked, telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked, tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), weather: txtWeatherCities.value.trim()
+        localAlarm: chkLocalAlarm.checked, telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked, tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), 
+        tgVideoMode: selTgVideoMode.value, audioThreshold: slideAudioThreshold.value, weather: txtWeatherCities.value.trim()
     };
     localStorage.setItem('pixel_settings_v2', JSON.stringify(settings));
 }
@@ -731,7 +770,10 @@ function loadSettings() {
             if (s.localAlarm !== undefined) chkLocalAlarm.checked = s.localAlarm;
             if (s.telegram !== undefined) { chkTelegram.checked = s.telegram; telegramSettingsBox.style.display = s.telegram ? 'flex' : 'none'; }
             if (s.audioGuard !== undefined) chkAudioGuard.checked = s.audioGuard;
-            if (s.tgToken) txtTelegramToken.value = s.tgToken; if (s.tgChat) txtTelegramChatId.value = s.tgChat; if (s.weather) txtWeatherCities.value = s.weather;
+            if (s.tgToken) txtTelegramToken.value = s.tgToken; if (s.tgChat) txtTelegramChatId.value = s.tgChat; 
+            if (s.tgVideoMode) selTgVideoMode.value = s.tgVideoMode;
+            if (s.audioThreshold) slideAudioThreshold.value = s.audioThreshold;
+            if (s.weather) txtWeatherCities.value = s.weather;
 
             if (s.positions) { s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } }); }
             if (s.anchor) { anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; anchorBox.active = s.anchor.active; chkAnchorActive.checked = s.anchor.active; }
@@ -800,7 +842,7 @@ bindTurboButton('btnHMinus', (s) => { selectedBox.h = Math.max(5, selectedBox.h 
 bindTurboButton('btnHPlus', (s) => { selectedBox.h = Math.min(50, selectedBox.h + s); selectedBox.baseline=null; saveSettings(); if(selectedBox===anchorBox) slideAnchorH.value = selectedBox.h; else if(selectedBox===muteBox) slideMuteH.value = selectedBox.h; else slideHeight.value = selectedBox.h; updateLabels(); });
 
 
-// ---------- AUDIO ECHO BLOCKER & TÖNE ----------
+// ---------- AUDIO ECHO BLOCKER & V1.0 TÖNE ----------
 function setInternalMute(duration) {
     isMutedInternally = true;
     if(internalMuteTimeout) clearTimeout(internalMuteTimeout);
@@ -819,12 +861,16 @@ function playLocalBeep() {
 function playAnchorBeep() { 
     if(!chkLocalAlarm.checked) return;
     setInternalMute(1500);
-    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); 
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; 
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); 
 }
 function playWarningBeep() { 
     if(!chkLocalAlarm.checked) return;
     setInternalMute(1000);
-    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 800; gain.gain.value = 0.05; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
+    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
+    osc.type = 'sine'; osc.frequency.value = 800; gain.gain.value = 0.05; 
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
 }
 function playLoudAlarm() { 
     if(!chkLocalAlarm.checked) return;
@@ -834,9 +880,9 @@ function playLoudAlarm() {
     gain.gain.value = 0.25; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.8); 
 }
 
-// ---------- WETTER API (Open-Meteo) ----------
+// ---------- WETTER API (Open-Meteo mit Nebel & Intensität) ----------
 async function fetchWeather() {
-    if(!txtWeatherCities.value) { weatherDisplay.innerText = ''; return; }
+    if(!txtWeatherCities.value) { weatherDisplay.innerHTML = ''; return; }
     let cities = txtWeatherCities.value.split(',').map(c => c.trim()).filter(c => c);
     let output = [];
     for(let city of cities) {
@@ -848,16 +894,30 @@ async function fetchWeather() {
             let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
             let wData = await wRes.json();
             let code = wData.current_weather.weathercode; let temp = Math.round(wData.current_weather.temperature);
-            let emoji = '☁️';
-            if(code === 0 || code === 1) emoji = '☀️'; else if(code === 2 || code === 3) emoji = '⛅'; else if(code >= 50 && code <= 69) emoji = '🌧️'; else if(code >= 70 && code <= 79) emoji = '❄️'; else if(code >= 95) emoji = '⛈️';
-            output.push(`${city}: ${temp}°C ${emoji}`);
+            
+            let emoji = '☁️'; let desc = '';
+            if(code === 0 || code === 1) { emoji = '☀️'; } 
+            else if(code === 2) { emoji = '⛅'; } 
+            else if(code === 3) { emoji = '☁️'; } 
+            else if(code === 45 || code === 48) { emoji = '🌫️'; desc = 'Nebel'; } 
+            else if(code === 51 || code === 53 || code === 55) { emoji = '💧'; desc = 'Niesel'; } 
+            else if(code === 61 || code === 80) { emoji = '🌧️'; desc = 'Leicht'; } 
+            else if(code === 63 || code === 81) { emoji = '🌧️'; desc = 'Mittel'; } 
+            else if(code === 65 || code === 82) { emoji = '🌧️'; desc = 'Stark'; } 
+            else if(code === 71 || code === 73 || code === 75 || code === 77) { emoji = '❄️'; desc = 'Schnee'; } 
+            else if(code >= 95) { emoji = '⛈️'; desc = 'Gewitter'; }
+            
+            let text = `<b>${city}</b>: ${temp}°C ${emoji}`;
+            if(desc) text += ` <span style="font-size:0.6em; color:#888;">(${desc})</span>`;
+            output.push(text);
         } catch(e) {}
     }
-    weatherDisplay.innerText = output.join(" | ");
+    // Großzügiger Abstand zwischen den Orten
+    weatherDisplay.innerHTML = output.join("&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;");
 }
 setInterval(fetchWeather, 5 * 60 * 1000); 
 
-// ---------- AUDIO WÄCHTER (Kadenz & Filter) ----------
+// ---------- AUDIO WÄCHTER (Kalibrierbar & Lokal Stumm) ----------
 async function restartAudioSystem() {
     if(micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     if(!chkAudioGuard.checked || !isRunning) return;
@@ -874,16 +934,29 @@ function processAudio() {
     if(!chkAudioGuard.checked || !analyser || !isMonitoring || isMutedInternally) return;
     analyser.getByteFrequencyData(dataArray);
     let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
-    let avg = sum / dataArray.length;
+    let avg = Math.round(sum / dataArray.length);
     let now = Date.now();
+    let threshold = parseInt(slideAudioThreshold.value);
+
+    // Live Pegel Anzeige im UI
+    if (panelSmartOpen && frameCounter % 5 === 0) {
+        let lbl = document.getElementById('liveAudioLevel');
+        lbl.innerText = avg;
+        lbl.style.color = avg > threshold ? "#ff0000" : "#00ff88";
+    }
     
-    if(avg > AUDIO_LOUDNESS_THRESHOLD) loudFrames.push(now);
+    if(avg > threshold) loudFrames.push(now);
     loudFrames = loudFrames.filter(t => now - t < 2000); // 2-Sekunden Eimer
     
-    let loudDurationMs = loudFrames.length * 66.6; // 15 FPS = ~66ms pro Frame
+    let loudDurationMs = loudFrames.length * (1000 / TARGET_FPS);
     if (loudDurationMs >= AUDIO_DENSITY_REQ_MS && (now - lastAcousticAlarm > 10000)) {
         lastAcousticAlarm = now; loudFrames = []; 
-        if (chkLocalAlarm.checked) playLocalBeep();
+        
+        // Optisches Feedback, KEIN lokaler Ton!
+        const micUi = document.getElementById('micAlarmUI');
+        micUi.style.display = 'block';
+        setTimeout(() => micUi.style.display = 'none', 4000);
+
         if (chkTelegram.checked) recordAndSendAudio();
     }
 }
@@ -902,9 +975,20 @@ async function sendTgMedia(endpoint, formData) {
 
 function recordAndSendVideo(boxId) {
     if(isRecordingVideo || !chkTelegram.checked) return;
-    isRecordingVideo = true; sendTgMessage("🚨 Alarm Box " + boxId + "! Zeichne 4s Video auf...");
+    isRecordingVideo = true; sendTgMessage("🚨 Alarm Box " + boxId + "! Erstelle Beweis-Video...");
     try {
-        let stream = canvas.captureStream(15);
+        let stream;
+        const mode = selTgVideoMode.value;
+        if(mode === 'box') {
+            isRecordingBoxId = boxId;
+            let b = boxes.find(x => x.id === boxId);
+            // Leinwand etwas vergrößern für Qualität
+            recordCanvas.width = b.w * 3; recordCanvas.height = b.h * 3;
+            stream = recordCanvas.captureStream(15);
+        } else {
+            stream = canvas.captureStream(15);
+        }
+
         let recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
         let chunks = [];
         recorder.ondataavailable = e => chunks.push(e.data);
@@ -912,23 +996,24 @@ function recordAndSendVideo(boxId) {
             let blob = new Blob(chunks, { type: 'video/webm' });
             let fd = new FormData(); fd.append("video", blob, "alarm.webm"); fd.append("caption", "🎥 Live-Aufnahme Box " + boxId);
             await sendTgMedia("sendVideo", fd);
+            isRecordingBoxId = null;
             setTimeout(() => { isRecordingVideo = false; }, 5000); 
         };
         recorder.start(); setTimeout(() => { recorder.stop(); }, 4000); 
     } catch(e) {
-        sendTgPhoto("📸 Notfall-Bild Box " + boxId); setTimeout(() => { isRecordingVideo = false; }, 5000);
+        sendTgPhoto("📸 Notfall-Bild Box " + boxId); isRecordingBoxId = null; setTimeout(() => { isRecordingVideo = false; }, 5000);
     }
 }
 
 function recordAndSendAudio() {
     if(isRecordingAudio || !chkTelegram.checked || !micStream) return;
-    isRecordingAudio = true; sendTgMessage("🚨 Akustischer Alarm! Zeichne 5s Audio auf...");
+    isRecordingAudio = true; sendTgMessage("🚨 Telefon / Audio-Alarm! Zeichne 5s auf...");
     try {
         let recorder = new MediaRecorder(micStream); let chunks = [];
         recorder.ondataavailable = e => chunks.push(e.data);
         recorder.onstop = async () => {
             let blob = new Blob(chunks, { type: 'audio/webm' });
-            let fd = new FormData(); fd.append("voice", blob, "alarm.webm"); fd.append("caption", "🎙️ Audio-Alarm erkannt");
+            let fd = new FormData(); fd.append("voice", blob, "alarm.webm"); fd.append("caption", "🎙️ Audio-Meldung");
             await sendTgMedia("sendVoice", fd);
             setTimeout(() => { isRecordingAudio = false; }, 5000); 
         };
@@ -937,6 +1022,7 @@ function recordAndSendAudio() {
 }
 
 function sendTgPhoto(caption) {
+    if(!chkTelegram.checked) return;
     canvas.toBlob(async (blob) => {
         let fd = new FormData(); fd.append("photo", blob, "live.jpg"); fd.append("caption", caption); await sendTgMedia("sendPhoto", fd);
     }, 'image/jpeg', 0.8);
@@ -996,7 +1082,15 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
     let structuralDiff = Math.round(totalDiff / pCount); let anchorThreshold = parseInt(slideAnchorSens.value);
 
     if (isMonitoring && structuralDiff > anchorThreshold) { 
-        if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now; else if (now - anchorBox.alarmStart > 1000) anchorBox.isAlarm = true; 
+        if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now; 
+        else if (now - anchorBox.alarmStart > 1000) {
+            anchorBox.isAlarm = true;
+            // Telegram Push für Anker (mit 60s Sperre gegen Dauerspam)
+            if(chkTelegram.checked && (!anchorBox.lastTgAlarm || now - anchorBox.lastTgAlarm > 60000)) {
+                anchorBox.lastTgAlarm = now;
+                sendTgPhoto("🚨 WARNUNG: Kamera (Anker) verrutscht! Überwachung gefährdet.");
+            }
+        }
     } else { 
         anchorBox.alarmStart = 0; anchorBox.isAlarm = false; 
         let alpha = parseInt(slideAnchorDrift.value) * 0.001;
@@ -1134,7 +1228,7 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
             if (currentInstantState !== 0) box.lastState = currentInstantState; 
             if (box.validCrossings > 0 && now - box.lastValidTime > (targetTakt * 2.5)) box.validCrossings = 0; 
             if (isMonitoring && diff >= kritischeMasse && box.validCrossings >= minCrossings) { 
-                if(now - box.lastAlarmTime > holdMs + 4000) { boxAlarmTriggered = true; alarmBoxId = box.id; } // Verhindert Video-Dauerschleife
+                if(now - box.lastAlarmTime > holdMs + 4000) { boxAlarmTriggered = true; alarmBoxId = box.id; } 
                 box.lastAlarmTime = now; 
             }
         }
@@ -1152,6 +1246,15 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
 }
 
 function drawUI() {
+    // Record Canvas für Lupen-Video (Nur die Box) füttern, falls aktiv
+    if (isRecordingBoxId !== null) {
+        let b = boxes.find(x => x.id === isRecordingBoxId);
+        if (b) {
+            recordCtx.fillStyle = 'black'; recordCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+            recordCtx.drawImage(canvas, b.x, b.y, b.w, b.h, 0, 0, recordCanvas.width, recordCanvas.height);
+        }
+    }
+
     if (!showCamera) return;
 
     for (let i = 0; i < activeBoxCount; i++) {
