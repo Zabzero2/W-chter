@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#1e1e1e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+
 <title>Pixel-Wächter Pro v2.1 Smart</title>
 
 <style>
@@ -24,8 +26,15 @@
         border: 2px solid #555; cursor: pointer; width: 110px; 
         flex-shrink: 0; transition: border-color 0.1s, background 0.1s;
     }
+    .zoom-box:active { background: #555; }
     .zoom-box.active-zoom { border-color: #00aaff; background: #2a4054; }
+    .zoom-box.alarm-zoom { border-color: #ff0000 !important; background: #5a1010 !important; }
+
+    .anchor-zoom { width: auto; border-color: #17a2b8; background: #0f4c5c; padding: 5px 10px; }
+    .anchor-zoom.alarm-zoom { border-color: #ffaa00 !important; background: #663300 !important; }
     
+    .mute-zoom { width: 125px; border-color: #ffcc00; background: #4a3a00; padding: 5px 10px; }
+
     .zoom-canvas { width: 80px; height: 40px; background: black; border: 1px solid #111; image-rendering: pixelated; }
     .zoom-label { font-size: 11px; margin-top: 4px; font-weight: bold; }
     .zoom-stats { font-size: 11px; color: #ccc; margin-top: 2px; line-height: 1.3; width: 100%; word-wrap: break-word; }
@@ -52,6 +61,8 @@
     button:hover { background: #666; }
     #monitorBtn.off { background: #dc3545; color: white; } 
 
+    .stealth-hint { font-size: 12px; color: #aaa; margin-top: -2px; margin-bottom: 5px; }
+
     #mainSettingsWrapper { display: none; width: 100%; flex-direction: column; align-items: center; }
 
     .module-section {
@@ -61,26 +72,53 @@
     .module-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; }
     
     .config-btn { background: #444; padding: 6px 10px; font-size: 14px; border-radius: 6px; }
+    .config-btn:hover { background: #666; }
+    .config-btn.open { background: #777; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
+
     .module-body { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; }
 
-    /* Farben der Module */
     .sec-main { border-left-color: #00ff88; }
     .sec-anchor { border-left-color: #17a2b8; }
     .sec-mute { border-left-color: #ffcc00; }
+    
+    /* V2.1 Module Colors */
     .sec-telegram { border-left-color: #0088cc; }
     .sec-audio { border-left-color: #e83e8c; }
     .sec-weather { border-left-color: #fd7e14; }
 
     .slider-row { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .slider-row label { width: 140px; text-align: left; font-size: 13px; flex-shrink: 0; }
-    .slider-row input[type="range"], .slider-row input[type="text"], .slider-row select { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; }
-    .adj-btn { width: 32px; height: 32px; padding: 0; background: #555; font-size: 20px; display: flex; justify-content: center; align-items: center; }
+    .slider-row label { width: 140px; text-align: left; font-size: 13px; flex-shrink: 0;}
+    .slider-row input[type="range"], .slider-row input[type="text"] { flex-grow: 1; }
+    .slider-row input[type="text"] { background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; }
+    .slider-row select { flex-grow: 1; background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; }
+    .adj-btn { width: 32px; height: 32px; padding: 0; background: #555; font-size: 20px; line-height: 1; display: flex; justify-content: center; align-items: center; }
 
     .checkbox-group { display: flex; gap: 15px; font-size: 13px; font-weight: normal; }
-    
+    .checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+
+    .reset-btn-small { background: #5a1010; font-size: 12px; padding: 8px 12px; margin-top: 5px; align-self: flex-start; }
+    .reset-btn-small:hover { background: #7a1010; }
+
     #container { position: relative; margin-top: 10px; display: flex; justify-content: center; width: 100%; }
-    canvas { width: 100%; max-width: 100%; height: auto; background: black; border: 2px solid #555; border-radius: 8px; }
+    
+    canvas { 
+        width: 100%; max-width: 100%; height: auto; background: black; 
+        border: 2px solid #555; border-radius: 8px; 
+    }
     video { display: none; }
+
+    .overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background: rgba(0,0,0,0.9); display: none; z-index: 9999; 
+        justify-content: center; align-items: center; flex-direction: column;
+        font-family: Arial, sans-serif; color: white; padding: 20px; box-sizing: border-box;
+    }
+    .help-content { background: #222; padding: 25px; border-radius: 12px; max-width: 650px; text-align: left; border: 1px solid #444; max-height: 90vh; overflow-y: auto; }
+    .help-content h2 { margin-top: 0; color: #00aaff; }
+    .help-content p, .help-content li { font-size: 14px; line-height: 1.5; color: #ccc; }
+    .help-content ul, .help-content ol { padding-left: 20px; margin-bottom: 15px; }
+    .help-content li { margin-bottom: 8px; }
 
     /* V2.1: Roter Screen für MIC Alarm */
     #micAlarmOverlay {
@@ -91,42 +129,77 @@
         animation: flash 0.4s infinite alternate;
     }
     @keyframes flash { from { opacity: 1; } to { opacity: 0.3; } }
-
 </style>
 </head>
 <body>
+
+<div id="micAlarmOverlay">MIC ALARM</div>
 
 <div id="stealthOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: none; z-index: 9999; justify-content: center; align-items: center; font-family: Arial, sans-serif; font-size: 22vw; font-weight: bold; color: white; gap: 3vw; box-sizing: border-box; transition: color 0.5s;">
     <span id="hoursHTML">00</span>
     <div style="display: flex; flex-direction: column; justify-content: space-between; height: 14vw; padding: 2.2vw 0; box-sizing: border-box;">
         <div style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%;"></div>
-        <div id="exitStealthBtn" style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%; cursor: pointer;"></div>
+        <div id="exitStealthBtn" style="width: 3vw; height: 3vw; background: currentColor; border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent;"></div>
     </div>
     <span id="minsHTML">00</span>
     
     <div id="stealthWeather" style="position: absolute; bottom: 8vh; width: 100%; display: flex; justify-content: space-evenly; font-size: 6vw; color: #777;"></div>
 </div>
 
-<div id="micAlarmOverlay">MIC ALARM</div>
+<div id="helpOverlay" class="overlay">
+    <div class="help-content">
+        <h2>Hilfe & Anleitung</h2>
+        <p>Der <b>Pixel-Wächter Pro</b> ist ein optisches Analysewerkzeug zur Überwachung von Helligkeitsschwankungen und Rhythmen in definierten Bildbereichen.</p>
+        
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Schritt-für-Schritt Einrichtung</h3>
+        <ol>
+            <li><b>Kamera starten:</b> Erlaube den Kamerazugriff und richte das Gerät auf den Bereich.</li>
+            <li><b>Mess-Felder platzieren:</b> Tippe das gewünschte Feld direkt im Live-Bild an und schiebe die Box über den zu überwachenden Bereich. <i>Hinweis: Der Rahmen muss nicht millimetergenau sein, sollte aber keine störenden Nachbar-Elemente erfassen.</i></li>
+            <li><b>Feinjustieren:</b> Nutze das D-Pad für pixelgenaues Ausrichten. Stelle die <i>Pixel-Helligkeit</i> und das <i>Max-Delta Limit</i> so ein, dass sie nur bei der gewünschten Anzahl an blinkenden Ziffern anschlagen.</li>
+            <li><b>Automatische Erkennung:</b> Sobald die blinkende Fläche rhythmisch wechselt, sammelt das System Takt-Punkte. Bei Erreichen der Mindest-Punkte wird der Alarm verlässlich ausgelöst.</li>
+        </ol>
+        
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Spezial-Module (Zuschaltbar)</h3>
+        <ul>
+            <li><b>Anker-Referenz (Verrutsch-Schutz):</b> Überwacht das Bild strukturell. Verrutscht das Tablet oder die Kamera, schlägt das System sofort Alarm.</li>
+            <li><b>Mute-Zone:</b> Ermöglicht das temporäre Abschalten aller Alarme (ausgenommen Anker), wenn beispielsweise ein Mauszeiger in das Feld bewegt wird. Sobald eine strukturelle Veränderung in dieser Zone erkannt wird, unterdrückt sie Alarme für die voreingestellte Mute-Dauer. Nach Ablauf wird das System sofort wieder scharf geschaltet. Um erneut stummzuschalten, muss die Zone zuerst für mindestens 1 Sekunde komplett aktivitätsfrei sein.</li>
+        </ul>
+        <p style="font-size: 13px;"><i>Sicherheitsnetz: Verfängt sich die Mute-Zone durch extremes Flackern in einem Dauer-Stumm-Zustand, ertönt nach 5 Minuten ein Warn-Beep und nach 10 Minuten ein Alarm.</i></p>
+
+        <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Tarnmodus</h3>
+        <p>Der Tarnmodus verdunkelt das Display, um Akku zu sparen und unauffällig zu bleiben, während die Kamera-Analyse im Hintergrund uneingeschränkt weiterläuft.<br>
+        <b>Pausiert-Indikator:</b> Leuchtet die Uhrzeit sanft rötlich, ist die Kamera aus oder die Überwachung im Hintergrund pausiert!<br>
+        <b>Beenden:</b> Tippe auf den <b>unteren Punkt</b> der angezeigten Uhrzeit, um den Tarnmodus zu verlassen.</p>
+
+        <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
+    </div>
+</div>
 
 <div style="width: 100%; max-width: 1000px; margin: 0 auto;">
-    <div id="topPanelContainer"><div id="zoomHeader"></div></div>
-    
+    <div id="topPanelContainer">
+        <div id="zoomHeader"></div>
+    </div>
     <div class="dpad-container" id="dpadPanel">
         <div style="font-size: 13px; color: #00ff88; margin-bottom: 5px;">Ausgewählte Box <span id="selectedBoxId">1</span></div>
         <div class="dpad-grid">
             <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
                 <span style="font-size: 11px; color:#aaa;">Rahmen-Breite</span>
-                <div style="display:flex; gap:5px;"><button class="dpad-btn" id="btnWMinus">-</button><button class="dpad-btn" id="btnWPlus">+</button></div>
+                <div style="display:flex; gap:5px;">
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnWMinus">-</button>
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnWPlus">+</button>
+                </div>
             </div>
-            <button class="dpad-btn" id="btnUp">🔼</button>
+            <button class="dpad-btn" id="btnUp" style="padding: 15px 25px;">🔼</button>
             <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
                 <span style="font-size: 11px; color:#aaa;">Rahmen-Höhe</span>
-                <div style="display:flex; gap:5px;"><button class="dpad-btn" id="btnHMinus">-</button><button class="dpad-btn" id="btnHPlus">+</button></div>
+                <div style="display:flex; gap:5px;">
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnHMinus">-</button>
+                    <button class="dpad-btn" style="padding: 10px 15px;" id="btnHPlus">+</button>
+                </div>
             </div>
-            <button class="dpad-btn" id="btnLeft">◀️</button>
-            <button class="dpad-btn" id="btnDown">🔽</button>
-            <button class="dpad-btn" id="btnRight">▶️</button>
+            <button class="dpad-btn" id="btnLeft" style="padding: 15px 25px;">◀️</button>
+            <button class="dpad-btn" id="btnDown" style="padding: 15px 25px;">🔽</button>
+            <button class="dpad-btn" id="btnRight" style="padding: 15px 25px;">▶️</button>
         </div>
     </div>
 </div>
@@ -136,42 +209,195 @@
         <button id="startBtn">Kamera Start</button>
         <button id="monitorBtn" class="off">Kamera starten zur Überwachung</button>
         <button id="activateStealthBtn">Tarnmodus</button>
-        <button id="toggleSettingsBtn" style="background: #444;">⚙️ Settings</button>
+        <button id="toggleSettingsBtn" style="background: #444; padding: 12px 18px; font-size: 18px;">⚙️</button>
+        <button id="helpBtn" style="background: #17a2b8; padding: 12px 18px; font-size: 18px;">❓</button>
     </div>
+    
+    <div class="stealth-hint">Tipp: Tarnmodus beenden durch Tippen auf den unteren Uhr-Punkt.</div>
 
     <div id="mainSettingsWrapper">
         <div class="module-section">
             <div class="module-header">
                 <span>Anzeige & Justierung</span>
                 <div class="checkbox-group">
+                    <label><input type="checkbox" id="chkExpert"> Experten</label>
                     <label><input type="checkbox" id="chkShowZoom" checked> Werte</label>
                     <label><input type="checkbox" id="chkShowCam" checked> Live-Bild</label>
                     <label><input type="checkbox" id="chkShowDpad" checked> D-Pad</label>
                 </div>
             </div>
+            <div class="module-body" style="border:none; padding-top: 5px; margin-top: 5px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <select id="cameraSelect" style="background: #444; color: white; border: 1px solid #666; border-radius: 4px; padding: 5px; flex-grow: 1; max-width: 250px;">
+                    <option value="default">Standard Kamera</option>
+                </select>
+                <button id="btnResetAll" style="background: #dc3545; font-size: 12px; padding: 8px 12px; margin-left: auto;">⚠ Alles Zurücksetzen</button>
+            </div>
+            <div class="slider-row" id="rowCamZoom" style="margin-top: 10px;">
+                <label>Live-Zoom: <span id="valCamZoom">1.0</span>x</label>
+                <button class="adj-btn" id="zoomMinus">-</button>
+                <input type="range" id="slideCamZoom" min="1" max="10" step="0.1" value="1">
+                <button class="adj-btn" id="zoomPlus">+</button>
+            </div>
         </div>
 
         <div class="module-section sec-main">
-            <div class="module-header"><span>Mess-Felder (Rhythmus)</span><button class="config-btn" id="btnToggleMainConfig">⚙️</button></div>
+            <div class="module-header">
+                <span>Mess-Felder (Rhythmus)</span>
+                <button class="config-btn" id="btnToggleMainConfig">⚙️</button>
+            </div>
             <div class="module-body" id="panelMainSettings" style="display: none;">
-                <div class="slider-row"><label>Anzahl Felder:</label><select id="boxCountSelect"><option value="1">1 Feld</option><option value="2" selected>2 Felder</option></select></div>
-                <div class="slider-row"><label>Sensibilität: <span id="valSens">30</span></label><input type="range" id="slideSens" min="2" max="100" value="30"></div>
-                <div class="slider-row"><label>Max-Delta: <span id="valMass">60</span></label><input type="range" id="slideMass" min="1" max="700" value="60"></div>
-                <div class="slider-row"><label>Min. Takte: <span id="valPulse">3</span></label><input type="range" id="slidePulse" min="1" max="10" value="3"></div>
+                <div class="slider-row">
+                    <label>Anzahl Felder:</label>
+                    <select id="boxCountSelect">
+                        <option value="1">1 Feld</option>
+                        <option value="2" selected>2 Felder</option> 
+                        <option value="3">3 Felder</option>
+                        <option value="4">4 Felder</option>
+                    </select>
+                </div>
+                <div class="slider-row" id="rowSens">
+                    <label>Pixel-Helligkeit (Limit): <span id="valSens">30</span></label>
+                    <button class="adj-btn" id="sensMinus">-</button>
+                    <input type="range" id="slideSens" min="2" max="100" value="30">
+                    <button class="adj-btn" id="sensPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowMass">
+                    <label>Max-Delta Limit: <span id="valMass">60</span> px</label>
+                    <button class="adj-btn" id="massMinus">-</button>
+                    <input type="range" id="slideMass" min="1" max="700" value="60">
+                    <button class="adj-btn" id="massPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowTakt">
+                    <label>Ziel-Zyklus: <span id="valTakt">2000</span>ms</label>
+                    <button class="adj-btn" id="taktMinus">-</button>
+                    <input type="range" id="slideTakt" min="200" max="4000" step="100" value="2000">
+                    <button class="adj-btn" id="taktPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowToleranz">
+                    <label>Takt-Toleranz: <span id="valToleranz">10</span>%</label>
+                    <button class="adj-btn" id="toleranzMinus">-</button>
+                    <input type="range" id="slideToleranz" min="5" max="100" step="5" value="10">
+                    <button class="adj-btn" id="toleranzPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Rahmen-Breite: <span id="valWidth">35</span></label>
+                    <button class="adj-btn" id="widthMinus">-</button>
+                    <input type="range" id="slideWidth" min="5" max="100" value="35">
+                    <button class="adj-btn" id="widthPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Rahmen-Höhe: <span id="valHeight">20</span></label>
+                    <button class="adj-btn" id="heightMinus">-</button>
+                    <input type="range" id="slideHeight" min="5" max="50" value="20">
+                    <button class="adj-btn" id="heightPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowPulse">
+                    <label>Min. Takt-Punkte: <span id="valPulse">3</span></label>
+                    <button class="adj-btn" id="pulseMinus">-</button>
+                    <input type="range" id="slidePulse" min="1" max="10" value="3">
+                    <button class="adj-btn" id="pulsePlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Alarmdauer: <span id="valHold">6.0</span>s</label>
+                    <button class="adj-btn" id="holdMinus">-</button>
+                    <input type="range" id="slideHold" min="0.5" max="10" step="0.5" value="6.0">
+                    <button class="adj-btn" id="holdPlus">+</button>
+                </div>
+                <button id="btnResetMain" class="reset-btn-small">Modul Reset</button>
             </div>
         </div>
 
         <div class="module-section sec-anchor">
-            <div class="module-header"><span>Anker-Referenz <label><input type="checkbox" id="chkAnchorActive"> Aktiv</label></span><button class="config-btn" id="btnToggleAnchorConfig">⚙️</button></div>
+            <div class="module-header">
+                <span style="display: flex; align-items: center; gap: 10px;">Anker-Referenz <label style="font-size:12px; font-weight:normal; cursor:pointer;"><input type="checkbox" id="chkAnchorActive"> Aktiv</label></span>
+                <button class="config-btn" id="btnToggleAnchorConfig">⚙️</button>
+            </div>
             <div class="module-body" id="panelAnchorSettings" style="display: none;">
-                <div class="slider-row"><label>Toleranz-Limit: <span id="valAnchorSens">20</span></label><input type="range" id="slideAnchorSens" min="1" max="100" value="20"></div>
+                <div style="text-align: left; margin-bottom: 10px;" id="rowAnchorDriftCheck">
+                    <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkAnchorDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
+                    </label>
+                </div>
+                <div class="slider-row" id="rowAnchorDriftSpeed">
+                    <label>Drift-Tempo: <span id="valAnchorDrift">1</span></label>
+                    <button class="adj-btn" id="anchorDriftMinus">-</button>
+                    <input type="range" id="slideAnchorDrift" min="1" max="10" value="1">
+                    <button class="adj-btn" id="anchorDriftPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowAnchorSens">
+                    <label>Toleranz: <span id="valAnchorSens">15</span></label>
+                    <button class="adj-btn" id="anchorSensMinus">-</button>
+                    <input type="range" id="slideAnchorSens" min="5" max="100" value="15">
+                    <button class="adj-btn" id="anchorSensPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Breite: <span id="valAnchorW">10</span></label>
+                    <button class="adj-btn" id="anchorWMinus">-</button>
+                    <input type="range" id="slideAnchorW" min="5" max="100" value="10">
+                    <button class="adj-btn" id="anchorWPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Höhe: <span id="valAnchorH">10</span></label>
+                    <button class="adj-btn" id="anchorHMinus">-</button>
+                    <input type="range" id="slideAnchorH" min="5" max="50" value="10">
+                    <button class="adj-btn" id="anchorHPlus">+</button>
+                </div>
+                <button id="btnResetAnchor" class="reset-btn-small">Modul Reset</button>
+            </div>
+        </div>
+
+        <div class="module-section sec-mute">
+            <div class="module-header">
+                <span style="display: flex; align-items: center; gap: 10px;">Mute-Zone <label style="font-size:12px; font-weight:normal; cursor:pointer;"><input type="checkbox" id="chkMuteActive"> Aktiv</label></span>
+                <button class="config-btn" id="btnToggleMuteConfig">⚙️</button>
+            </div>
+            <div class="module-body" id="panelMuteSettings" style="display: none;">
+                <div style="text-align: left; margin-bottom: 10px;" id="rowMuteDriftCheck">
+                    <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="chkMuteDrift" checked> Auto-Korrektur (Licht-Drift) aktiv
+                    </label>
+                </div>
+                <div class="slider-row" id="rowMuteDriftSpeed">
+                    <label>Drift-Tempo: <span id="valMuteDrift">1</span></label>
+                    <button class="adj-btn" id="muteDriftMinus">-</button>
+                    <input type="range" id="slideMuteDrift" min="1" max="10" value="1">
+                    <button class="adj-btn" id="muteDriftPlus">+</button>
+                </div>
+                <div class="slider-row" id="rowMuteSens">
+                    <label>Toleranz: <span id="valMuteSens">30</span></label>
+                    <button class="adj-btn" id="muteSensMinus">-</button>
+                    <input type="range" id="slideMuteSens" min="5" max="100" value="30">
+                    <button class="adj-btn" id="muteSensPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Mute-Dauer: <span id="valMuteHold">60</span>s</label>
+                    <button class="adj-btn" id="muteHoldMinus">-</button>
+                    <input type="range" id="slideMuteHold" min="10" max="120" step="1" value="60">
+                    <button class="adj-btn" id="muteHoldPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Breite: <span id="valMuteW">9</span></label>
+                    <button class="adj-btn" id="muteWMinus">-</button>
+                    <input type="range" id="slideMuteW" min="5" max="100" value="9">
+                    <button class="adj-btn" id="muteWPlus">+</button>
+                </div>
+                <div class="slider-row">
+                    <label>Höhe: <span id="valMuteH">11</span></label>
+                    <button class="adj-btn" id="muteHMinus">-</button>
+                    <input type="range" id="slideMuteH" min="5" max="50" value="11">
+                    <button class="adj-btn" id="muteHPlus">+</button>
+                </div>
+                <button id="btnResetMute" class="reset-btn-small">Modul Reset</button>
             </div>
         </div>
 
         <div class="module-section sec-telegram">
-            <div class="module-header"><span>Telegram Bot Integration</span><button class="config-btn" id="btnToggleTgConfig">⚙️</button></div>
+            <div class="module-header">
+                <span>Telegram Bot Integration</span>
+                <button class="config-btn" id="btnToggleTgConfig">⚙️</button>
+            </div>
             <div class="module-body" id="panelTgSettings" style="display: none;">
-                <div class="slider-row"><label>Bot Token:</label><input type="text" id="inpTgToken" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"></div>
+                <div class="slider-row"><label>Bot Token:</label><input type="text" id="inpTgToken" placeholder="123456:ABC-DEF..."></div>
                 <div class="slider-row"><label>Chat ID:</label><input type="text" id="inpTgChatId" placeholder="123456789"></div>
                 <div class="slider-row"><label>Alarm-Video:</label>
                     <select id="selTgVideoMode">
@@ -183,7 +409,10 @@
         </div>
 
         <div class="module-section sec-audio">
-            <div class="module-header"><span>Audio-Wächter (Mikrofon) <label><input type="checkbox" id="chkAudioActive"> Aktiv</label></span><button class="config-btn" id="btnToggleAudioConfig">⚙️</button></div>
+            <div class="module-header">
+                <span style="display: flex; align-items: center; gap: 10px;">Audio-Wächter <label style="font-size:12px; font-weight:normal; cursor:pointer;"><input type="checkbox" id="chkAudioActive"> Aktiv</label></span>
+                <button class="config-btn" id="btnToggleAudioConfig">⚙️</button>
+            </div>
             <div class="module-body" id="panelAudioSettings" style="display: none;">
                 <div class="slider-row">
                     <label>Audio-Schwelle: <span id="valAudioThr">50</span></label>
@@ -196,7 +425,10 @@
         </div>
 
         <div class="module-section sec-weather">
-            <div class="module-header"><span>Wetter-Station (Tarnmodus)</span><button class="config-btn" id="btnToggleWeatherConfig">⚙️</button></div>
+            <div class="module-header">
+                <span>Wetter-Station (Tarnmodus)</span>
+                <button class="config-btn" id="btnToggleWeatherConfig">⚙️</button>
+            </div>
             <div class="module-body" id="panelWeatherSettings" style="display: none;">
                 <p style="font-size:11px; margin-top:0; color:#aaa;">Leer lassen zum Deaktivieren. Aktualisiert alle 30 Min.</p>
                 <div class="slider-row"><label>Ort 1:</label><input type="text" id="inpCity1" placeholder="Berlin"></div>
@@ -206,390 +438,1552 @@
         </div>
 
     </div>
+</div>
 
-    <div id="container">
-        <video id="video" playsinline autoplay muted></video>
-        <canvas id="canvas"></canvas>
-    </div>
+<div id="container">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
 </div>
 
 <script>
-    // --- V1.0 Basis Variablen ---
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    
-    let isRunning = false;
-    let isMonitoring = false;
-    let showCamera = true;
-    let lastFrameTime = 0;
-    const FRAME_INTERVAL = 1000 / 15; // 15 FPS
-    
-    let audioCtx = null;
-    
-    // Core Box Objekte (vereinfachte Logik für das Snippet)
-    let boxes = [
-        { id: 1, x: 50, y: 50, w: 35, h: 20, active: true, validCrossings: 0, history: [] },
-        { id: 2, x: 150, y: 50, w: 35, h: 20, active: true, validCrossings: 0, history: [] }
-    ];
-    let anchorBox = { id: 'ANKER', x: 100, y: 150, w: 40, h: 40, active: false, baseline: null };
-    let selectedBox = boxes[0];
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Setup fehlgeschlagen', err));
+  });
+}
 
-    // --- V2.1 Smart Features Variablen ---
-    let tgToken = "";
-    let tgChatId = "";
-    let tgVideoMode = "full";
-    let tgOffset = 0;
-    
-    let audioMicStream = null;
-    let audioAnalyser = null;
-    let audioDataArray = null;
-    let isRecordingAudio = false;
-    let isRecordingVideo = false;
-    let activeRecBox = null;
-    let weatherCities = ["", "", ""];
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const zoomHeader = document.getElementById('zoomHeader');
 
-    // --- V1.0 AUDIO ENGINE (Strenge Philosophie) ---
-    function initAudio() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+const startBtn = document.getElementById('startBtn');
+const monitorBtn = document.getElementById('monitorBtn');
+const activateStealthBtn = document.getElementById('activateStealthBtn');
+const exitStealthBtn = document.getElementById('exitStealthBtn');
+const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+const mainSettingsWrapper = document.getElementById('mainSettingsWrapper');
+
+const btnToggleMainConfig = document.getElementById('btnToggleMainConfig');
+const panelMainSettings = document.getElementById('panelMainSettings');
+const btnToggleAnchorConfig = document.getElementById('btnToggleAnchorConfig');
+const panelAnchorSettings = document.getElementById('panelAnchorSettings');
+const btnToggleMuteConfig = document.getElementById('btnToggleMuteConfig');
+const panelMuteSettings = document.getElementById('panelMuteSettings');
+
+// V2.1 Config Buttons
+const btnToggleTgConfig = document.getElementById('btnToggleTgConfig');
+const panelTgSettings = document.getElementById('panelTgSettings');
+const btnToggleAudioConfig = document.getElementById('btnToggleAudioConfig');
+const panelAudioSettings = document.getElementById('panelAudioSettings');
+const btnToggleWeatherConfig = document.getElementById('btnToggleWeatherConfig');
+const panelWeatherSettings = document.getElementById('panelWeatherSettings');
+
+const chkShowZoom = document.getElementById('chkShowZoom');
+const chkShowCam = document.getElementById('chkShowCam');
+const chkShowDpad = document.getElementById('chkShowDpad');
+const dpadPanel = document.getElementById('dpadPanel');
+const selectedBoxIdLabel = document.getElementById('selectedBoxId');
+const chkExpert = document.getElementById('chkExpert');
+const cameraSelect = document.getElementById('cameraSelect');
+
+const boxCountSelect = document.getElementById('boxCountSelect');
+const slideSens = document.getElementById('slideSens');
+const slideMass = document.getElementById('slideMass');
+const slideWidth = document.getElementById('slideWidth');
+const slideHeight = document.getElementById('slideHeight');
+const slidePulse = document.getElementById('slidePulse');
+const slideHold = document.getElementById('slideHold');
+const slideTakt = document.getElementById('slideTakt');
+const slideToleranz = document.getElementById('slideToleranz');
+
+const chkAnchorActive = document.getElementById('chkAnchorActive');
+const chkAnchorDrift = document.getElementById('chkAnchorDrift');
+const slideAnchorSens = document.getElementById('slideAnchorSens');
+const slideAnchorDrift = document.getElementById('slideAnchorDrift');
+const slideAnchorW = document.getElementById('slideAnchorW');
+const slideAnchorH = document.getElementById('slideAnchorH');
+
+const chkMuteActive = document.getElementById('chkMuteActive');
+const chkMuteDrift = document.getElementById('chkMuteDrift');
+const slideMuteSens = document.getElementById('slideMuteSens');
+const slideMuteDrift = document.getElementById('slideMuteDrift');
+const slideMuteHold = document.getElementById('slideMuteHold');
+const slideMuteW = document.getElementById('slideMuteW');
+const slideMuteH = document.getElementById('slideMuteH');
+const slideCamZoom = document.getElementById('slideCamZoom');
+
+const valSens = document.getElementById('valSens');
+const valMass = document.getElementById('valMass');
+const valWidth = document.getElementById('valWidth');
+const valHeight = document.getElementById('valHeight');
+const valPulse = document.getElementById('valPulse');
+const valHold = document.getElementById('valHold');
+const valTakt = document.getElementById('valTakt');
+const valToleranz = document.getElementById('valToleranz');
+const valAnchorSens = document.getElementById('valAnchorSens');
+const valAnchorDrift = document.getElementById('valAnchorDrift');
+const valAnchorW = document.getElementById('valAnchorW');
+const valAnchorH = document.getElementById('valAnchorH');
+const valMuteSens = document.getElementById('valMuteSens');
+const valMuteDrift = document.getElementById('valMuteDrift');
+const valMuteHold = document.getElementById('valMuteHold');
+const valMuteW = document.getElementById('valMuteW');
+const valMuteH = document.getElementById('valMuteH');
+const valCamZoom = document.getElementById('valCamZoom');
+
+let isRunning = false;
+let isMonitoring = false;
+let showZoomValues = true;
+let showCamera = true;
+let settingsVisible = false;
+let panelMainOpen = false;
+let panelAnchorOpen = false;
+let panelMuteOpen = false;
+
+// V2.1 Panel States
+let panelTgOpen = false;
+let panelAudioOpen = false;
+let panelWeatherOpen = false;
+
+let isStealthActive = false;
+let currentTrack = null;
+let draggingBox = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let audioCtx = null;
+let wakeLock = null;
+let lastBeep = 0;
+let lastAnchorBeep = 0;
+let lastLoudBeep = 0;
+let lastFrameTime = 0;
+let frameCounter = 0;
+
+const TARGET_FPS = 15;
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+const HIT_PAD = 30;
+const HISTORY_MS = 5000;
+const PIXEL_STEP = 1;
+
+// V2.1 Variablen
+let tgToken = "";
+let tgChatId = "";
+let tgVideoMode = "full";
+let tgOffset = 0;
+let audioMicStream = null;
+let audioAnalyser = null;
+let audioDataArray = null;
+let isRecordingAudio = false;
+let isRecordingVideo = false;
+let activeRecBox = null;
+let weatherCities = ["", "", ""];
+let lastAnkerFotoTime = 0;
+
+const DEFAULTS = {
+    sens: 30, mass: 60, width: 35, height: 20, pulse: 3, hold: 6.0, takt: 2000, toleranz: 10,
+    anchorActive: false, anchorDrift: 1, anchorSens: 15, anchorW: 10, anchorH: 10, anchorDriftCheck: true,
+    muteActive: false, muteDrift: 1, muteSens: 30, muteHold: 60, muteW: 9, muteH: 11, muteDriftCheck: true, camZoom: 1
+};
+
+let activeBoxCount = 2;
+let boxes = [];
+for (let i = 0; i < 4; i++) {
+    boxes.push({ id: i+1, x: 50 + i * 50, y: 50, w: DEFAULTS.width, h: DEFAULTS.height, active: false, validCrossings: 0, history: [], baseline: null, alarmHoldUntil: 0, zoomCtx: null, zoomStatsDiv: null, zoomBoxDiv: null });
+}
+
+let anchorBox = { id: 'ANKER', x: 20, y: 20, w: DEFAULTS.anchorW, h: DEFAULTS.anchorH, active: false, baseline: null, refCtx: null, zoomCtx: null, zoomStatsDiv: null, zoomBoxDiv: null, refNeedsDraw: false };
+let muteBox = { id: 'MUTE', x: 20, y: 80, w: DEFAULTS.muteW, h: DEFAULTS.muteH, active: false, baseline: null, refCtx: null, zoomCtx: null, zoomStatsDiv: null, zoomBoxDiv: null, refNeedsDraw: false, state: 'IDLE', emptyStartTime: 0, triggerStart: 0, continuousStart: 0 };
+let selectedBox = boxes[0];
+
+function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, targetW, targetH);
+    let scale = Math.min(targetW / sw, targetH / sh);
+    let drawW = sw * scale;
+    let drawH = sh * scale;
+    let dx = (targetW - drawW) / 2;
+    let dy = (targetH - drawH) / 2;
+    ctx.drawImage(sourceCanvas, sx, sy, sw, sh, dx, dy, drawW, drawH);
+}
+
+function updateUIVisibility() {
+    const exp = chkExpert.checked;
+    cameraSelect.style.display = exp ? 'block' : 'none';
+    document.getElementById('rowCamZoom').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowSens').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowMass').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowTakt').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowToleranz').style.display = exp ? 'flex' : 'none';
+    document.getElementById('rowPulse').style.display = exp ? 'flex' : 'none';
+    
+    document.getElementById('rowAnchorDriftCheck').style.display = exp ? 'block' : 'none';
+    document.getElementById('rowAnchorDriftSpeed').style.display = exp && chkAnchorDrift.checked ? 'flex' : 'none';
+    document.getElementById('rowAnchorSens').style.display = exp ? 'flex' : 'none';
+    
+    document.getElementById('rowMuteDriftCheck').style.display = exp ? 'block' : 'none';
+    document.getElementById('rowMuteDriftSpeed').style.display = exp && chkMuteDrift.checked ? 'flex' : 'none';
+    document.getElementById('rowMuteSens').style.display = exp ? 'flex' : 'none';
+}
+
+chkExpert.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
+
+chkShowZoom.addEventListener('change', (e) => {
+    showZoomValues = e.target.checked;
+    boxes.forEach(b => { if (b.zoomStatsDiv) b.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none'; });
+    if (anchorBox.zoomStatsDiv) anchorBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
+    if (muteBox.zoomStatsDiv) muteBox.zoomStatsDiv.style.display = showZoomValues ? 'block' : 'none';
+    saveSettings();
+});
+
+chkShowCam.addEventListener('change', (e) => { showCamera = e.target.checked; canvas.style.display = showCamera ? 'block' : 'none'; saveSettings(); });
+chkShowDpad.addEventListener('change', (e) => { dpadPanel.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
+
+chkAnchorDrift.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
+chkMuteDrift.addEventListener('change', () => { updateUIVisibility(); saveSettings(); });
+
+chkAnchorActive.addEventListener('change', (e) => {
+    anchorBox.active = e.target.checked;
+    anchorBox.baseline = null;
+    if (anchorBox.active) selectedBox = anchorBox;
+    else if(selectedBox === anchorBox) selectedBox = boxes[0];
+    saveSettings();
+    createZoomDisplays();
+});
+
+chkMuteActive.addEventListener('change', (e) => {
+    muteBox.active = e.target.checked;
+    muteBox.baseline = null;
+    muteBox.state = 'IDLE';
+    muteBox.emptyStartTime = 0;
+    muteBox.triggerStart = 0;
+    if (muteBox.active) selectedBox = muteBox;
+    else if(selectedBox === muteBox) selectedBox = boxes[0];
+    saveSettings();
+    createZoomDisplays();
+});
+
+function createZoomDisplays() {
+    zoomHeader.innerHTML = '';
+    for (let i = 0; i < activeBoxCount; i++) {
+        const div = document.createElement('div');
+        div.className = 'zoom-box';
+        div.onclick = () => { selectedBox = boxes[i]; updateZoomSelectionUI(); };
+        
+        const c = document.createElement('canvas');
+        c.className = 'zoom-canvas'; c.width = 100; c.height = 50;
+        
+        const label = document.createElement('div');
+        label.className = 'zoom-label'; label.innerText = 'BOX ' + (i+1);
+        
+        const stats = document.createElement('div');
+        stats.className = 'zoom-stats';
+        stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Masse: 0`;
+        
+        div.appendChild(c); div.appendChild(label); div.appendChild(stats);
+        zoomHeader.appendChild(div);
+        
+        boxes[i].zoomCtx = c.getContext('2d');
+        boxes[i].zoomStatsDiv = stats;
+        boxes[i].zoomBoxDiv = div;
     }
     
-    function playWarningBeep() { // V1.0 Anker Sound
-        initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine'; osc.frequency.value = 800;
-        gain.gain.value = 0.05;
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
-    
-    function playLoudAlarm() { // V1.0 Box Sound
-        initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.1);
-        osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
-        osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.3);
-        gain.gain.value = 1.0;
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    if (anchorBox.active) {
+        const div = document.createElement('div');
+        div.className = 'zoom-box anchor-zoom';
+        div.onclick = () => { selectedBox = anchorBox; updateZoomSelectionUI(); };
+        
+        const row = document.createElement('div');
+        row.style.display = "flex"; row.style.gap = "5px";
+        
+        const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 50; cLive.height = 50;
+        const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 50; cRef.height = 50;
+        
+        row.appendChild(cRef); row.appendChild(cLive);
+        
+        const label = document.createElement('div');
+        label.className = 'zoom-label'; label.innerText = 'ANKER';
+        
+        const stats = document.createElement('div');
+        stats.className = 'zoom-stats';
+        stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Diff: 0`;
+        
+        div.appendChild(row); div.appendChild(label); div.appendChild(stats);
+        zoomHeader.appendChild(div);
+        
+        anchorBox.zoomCtx = cLive.getContext('2d');
+        anchorBox.refCtx = cRef.getContext('2d');
+        anchorBox.zoomStatsDiv = stats;
+        anchorBox.zoomBoxDiv = div;
+        anchorBox.refNeedsDraw = true;
     }
 
-    // --- V2.1 TELEGRAM ENGINE ---
-    async function sendTgMedia(endpoint, fieldName, blob, filename) {
-        if (!tgToken || !tgChatId) return;
-        let formData = new FormData();
-        formData.append('chat_id', tgChatId);
-        formData.append(fieldName, blob, filename);
+    if (muteBox.active) {
+        const div = document.createElement('div');
+        div.className = 'zoom-box mute-zoom';
+        div.onclick = () => { selectedBox = muteBox; updateZoomSelectionUI(); };
+        
+        const row = document.createElement('div');
+        row.style.display = "flex"; row.style.gap = "5px";
+        
+        const cLive = document.createElement('canvas'); cLive.className = 'zoom-canvas'; cLive.width = 50; cLive.height = 50;
+        const cRef = document.createElement('canvas'); cRef.className = 'zoom-canvas'; cRef.width = 50; cRef.height = 50;
+        
+        row.appendChild(cRef); row.appendChild(cLive);
+        
+        const label = document.createElement('div');
+        label.className = 'zoom-label'; label.innerText = 'MUTE-ZONE';
+        
+        const stats = document.createElement('div');
+        stats.className = 'zoom-stats';
+        stats.style.display = showZoomValues ? 'block' : 'none';
+        stats.innerHTML = `Bereit`;
+        
+        div.appendChild(row); div.appendChild(label); div.appendChild(stats);
+        zoomHeader.appendChild(div);
+        
+        muteBox.zoomCtx = cLive.getContext('2d');
+        muteBox.refCtx = cRef.getContext('2d');
+        muteBox.zoomStatsDiv = stats;
+        muteBox.zoomBoxDiv = div;
+        muteBox.refNeedsDraw = true;
+    }
+    
+    updateZoomSelectionUI();
+}
+
+function updateZoomSelectionUI() {
+    let allDivs = [...boxes.map(b => b.zoomBoxDiv)];
+    if (anchorBox.active) allDivs.push(anchorBox.zoomBoxDiv);
+    if (muteBox.active) allDivs.push(muteBox.zoomBoxDiv);
+    
+    allDivs.forEach((div) => { if (div) div.classList.remove('active-zoom'); });
+    if (selectedBox && selectedBox.zoomBoxDiv) {
+        selectedBox.zoomBoxDiv.classList.add('active-zoom');
+        selectedBoxIdLabel.innerText = selectedBox.id;
+    }
+}
+
+function updateLabels() {
+    valSens.innerText = slideSens.value;
+    valWidth.innerText = slideWidth.value;
+    valHeight.innerText = slideHeight.value;
+    valPulse.innerText = slidePulse.value;
+    valHold.innerText = parseFloat(slideHold.value).toFixed(1);
+    valTakt.innerText = slideTakt.value;
+    valToleranz.innerText = slideToleranz.value;
+    
+    valAnchorSens.innerText = slideAnchorSens.value;
+    valAnchorW.innerText = slideAnchorW.value;
+    valAnchorH.innerText = slideAnchorH.value;
+    valAnchorDrift.innerText = slideAnchorDrift.value;
+
+    valMuteSens.innerText = slideMuteSens.value;
+    valMuteW.innerText = slideMuteW.value;
+    valMuteH.innerText = slideMuteH.value;
+    valMuteHold.innerText = slideMuteHold.value;
+    valMuteDrift.innerText = slideMuteDrift.value;
+    
+    valCamZoom.innerText = parseFloat(slideCamZoom.value).toFixed(1);
+}
+
+function setSliderValue(slider, valLabel, step, max, min, offset) {
+    let val = parseFloat(slider.value) + offset * step;
+    if (val > max) val = max;
+    if (val < min) val = min;
+    slider.value = val;
+    valLabel.innerText = slider.step.includes('.') ? val.toFixed(1) : Math.round(val);
+    saveSettings();
+}
+
+document.getElementById('zoomMinus').onclick = () => { setSliderValue(slideCamZoom, valCamZoom, 0.1, 10, 1, -1); applyZoom(); };
+document.getElementById('zoomPlus').onclick = () => { setSliderValue(slideCamZoom, valCamZoom, 0.1, 10, 1, 1); applyZoom(); };
+document.getElementById('sensMinus').onclick = () => setSliderValue(slideSens, valSens, 1, 100, 2, -1);
+document.getElementById('sensPlus').onclick = () => setSliderValue(slideSens, valSens, 1, 100, 2, 1);
+document.getElementById('massMinus').onclick = () => setSliderValue(slideMass, valMass, 1, 700, 1, -1);
+document.getElementById('massPlus').onclick = () => setSliderValue(slideMass, valMass, 1, 700, 1, 1);
+document.getElementById('taktMinus').onclick = () => setSliderValue(slideTakt, valTakt, 100, 4000, 200, -1);
+document.getElementById('taktPlus').onclick = () => setSliderValue(slideTakt, valTakt, 100, 4000, 200, 1);
+document.getElementById('toleranzMinus').onclick = () => setSliderValue(slideToleranz, valToleranz, 5, 100, 5, -1);
+document.getElementById('toleranzPlus').onclick = () => setSliderValue(slideToleranz, valToleranz, 5, 100, 5, 1);
+
+document.getElementById('widthMinus').onclick = () => { setSliderValue(slideWidth, valWidth, 1, 100, 5, -1); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.baseline=null; }); };
+document.getElementById('widthPlus').onclick = () => { setSliderValue(slideWidth, valWidth, 1, 100, 5, 1); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.baseline=null; }); };
+document.getElementById('heightMinus').onclick = () => { setSliderValue(slideHeight, valHeight, 1, 50, 5, -1); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.baseline=null; }); };
+document.getElementById('heightPlus').onclick = () => { setSliderValue(slideHeight, valHeight, 1, 50, 5, 1); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.baseline=null; }); };
+
+document.getElementById('pulseMinus').onclick = () => setSliderValue(slidePulse, valPulse, 1, 10, 1, -1);
+document.getElementById('pulsePlus').onclick = () => setSliderValue(slidePulse, valPulse, 1, 10, 1, 1);
+document.getElementById('holdMinus').onclick = () => setSliderValue(slideHold, valHold, 0.5, 10, 0.5, -1);
+document.getElementById('holdPlus').onclick = () => setSliderValue(slideHold, valHold, 0.5, 10, 0.5, 1);
+
+document.getElementById('anchorSensMinus').onclick = () => setSliderValue(slideAnchorSens, valAnchorSens, 1, 100, 5, -1);
+document.getElementById('anchorSensPlus').onclick = () => setSliderValue(slideAnchorSens, valAnchorSens, 1, 100, 5, 1);
+document.getElementById('anchorDriftMinus').onclick = () => setSliderValue(slideAnchorDrift, valAnchorDrift, 1, 10, 1, -1);
+document.getElementById('anchorDriftPlus').onclick = () => setSliderValue(slideAnchorDrift, valAnchorDrift, 1, 10, 1, 1);
+document.getElementById('anchorWMinus').onclick = () => { setSliderValue(slideAnchorW, valAnchorW, 1, 100, 5, -1); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; };
+document.getElementById('anchorWPlus').onclick = () => { setSliderValue(slideAnchorW, valAnchorW, 1, 100, 5, 1); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; };
+document.getElementById('anchorHMinus').onclick = () => { setSliderValue(slideAnchorH, valAnchorH, 1, 50, 5, -1); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; };
+document.getElementById('anchorHPlus').onclick = () => { setSliderValue(slideAnchorH, valAnchorH, 1, 50, 5, 1); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; };
+
+document.getElementById('muteSensMinus').onclick = () => setSliderValue(slideMuteSens, valMuteSens, 1, 100, 5, -1);
+document.getElementById('muteSensPlus').onclick = () => setSliderValue(slideMuteSens, valMuteSens, 1, 100, 5, 1);
+document.getElementById('muteHoldMinus').onclick = () => setSliderValue(slideMuteHold, valMuteHold, 1, 120, 10, -1);
+document.getElementById('muteHoldPlus').onclick = () => setSliderValue(slideMuteHold, valMuteHold, 1, 120, 10, 1);
+document.getElementById('muteDriftMinus').onclick = () => setSliderValue(slideMuteDrift, valMuteDrift, 1, 10, 1, -1);
+document.getElementById('muteDriftPlus').onclick = () => setSliderValue(slideMuteDrift, valMuteDrift, 1, 10, 1, 1);
+document.getElementById('muteWMinus').onclick = () => { setSliderValue(slideMuteW, valMuteW, 1, 100, 5, -1); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; };
+document.getElementById('muteWPlus').onclick = () => { setSliderValue(slideMuteW, valMuteW, 1, 100, 5, 1); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; };
+document.getElementById('muteHMinus').onclick = () => { setSliderValue(slideMuteH, valMuteH, 1, 50, 5, -1); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; };
+document.getElementById('muteHPlus').onclick = () => { setSliderValue(slideMuteH, valMuteH, 1, 50, 5, 1); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; };
+
+function resetToDefaults(modul) {
+    if (modul === 'main' || modul === 'all') {
+        slideSens.value = DEFAULTS.sens; slideMass.value = DEFAULTS.mass;
+        slideWidth.value = DEFAULTS.width; slideHeight.value = DEFAULTS.height;
+        slidePulse.value = DEFAULTS.pulse; slideHold.value = DEFAULTS.hold;
+        slideTakt.value = DEFAULTS.takt; slideToleranz.value = DEFAULTS.toleranz;
+        boxes.forEach(b => { b.w = DEFAULTS.width; b.h = DEFAULTS.height; b.baseline = null; });
+    }
+    if (modul === 'anchor' || modul === 'all') {
+        slideAnchorSens.value = DEFAULTS.anchorSens; slideAnchorDrift.value = DEFAULTS.anchorDrift;
+        slideAnchorW.value = DEFAULTS.anchorW; slideAnchorH.value = DEFAULTS.anchorH;
+        chkAnchorDrift.checked = DEFAULTS.anchorDriftCheck;
+        anchorBox.w = DEFAULTS.anchorW; anchorBox.h = DEFAULTS.anchorH; anchorBox.baseline = null;
+    }
+    if (modul === 'mute' || modul === 'all') {
+        slideMuteSens.value = DEFAULTS.muteSens; slideMuteDrift.value = DEFAULTS.muteDrift;
+        slideMuteW.value = DEFAULTS.muteW; slideMuteH.value = DEFAULTS.muteH;
+        slideMuteHold.value = DEFAULTS.muteHold; chkMuteDrift.checked = DEFAULTS.muteDriftCheck;
+        muteBox.w = DEFAULTS.muteW; muteBox.h = DEFAULTS.muteH; muteBox.baseline = null;
+        muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
+    }
+    if (modul === 'all') {
+        slideCamZoom.value = DEFAULTS.camZoom; applyZoom();
+        chkExpert.checked = false; chkShowZoom.checked = true; chkShowCam.checked = true; chkShowDpad.checked = true;
+        chkAnchorActive.checked = DEFAULTS.anchorActive; anchorBox.active = DEFAULTS.anchorActive;
+        chkMuteActive.checked = DEFAULTS.muteActive; muteBox.active = DEFAULTS.muteActive;
+        boxCountSelect.value = "2"; activeBoxCount = 2;
+        showZoomValues = true; showCamera = true;
+        canvas.style.display = 'block'; dpadPanel.style.display = 'flex';
+        createZoomDisplays(); updateUIVisibility();
+    }
+    updateLabels(); saveSettings();
+}
+
+document.getElementById('btnResetMain').onclick = () => resetToDefaults('main');
+document.getElementById('btnResetAnchor').onclick = () => resetToDefaults('anchor');
+document.getElementById('btnResetMute').onclick = () => resetToDefaults('mute');
+document.getElementById('btnResetAll').onclick = () => { if(confirm("Möchtest du wirklich ALLE Einstellungen und Modul-Werte auf die Werkseinstellungen zurücksetzen?")) resetToDefaults('all'); };
+
+function loadSettings() {
+    const sStr = localStorage.getItem('pixelwachter_pro_settings');
+    if (sStr) {
         try {
-            await fetch(`https://api.telegram.org/bot${tgToken}/${endpoint}`, { method: 'POST', body: formData });
-        } catch(e) { console.error("Telegram Sende-Fehler:", e); }
-    }
+            const s = JSON.parse(sStr);
+            if (s.sens) slideSens.value = s.sens;
+            if (s.mass) slideMass.value = s.mass;
+            if (s.width) { slideWidth.value = s.width; boxes.forEach(b => b.w = s.width); }
+            if (s.height) { slideHeight.value = s.height; boxes.forEach(b => b.h = s.height); }
+            if (s.pulse) slidePulse.value = s.pulse;
+            if (s.hold) slideHold.value = s.hold;
+            if (s.takt) slideTakt.value = s.takt;
+            if (s.toleranz) slideToleranz.value = s.toleranz;
+            if (s.anchorSens) slideAnchorSens.value = s.anchorSens;
+            if (s.anchorDrift) slideAnchorDrift.value = s.anchorDrift;
+            if (s.anchorW) { slideAnchorW.value = s.anchorW; anchorBox.w = s.anchorW; }
+            if (s.anchorH) { slideAnchorH.value = s.anchorH; anchorBox.h = s.anchorH; }
+            if (s.muteSens) slideMuteSens.value = s.muteSens;
+            if (s.muteDrift) slideMuteDrift.value = s.muteDrift;
+            if (s.muteHold) slideMuteHold.value = s.muteHold;
+            if (s.muteW) { slideMuteW.value = s.muteW; muteBox.w = s.muteW; }
+            if (s.muteH) { slideMuteH.value = s.muteH; muteBox.h = s.muteH; }
+            if (s.camZoom) { slideCamZoom.value = s.camZoom; }
+            
+            if (s.boxCount) { boxCountSelect.value = s.boxCount; activeBoxCount = parseInt(s.boxCount); }
+            if (s.chkExpert !== undefined) chkExpert.checked = s.chkExpert;
+            if (s.chkShowZoom !== undefined) { showZoomValues = s.chkShowZoom; chkShowZoom.checked = s.chkShowZoom; }
+            if (s.chkShowCam !== undefined) { showCamera = s.chkShowCam; chkShowCam.checked = s.chkShowCam; canvas.style.display = showCamera ? 'block' : 'none'; }
+            if (s.chkShowDpad !== undefined) { chkShowDpad.checked = s.chkShowDpad; dpadPanel.style.display = s.chkShowDpad ? 'flex' : 'none'; }
+            if (s.anchorActive !== undefined) { anchorBox.active = s.anchorActive; chkAnchorActive.checked = s.anchorActive; }
+            if (s.muteActive !== undefined) { muteBox.active = s.muteActive; chkMuteActive.checked = s.muteActive; }
+            if (s.anchorDriftCheck !== undefined) chkAnchorDrift.checked = s.anchorDriftCheck;
+            if (s.muteDriftCheck !== undefined) chkMuteDrift.checked = s.muteDriftCheck;
 
-    // Telegram Bot Befehle (/foto, /video, /audio) empfangen
-    async function pollTelegramCommands() {
-        if (!tgToken || !tgChatId) return;
-        try {
-            let res = await fetch(`https://api.telegram.org/bot${tgToken}/getUpdates?offset=${tgOffset}&timeout=5`);
-            let data = await res.json();
-            if (data.ok && data.result.length > 0) {
-                for (let r of data.result) {
-                    tgOffset = r.update_id + 1;
-                    let text = r.message?.text;
-                    let cid = r.message?.chat?.id;
-                    if (text && cid == tgChatId) {
-                        if (text === '/foto') {
-                            canvas.toBlob(blob => sendTgMedia('sendPhoto', 'photo', blob, 'live.jpg'), 'image/jpeg', 0.8);
-                        }
-                        if (text === '/video') {
-                            recordAndSendVideo('full', 5); // Manuelles Video erzwingen (ohne Alarmton)
-                        }
-                        if (text === '/audio') {
-                            triggerAudioAlarm(); // Audio Wächter triggern
-                        }
+            if (s.settingsVisible !== undefined) {
+                settingsVisible = s.settingsVisible;
+                mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none';
+                toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444';
+            }
+            if (s.panelMainOpen !== undefined) { panelMainOpen = s.panelMainOpen; togglePanel(btnToggleMainConfig, panelMainSettings, !panelMainOpen); }
+            if (s.panelAnchorOpen !== undefined) { panelAnchorOpen = s.panelAnchorOpen; togglePanel(btnToggleAnchorConfig, panelAnchorSettings, !panelAnchorOpen); }
+            if (s.panelMuteOpen !== undefined) { panelMuteOpen = s.panelMuteOpen; togglePanel(btnToggleMuteConfig, panelMuteSettings, !panelMuteOpen); }
+            
+            // V2.1 Panels
+            if (s.panelTgOpen !== undefined) { panelTgOpen = s.panelTgOpen; togglePanel(btnToggleTgConfig, panelTgSettings, !panelTgOpen); }
+            if (s.panelAudioOpen !== undefined) { panelAudioOpen = s.panelAudioOpen; togglePanel(btnToggleAudioConfig, panelAudioSettings, !panelAudioOpen); }
+            if (s.panelWeatherOpen !== undefined) { panelWeatherOpen = s.panelWeatherOpen; togglePanel(btnToggleWeatherConfig, panelWeatherSettings, !panelWeatherOpen); }
+            
+            // V2.1 Settings
+            if (s.tgToken !== undefined) { tgToken = s.tgToken; document.getElementById('inpTgToken').value = tgToken; }
+            if (s.tgChatId !== undefined) { tgChatId = s.tgChatId; document.getElementById('inpTgChatId').value = tgChatId; }
+            if (s.tgVideoMode !== undefined) { tgVideoMode = s.tgVideoMode; document.getElementById('selTgVideoMode').value = tgVideoMode; }
+            if (s.audioActive !== undefined) { document.getElementById('chkAudioActive').checked = s.audioActive; if(s.audioActive) toggleAudioWächter(); }
+            if (s.audioThr !== undefined) { document.getElementById('slideAudioThr').value = s.audioThr; document.getElementById('valAudioThr').innerText = s.audioThr; }
+            if (s.weatherCities) { 
+                weatherCities = s.weatherCities; 
+                document.getElementById('inpCity1').value = weatherCities[0];
+                document.getElementById('inpCity2').value = weatherCities[1];
+                document.getElementById('inpCity3').value = weatherCities[2];
+            }
+
+            if (s.positions) { s.positions.forEach((pos, idx) => { if (boxes[idx]) { boxes[idx].x = pos.x; boxes[idx].y = pos.y; } }); }
+            if (s.anchor) { anchorBox.x = s.anchor.x; anchorBox.y = s.anchor.y; }
+            if (s.mute) { muteBox.x = s.mute.x; muteBox.y = s.mute.y; }
+            
+        } catch(e) { console.error("Fehler beim Laden:", e); resetToDefaults('all'); }
+    }
+    updateLabels();
+    updateUIVisibility();
+}
+
+function saveSettings() {
+    const s = {
+        sens: parseInt(slideSens.value),
+        mass: parseInt(slideMass.value),
+        width: parseInt(slideWidth.value),
+        height: parseInt(slideHeight.value),
+        pulse: parseInt(slidePulse.value),
+        hold: parseFloat(slideHold.value),
+        takt: parseInt(slideTakt.value),
+        toleranz: parseInt(slideToleranz.value),
+        anchorSens: parseInt(slideAnchorSens.value),
+        anchorDrift: parseInt(slideAnchorDrift.value),
+        anchorW: parseInt(slideAnchorW.value),
+        anchorH: parseInt(slideAnchorH.value),
+        muteSens: parseInt(slideMuteSens.value),
+        muteDrift: parseInt(slideMuteDrift.value),
+        muteHold: parseInt(slideMuteHold.value),
+        muteW: parseInt(slideMuteW.value),
+        muteH: parseInt(slideMuteH.value),
+        camZoom: parseFloat(slideCamZoom.value),
+        chkExpert: chkExpert.checked,
+        chkShowZoom: chkShowZoom.checked,
+        chkShowCam: chkShowCam.checked,
+        chkShowDpad: chkShowDpad.checked,
+        boxCount: boxCountSelect.value,
+        positions: boxes.map(b => ({x: b.x, y: b.y})),
+        anchor: {x: anchorBox.x, y: anchorBox.y},
+        mute: {x: muteBox.x, y: muteBox.y},
+        anchorActive: anchorBox.active,
+        muteActive: muteBox.active,
+        anchorDriftCheck: chkAnchorDrift.checked,
+        muteDriftCheck: chkMuteDrift.checked,
+        settingsVisible: settingsVisible,
+        panelMainOpen: panelMainOpen,
+        panelAnchorOpen: panelAnchorOpen,
+        panelMuteOpen: panelMuteOpen,
+        
+        // V2.1 Persistence
+        panelTgOpen: panelTgOpen,
+        panelAudioOpen: panelAudioOpen,
+        panelWeatherOpen: panelWeatherOpen,
+        tgToken: tgToken,
+        tgChatId: tgChatId,
+        tgVideoMode: tgVideoMode,
+        audioActive: document.getElementById('chkAudioActive').checked,
+        audioThr: document.getElementById('slideAudioThr').value,
+        weatherCities: weatherCities
+    };
+    localStorage.setItem('pixelwachter_pro_settings', JSON.stringify(s));
+}
+
+slideSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideMass.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideWidth.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.baseline=null; }); });
+slideHeight.addEventListener('input', () => { updateLabels(); saveSettings(); boxes.forEach(b => { b.h = parseInt(slideHeight.value); b.baseline=null; }); });
+slidePulse.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideTakt.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideToleranz.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideCamZoom.addEventListener('input', () => { updateLabels(); saveSettings(); applyZoom(); });
+slideAnchorSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideAnchorW.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.w = parseInt(slideAnchorW.value); anchorBox.baseline=null; });
+slideAnchorH.addEventListener('input', () => { updateLabels(); saveSettings(); anchorBox.h = parseInt(slideAnchorH.value); anchorBox.baseline=null; });
+slideAnchorDrift.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideMuteSens.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideMuteHold.addEventListener('input', () => { updateLabels(); saveSettings(); });
+slideMuteW.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.w = parseInt(slideMuteW.value); muteBox.baseline=null; });
+slideMuteH.addEventListener('input', () => { updateLabels(); saveSettings(); muteBox.h = parseInt(slideMuteH.value); muteBox.baseline=null; });
+slideMuteDrift.addEventListener('input', () => { updateLabels(); saveSettings(); });
+
+boxCountSelect.addEventListener('change', (e) => {
+    activeBoxCount = parseInt(e.target.value);
+    createZoomDisplays();
+    if (selectedBox !== anchorBox && selectedBox !== muteBox && selectedBox.id > activeBoxCount) {
+        selectedBox = boxes[0];
+        updateZoomSelectionUI();
+    }
+    saveSettings();
+});
+
+// V2.1 Bindings
+document.getElementById('inpTgToken').addEventListener('change', (e) => { tgToken = e.target.value; saveSettings(); });
+document.getElementById('inpTgChatId').addEventListener('change', (e) => { tgChatId = e.target.value; saveSettings(); });
+document.getElementById('selTgVideoMode').addEventListener('change', (e) => { tgVideoMode = e.target.value; saveSettings(); });
+document.getElementById('chkAudioActive').addEventListener('change', () => { toggleAudioWächter(); saveSettings(); });
+document.getElementById('slideAudioThr').addEventListener('input', (e) => { document.getElementById('valAudioThr').innerText = e.target.value; saveSettings(); });
+['inpCity1', 'inpCity2', 'inpCity3'].forEach((id, i) => {
+    document.getElementById(id).addEventListener('change', (e) => { weatherCities[i] = e.target.value; saveSettings(); updateWeather(); });
+});
+
+let turboInterval = null;
+let turboTimeout = null;
+
+function startTurboAction(actionFn) {
+    if (!selectedBox) return;
+    actionFn(1);
+    
+    if(selectedBox === anchorBox) anchorBox.baseline = null;
+    else if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+    else { selectedBox.baseline = null; }
+    
+    saveSettings();
+    turboTimeout = setTimeout(() => {
+        let speed = 1; let tick = 0;
+        turboInterval = setInterval(() => {
+            tick++;
+            if (tick > 15) speed = 3;
+            if (tick > 35) speed = 8;
+            actionFn(speed);
+            if(selectedBox === anchorBox) anchorBox.baseline = null;
+            else if(selectedBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+            else { selectedBox.baseline = null; }
+        }, 50);
+    }, 400);
+}
+
+function stopTurboAction() {
+    clearTimeout(turboTimeout);
+    clearInterval(turboInterval);
+}
+
+function bindTurboButton(btnId, actionFn) {
+    const btn = document.getElementById(btnId);
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); startTurboAction(actionFn); }, {passive: false});
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); stopTurboAction(); }, {passive: false});
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); startTurboAction(actionFn); });
+    btn.addEventListener('mouseup', (e) => { e.preventDefault(); stopTurboAction(); });
+    btn.addEventListener('mouseleave', () => { stopTurboAction(); });
+}
+
+bindTurboButton('btnUp', (s) => { selectedBox.y = Math.max(0, selectedBox.y - s); });
+bindTurboButton('btnDown', (s) => { selectedBox.y = Math.min(canvas.height - selectedBox.h, selectedBox.y + s); });
+bindTurboButton('btnLeft', (s) => { selectedBox.x = Math.max(0, selectedBox.x - s); });
+bindTurboButton('btnRight', (s) => { selectedBox.x = Math.min(canvas.width - selectedBox.w, selectedBox.x + s); });
+
+bindTurboButton('btnWMinus', (s) => { 
+    selectedBox.w = Math.max(5, selectedBox.w - s); 
+    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideWidth.value = selectedBox.w; boxes.forEach(b => b.w = selectedBox.w); }
+    else if (selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; }
+    else if (selectedBox === muteBox) { slideMuteW.value = selectedBox.w; }
+    updateLabels(); 
+});
+bindTurboButton('btnWPlus', (s) => { 
+    selectedBox.w = Math.min(canvas.width - selectedBox.x, selectedBox.w + s); 
+    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideWidth.value = selectedBox.w; boxes.forEach(b => b.w = selectedBox.w); }
+    else if (selectedBox === anchorBox) { slideAnchorW.value = selectedBox.w; }
+    else if (selectedBox === muteBox) { slideMuteW.value = selectedBox.w; }
+    updateLabels(); 
+});
+bindTurboButton('btnHMinus', (s) => { 
+    selectedBox.h = Math.max(5, selectedBox.h - s); 
+    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideHeight.value = selectedBox.h; boxes.forEach(b => b.h = selectedBox.h); }
+    else if (selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; }
+    else if (selectedBox === muteBox) { slideMuteH.value = selectedBox.h; }
+    updateLabels(); 
+});
+bindTurboButton('btnHPlus', (s) => { 
+    selectedBox.h = Math.min(canvas.height - selectedBox.y, selectedBox.h + s); 
+    if(selectedBox !== anchorBox && selectedBox !== muteBox) { slideHeight.value = selectedBox.h; boxes.forEach(b => b.h = selectedBox.h); }
+    else if (selectedBox === anchorBox) { slideAnchorH.value = selectedBox.h; }
+    else if (selectedBox === muteBox) { slideMuteH.value = selectedBox.h; }
+    updateLabels(); 
+});
+
+function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX; clientY = e.clientY;
+    }
+    return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+}
+
+function startDrag(e) {
+    if (!isRunning || !showCamera) return;
+    const pos = getPointerPos(e);
+    let checkBoxes = boxes.slice(0, activeBoxCount);
+    if (anchorBox.active) checkBoxes.push(anchorBox);
+    if (muteBox.active) checkBoxes.push(muteBox);
+    
+    let boxHit = false;
+    for (let i = checkBoxes.length - 1; i >= 0; i--) {
+        const box = checkBoxes[i];
+        if (pos.x >= box.x - HIT_PAD && pos.x <= box.x + box.w + HIT_PAD && pos.y >= box.y - HIT_PAD && pos.y <= box.y + box.h + HIT_PAD) {
+            draggingBox = box;
+            selectedBox = box;
+            dragOffsetX = pos.x - box.x; dragOffsetY = pos.y - box.y;
+            updateZoomSelectionUI();
+            boxHit = true;
+            break;
+        }
+    }
+    
+    if (boxHit && e.type === 'mousedown') {
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+    }
+}
+
+function drag(e) {
+    if (!draggingBox) return;
+    e.preventDefault();
+    const pos = getPointerPos(e);
+    draggingBox.x = Math.max(0, Math.min(canvas.width - draggingBox.w, pos.x - dragOffsetX));
+    draggingBox.y = Math.max(0, Math.min(canvas.height - draggingBox.h, pos.y - dragOffsetY));
+    if(draggingBox === anchorBox) anchorBox.baseline = null;
+    else if(draggingBox === muteBox) { muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0; }
+    else draggingBox.baseline = null;
+}
+
+function endDrag() {
+    draggingBox = null;
+    saveSettings();
+    document.removeEventListener('mousemove', drag);
+    document.removeEventListener('mouseup', endDrag);
+}
+
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e); }, {passive: false});
+canvas.addEventListener('touchmove', drag, {passive: false});
+canvas.addEventListener('touchend', endDrag);
+canvas.addEventListener('mousedown', startDrag);
+
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function beep() {
+    const now = Date.now();
+    if (now - lastBeep < 150) return;
+    lastBeep = now;
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 1200;
+    gain.gain.value = 0.05;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+}
+
+function beepMuteZone() {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 250;
+    gain.gain.value = 0.1;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function playWarningBeep() {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 800;
+    gain.gain.value = 0.05;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+}
+
+function playLoudAlarm() {
+    const now = Date.now();
+    if (now - lastLoudBeep < 1000) return;
+    lastLoudBeep = now;
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.3);
+    gain.gain.value = 1.0;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+}
+
+// --- V2.1: TELEGRAM & MEDIEN FUNKTIONEN ---
+async function sendTgMedia(endpoint, fieldName, blob, filename) {
+    if (!tgToken || !tgChatId) return;
+    let formData = new FormData();
+    formData.append('chat_id', tgChatId);
+    formData.append(fieldName, blob, filename);
+    try {
+        await fetch(`https://api.telegram.org/bot${tgToken}/${endpoint}`, { method: 'POST', body: formData });
+    } catch(e) { console.error("Telegram Sende-Fehler:", e); }
+}
+
+async function pollTelegramCommands() {
+    if (!tgToken || !tgChatId) return;
+    try {
+        let res = await fetch(`https://api.telegram.org/bot${tgToken}/getUpdates?offset=${tgOffset}&timeout=5`);
+        let data = await res.json();
+        if (data.ok && data.result.length > 0) {
+            for (let r of data.result) {
+                tgOffset = r.update_id + 1;
+                let text = r.message?.text;
+                let cid = r.message?.chat?.id;
+                if (text && cid == tgChatId) {
+                    if (text === '/foto') {
+                        canvas.toBlob(blob => sendTgMedia('sendPhoto', 'photo', blob, 'live.jpg'), 'image/jpeg', 0.8);
+                    }
+                    if (text === '/video') {
+                        recordAndSendVideo('full', 5); 
+                    }
+                    if (text === '/audio') {
+                        triggerAudioAlarm();
                     }
                 }
             }
+        }
+    } catch(e) {}
+}
+
+function recordAndSendVideo(mode, durationSec, boxObj = null) {
+    if (!tgToken || !tgChatId || isRecordingVideo) return;
+    isRecordingVideo = true;
+    let stream;
+    
+    if (mode === 'box' && boxObj) {
+        let recCanvas = document.createElement('canvas');
+        recCanvas.width = boxObj.w; recCanvas.height = boxObj.h;
+        stream = recCanvas.captureStream(TARGET_FPS);
+        activeRecBox = { canvas: recCanvas, ctx: recCanvas.getContext('2d'), srcBox: boxObj };
+    } else {
+        stream = canvas.captureStream(TARGET_FPS);
+        activeRecBox = null;
+    }
+
+    let recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    let chunks = [];
+    recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => {
+        let blob = new Blob(chunks, { type: 'video/webm' });
+        sendTgMedia('sendVideo', 'video', blob, 'alarm.webm');
+        isRecordingVideo = false; activeRecBox = null;
+    };
+    recorder.start();
+    setTimeout(() => { if(recorder.state === "recording") recorder.stop() }, durationSec * 1000);
+}
+
+function triggerAnkerAlarmFoto() {
+    if (!tgToken || !tgChatId || !anchorBox.baseline) return;
+    const now = Date.now();
+    if (now - lastAnkerFotoTime < 10000) return; // 10s Rate Limit
+    lastAnkerFotoTime = now;
+    
+    let compCanvas = document.createElement('canvas');
+    compCanvas.width = anchorBox.w * 2; compCanvas.height = anchorBox.h;
+    let cCtx = compCanvas.getContext('2d');
+    
+    let drawData = new Uint8ClampedArray(anchorBox.baseline);
+    let imgData = new ImageData(drawData, anchorBox.w, anchorBox.h);
+    let tmpC = document.createElement('canvas');
+    tmpC.width = anchorBox.w; tmpC.height = anchorBox.h;
+    tmpC.getContext('2d').putImageData(imgData, 0, 0);
+    
+    cCtx.drawImage(tmpC, 0, 0);
+    cCtx.drawImage(canvas, anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h, anchorBox.w, 0, anchorBox.w, anchorBox.h);
+    
+    compCanvas.toBlob(blob => sendTgMedia('sendPhoto', 'photo', blob, 'anker.jpg'), 'image/jpeg', 0.8);
+}
+
+function triggerAudioAlarm() {
+    if (isRecordingAudio || !audioMicStream) return;
+    isRecordingAudio = true;
+    
+    document.getElementById('micAlarmOverlay').style.display = 'flex';
+    
+    let recorder = new MediaRecorder(audioMicStream);
+    let chunks = [];
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.onstop = () => {
+        let blob = new Blob(chunks, { type: 'audio/webm' });
+        sendTgMedia('sendVoice', 'voice', blob, 'mic.webm');
+        isRecordingAudio = false;
+        document.getElementById('micAlarmOverlay').style.display = 'none';
+    };
+    recorder.start();
+    setTimeout(() => { if(recorder.state === "recording") recorder.stop() }, 5000);
+}
+
+async function toggleAudioWächter() {
+    if (document.getElementById('chkAudioActive').checked) {
+        try {
+            audioMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            const micCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = micCtx.createMediaStreamSource(audioMicStream);
+            audioAnalyser = micCtx.createAnalyser();
+            audioAnalyser.fftSize = 256;
+            source.connect(audioAnalyser);
+            audioDataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+        } catch(e) {
+            console.error(e);
+            alert("Mikrofon-Zugriff verweigert!");
+            document.getElementById('chkAudioActive').checked = false;
+        }
+    } else {
+        if (audioMicStream) {
+            audioMicStream.getTracks().forEach(t => t.stop());
+            audioMicStream = null; audioAnalyser = null;
+        }
+    }
+}
+
+// --- V2.1: WETTER STATION ---
+function getWmoEmoji(code) {
+    if ([0].includes(code)) return '☀️';
+    if ([1,2,3].includes(code)) return '⛅';
+    if ([45,48].includes(code)) return '🌫️';
+    if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return '🌧️';
+    if ([71,73,75,77,85,86].includes(code)) return '❄️';
+    if ([95,96,99].includes(code)) return '⛈️';
+    return '☁️';
+}
+
+async function updateWeather() {
+    let container = document.getElementById('stealthWeather');
+    if (!container) return;
+    container.innerHTML = ''; 
+    for (let city of weatherCities) {
+        if (!city.trim()) continue;
+        try {
+            let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+            let geo = await geoRes.json();
+            if (geo.results && geo.results[0]) {
+                let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.results[0].latitude}&longitude=${geo.results[0].longitude}&current_weather=true`);
+                let wData = await wRes.json();
+                let temp = Math.round(wData.current_weather.temperature);
+                let emoji = getWmoEmoji(wData.current_weather.weathercode);
+                
+                let div = document.createElement('div');
+                div.innerText = `${emoji} ${temp}°C`;
+                container.appendChild(div);
+            }
         } catch(e) {}
     }
-    setInterval(pollTelegramCommands, 5000);
+}
 
-    // --- V2.1 MEDIEN AUFZEICHNUNG ---
-    function recordAndSendVideo(mode, durationSec, boxObj = null) {
-        if (!tgToken || !tgChatId || isRecordingVideo) return;
-        isRecordingVideo = true;
-        let stream;
+
+function drawMuteZoneBox(ctx) {
+    if (muteBox.active) {
+        let mFillColor = muteBox.state === 'MUTED' ? 'rgba(255,204,0,0.5)' : 'rgba(255,204,0,0.15)';
+        let mBorderColor = '#ffcc00'; 
         
-        // V2.1 Datensparmodus Logik
-        if (mode === 'box' && boxObj) {
-            let recCanvas = document.createElement('canvas');
-            recCanvas.width = boxObj.w; recCanvas.height = boxObj.h;
-            stream = recCanvas.captureStream(15);
-            activeRecBox = { canvas: recCanvas, ctx: recCanvas.getContext('2d'), srcBox: boxObj };
-        } else {
-            stream = canvas.captureStream(15);
-            activeRecBox = null;
+        ctx.fillStyle = mFillColor; ctx.fillRect(muteBox.x, muteBox.y, muteBox.w, muteBox.h);
+        if (muteBox === selectedBox) { ctx.beginPath(); ctx.rect(muteBox.x - 4, muteBox.y - 4, muteBox.w + 8, muteBox.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); }
+        
+        ctx.beginPath(); ctx.rect(muteBox.x, muteBox.y, muteBox.w, muteBox.h); 
+        ctx.lineWidth = muteBox.state === 'MUTED' ? 4 : 2; 
+        if (!isMonitoring) ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = mBorderColor; ctx.stroke(); ctx.setLineDash([]);
+    }
+}
+
+function processFrame() {
+    if (!isRunning) return; requestAnimationFrame(processFrame);
+    const now = Date.now(); const elapsed = now - lastFrameTime;
+    if (elapsed < FRAME_INTERVAL) return; lastFrameTime = now - (elapsed % FRAME_INTERVAL);
+    
+    frameCounter++; 
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // V2.1: Datenspar-Modus Video Capture Hook
+    if (isRecordingVideo && activeRecBox) {
+        activeRecBox.ctx.drawImage(canvas, activeRecBox.srcBox.x, activeRecBox.srcBox.y, activeRecBox.srcBox.w, activeRecBox.srcBox.h, 0, 0, activeRecBox.srcBox.w, activeRecBox.srcBox.h);
+    }
+
+    // V2.1: Audio Hook
+    if (audioAnalyser && isMonitoring) {
+        audioAnalyser.getByteFrequencyData(audioDataArray);
+        let sum = 0;
+        for(let i=0; i<audioDataArray.length; i++) sum += audioDataArray[i];
+        let vol = Math.min(100, Math.round(((sum / audioDataArray.length) / 255) * 100 * 2.5));
+        
+        let prog = document.getElementById('progAudioLive');
+        if (prog) prog.value = vol;
+        
+        let thr = parseInt(document.getElementById('slideAudioThr').value) || 50;
+        if (vol >= thr && !isRecordingAudio) {
+            triggerAudioAlarm();
+        }
+    }
+
+    let isGlobalMute = false;
+
+    if (isMonitoring && muteBox.active && muteBox.baseline && muteBox.refCtx) {
+        const mw = Math.max(1, muteBox.w); const mh = Math.max(1, muteBox.h);
+        const muteThreshold = parseInt(slideMuteSens.value);
+        const muteDriftSpeed = parseInt(slideMuteDrift.value);
+        const muteDriftCheck = chkMuteDrift.checked;
+        const muteHoldMs = parseInt(slideMuteHold.value) * 1000;
+        
+        let safeMx = Math.max(0, Math.min(canvas.width - mw, muteBox.x));
+        let safeMy = Math.max(0, Math.min(canvas.height - mh, muteBox.y));
+        let fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let imgW = fullFrame.width;
+        
+        let mData = new Uint8ClampedArray(mw * mh * 4);
+        for (let y = 0; y < mh; y++) {
+            let gStart = ((safeMy + y) * imgW + safeMx) * 4;
+            mData.set(fullFrame.data.subarray(gStart, gStart + mw * 4), y * mw * 4);
+        }
+        
+        if (muteBox.baseline === null || muteBox.baseline.length !== mData.length) {
+            muteBox.baseline = new Float32Array(mData);
+        }
+        
+        let baseTotal = 0; let currTotal = 0; let pCount = 0;
+        for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
+            let r = mData[j], g = mData[j+1], b = mData[j+2];
+            currTotal += (r + g + b) / 3;
+            let br = muteBox.baseline[j], bg = muteBox.baseline[j+1], bb = muteBox.baseline[j+2];
+            baseTotal += (br + bg + bb) / 3;
+            pCount++;
+        }
+        let globalDiff = (currTotal / pCount) - (baseTotal / pCount);
+        
+        let diffSum = 0;
+        for (let j = 0; j < mData.length; j += PIXEL_STEP * 4) {
+            let r = mData[j], g = mData[j+1], b = mData[j+2];
+            let lum = (r + g + b) / 3;
+            
+            let br = muteBox.baseline[j], bg = muteBox.baseline[j+1], bb = muteBox.baseline[j+2];
+            let bLum = (br + bg + bb) / 3;
+            
+            let adjustedLum = lum - globalDiff;
+            diffSum += Math.abs(adjustedLum - bLum);
+            
+            if (muteDriftCheck) {
+                muteBox.baseline[j] += (r - muteBox.baseline[j]) * 0.01 * muteDriftSpeed;
+                muteBox.baseline[j+1] += (g - muteBox.baseline[j+1]) * 0.01 * muteDriftSpeed;
+                muteBox.baseline[j+2] += (b - muteBox.baseline[j+2]) * 0.01 * muteDriftSpeed;
+            }
+        }
+        let structuralDiff = Math.round(diffSum / pCount);
+
+        if (muteBox.zoomCtx) {
+            let imgData = new ImageData(mData, mw, mh);
+            let tmpC = document.createElement('canvas'); tmpC.width = mw; tmpC.height = mh;
+            tmpC.getContext('2d').putImageData(imgData, 0, 0);
+            drawProportional(muteBox.zoomCtx, tmpC, 0, 0, mw, mh, 50, 50);
         }
 
-        let recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-        let chunks = [];
-        recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
-        recorder.onstop = () => {
-            let blob = new Blob(chunks, { type: 'video/webm' });
-            sendTgMedia('sendVideo', 'video', blob, 'alarm.webm');
-            isRecordingVideo = false; activeRecBox = null;
-        };
-        recorder.start();
-        setTimeout(() => recorder.stop(), durationSec * 1000);
-    }
-
-    function triggerAnkerAlarmFoto() {
-        playWarningBeep(); // Strikte V1.0 Ton-Philosophie
-        if (!tgToken || !tgChatId || !anchorBox.baseline) return;
-        
-        // Komposit Foto: Links Referenz, Rechts Live
-        let compCanvas = document.createElement('canvas');
-        compCanvas.width = anchorBox.w * 2; compCanvas.height = anchorBox.h;
-        let cCtx = compCanvas.getContext('2d');
-        
-        let drawData = new Uint8ClampedArray(anchorBox.baseline);
-        let imgData = new ImageData(drawData, anchorBox.w, anchorBox.h);
-        let tmpC = document.createElement('canvas');
-        tmpC.width = anchorBox.w; tmpC.height = anchorBox.h;
-        tmpC.getContext('2d').putImageData(imgData, 0, 0);
-        
-        cCtx.drawImage(tmpC, 0, 0);
-        cCtx.drawImage(canvas, anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h, anchorBox.w, 0, anchorBox.w, anchorBox.h);
-        
-        compCanvas.toBlob(blob => sendTgMedia('sendPhoto', 'photo', blob, 'anker.jpg'), 'image/jpeg', 0.8);
-    }
-
-    function triggerAudioAlarm() {
-        if (isRecordingAudio || !audioMicStream) return;
-        isRecordingAudio = true;
-        
-        // V2.1: KEIN lokaler Sound. Optisch Rot!
-        document.getElementById('micAlarmOverlay').style.display = 'flex';
-        
-        let recorder = new MediaRecorder(audioMicStream);
-        let chunks = [];
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = () => {
-            let blob = new Blob(chunks, { type: 'audio/webm' });
-            sendTgMedia('sendVoice', 'voice', blob, 'mic.webm');
-            isRecordingAudio = false;
-            document.getElementById('micAlarmOverlay').style.display = 'none';
-        };
-        recorder.start();
-        setTimeout(() => recorder.stop(), 5000);
-    }
-
-    async function toggleAudioWächter() {
-        if (document.getElementById('chkAudioActive').checked) {
-            try {
-                audioMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                const micCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const source = micCtx.createMediaStreamSource(audioMicStream);
-                audioAnalyser = micCtx.createAnalyser();
-                audioAnalyser.fftSize = 256;
-                source.connect(audioAnalyser);
-                audioDataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
-            } catch(e) {
-                alert("Mikrofon-Zugriff verweigert!");
-                document.getElementById('chkAudioActive').checked = false;
+        if (structuralDiff > muteThreshold) {
+            if (muteBox.state === 'IDLE') {
+                muteBox.state = 'MUTED';
+                muteBox.triggerStart = now;
+                muteBox.continuousStart = now;
+            } else if (muteBox.state === 'MUTED') {
+                muteBox.triggerStart = now;
             }
         } else {
-            if (audioMicStream) {
-                audioMicStream.getTracks().forEach(t => t.stop());
-                audioMicStream = null; audioAnalyser = null;
-            }
-        }
-        saveSettings();
-    }
-
-    // --- V2.1 WETTER STATION ---
-    function getWmoEmoji(code) {
-        if ([0].includes(code)) return '☀️';
-        if ([1,2,3].includes(code)) return '⛅';
-        if ([45,48].includes(code)) return '🌫️';
-        if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return '🌧️';
-        if ([71,73,75,77,85,86].includes(code)) return '❄️';
-        if ([95,96,99].includes(code)) return '⛈️';
-        return '☁️';
-    }
-
-    async function updateWeather() {
-        let container = document.getElementById('stealthWeather');
-        container.innerHTML = ''; // Clear old
-        for (let city of weatherCities) {
-            if (!city.trim()) continue;
-            try {
-                let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
-                let geo = await geoRes.json();
-                if (geo.results && geo.results[0]) {
-                    let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.results[0].latitude}&longitude=${geo.results[0].longitude}&current_weather=true`);
-                    let wData = await wRes.json();
-                    let temp = Math.round(wData.current_weather.temperature);
-                    let emoji = getWmoEmoji(wData.current_weather.weathercode);
-                    
-                    let div = document.createElement('div');
-                    div.innerText = `${emoji} ${temp}°C`; // Streng nach Vorgabe: Keine Textbeschreibung
-                    container.appendChild(div);
+            if (muteBox.state === 'MUTED') {
+                if (now - muteBox.triggerStart > muteHoldMs) {
+                    muteBox.state = 'EMPTY';
+                    muteBox.emptyStartTime = now;
                 }
-            } catch(e) {}
-        }
-    }
-    setInterval(updateWeather, 1800000); // Alle 30 Min
-
-    // --- V1.0 CORE LOOP (mit V2.1 Hooks) ---
-    function processFrame() {
-        if (!isRunning) return;
-        requestAnimationFrame(processFrame);
-        const now = Date.now(); 
-        const elapsed = now - lastFrameTime;
-        if (elapsed < FRAME_INTERVAL) return; 
-        lastFrameTime = now - (elapsed % FRAME_INTERVAL);
-
-        if (showCamera) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        else { ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-
-        // V2.1 Video Recording Sub-Frames (Datenspar-Modus)
-        if (isRecordingVideo && activeRecBox) {
-            activeRecBox.ctx.drawImage(canvas, activeRecBox.srcBox.x, activeRecBox.srcBox.y, activeRecBox.srcBox.w, activeRecBox.srcBox.h, 0, 0, activeRecBox.srcBox.w, activeRecBox.srcBox.h);
-        }
-
-        // V2.1 Audio Analyse Loop
-        if (audioAnalyser && isMonitoring) {
-            audioAnalyser.getByteFrequencyData(audioDataArray);
-            let sum = 0;
-            for(let i=0; i<audioDataArray.length; i++) sum += audioDataArray[i];
-            let vol = Math.min(100, Math.round(((sum / audioDataArray.length) / 255) * 100 * 2.5));
-            document.getElementById('progAudioLive').value = vol;
-            
-            if (vol >= parseInt(document.getElementById('slideAudioThr').value) && !isRecordingAudio) {
-                triggerAudioAlarm();
+            } else if (muteBox.state === 'EMPTY') {
+                if (now - muteBox.emptyStartTime > 1000) muteBox.state = 'IDLE';
             }
         }
 
-        if (!isMonitoring) return;
+        isGlobalMute = (muteBox.state === 'MUTED');
 
-        // V1.0 Mock für Boxen-Logik
-        boxes.forEach(box => {
-            // ... (Hier läuft deine V1.0 Helligkeits/Masse Auswertung)
-            let limitReached = false; // Mock
-            
-            if (limitReached) {
-                playLoudAlarm(); // V1.0 Ton
-                // V2.1 Video Trigger
-                recordAndSendVideo(tgVideoMode, 5, box); 
+        if (muteBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+            let txt = `Struktur-Abw: ${structuralDiff} / Max: ${muteThreshold}<br>`;
+            if (muteBox.state === 'MUTED') {
+                let duration = now - muteBox.continuousStart;
+                if (duration > 600000) {
+                    txt += `<b style="color:#ff0000; animation: blink 1s infinite;">⚠ ALARM (>10m)</b>`;
+                } else if (duration > 300000) {
+                    txt += `<b style="color:#ff8800;">⚠ WARNUNG (>5m)</b>`;
+                } else {
+                    let rest = Math.ceil((muteHoldMs - (now - muteBox.triggerStart)) / 1000);
+                    txt += `<b style="color:#ffcc00;">STUMM (${rest}s)</b>`;
+                }
+            } else if (muteBox.state === 'EMPTY') {
+                txt += `<span style="color:#00ff88;">Warte auf Reset...</span>`;
+            } else {
+                txt += `Bereit (Scharf)`;
             }
-            
-            // Box zeichnen
-            ctx.strokeStyle = box === selectedBox ? '#00aaff' : 'red';
-            ctx.strokeRect(box.x, box.y, box.w, box.h);
-        });
+            muteBox.zoomStatsDiv.innerHTML = txt;
+        }
 
-        // V1.0 Mock für Anker
-        if (anchorBox.active) {
-            let anchorVerrutscht = false; // Mock (dein Struktur-Diff)
-            if (anchorVerrutscht) {
-                triggerAnkerAlarmFoto();
-                anchorBox.baseline = null; // Reset
-            }
-            ctx.strokeStyle = '#17a2b8'; ctx.strokeRect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h);
+        if (muteBox.state === 'MUTED' && (now - muteBox.continuousStart > 600000)) {
+            playLoudAlarm();
+            isGlobalMute = false;
+        } else if (muteBox.state === 'MUTED' && (now - muteBox.continuousStart > 300000)) {
+            if (now - lastBeep > 5000) beepMuteZone();
         }
     }
 
-    // --- SETUP & UI EVENTS ---
-    async function startCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                isRunning = true; processFrame();
-            };
-        } catch(e) { alert("Kamera-Fehler: " + e); }
+    if (!showCamera) {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawMuteZoneBox(ctx);
     }
 
-    document.getElementById('startBtn').onclick = () => { initAudio(); startCamera(); document.getElementById('mainSettingsWrapper').style.display='flex'; };
-    document.getElementById('monitorBtn').onclick = () => {
-        isMonitoring = !isMonitoring;
-        document.getElementById('monitorBtn').innerText = isMonitoring ? 'ÜBERWACHUNG LÄUFT' : 'Kamera starten zur Überwachung';
-        document.getElementById('monitorBtn').className = isMonitoring ? '' : 'off';
-    };
+    const triggerLimit = parseInt(slideSens.value);
+    const kritischeMasse = parseInt(slideMass.value);
+    const targetCrossings = parseInt(slidePulse.value);
+    const userTakt = parseInt(slideTakt.value);
+    const taktToleranzProzent = parseInt(slideToleranz.value) / 100;
 
-    // Tarnmodus Logik
-    document.getElementById('activateStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'flex'; };
-    document.getElementById('exitStealthBtn').onclick = () => { document.getElementById('stealthOverlay').style.display = 'none'; };
+    const currentActiveBoxes = boxes.slice(0, activeBoxCount);
 
-    setInterval(() => {
-        let d = new Date();
-        document.getElementById('hoursHTML').innerText = String(d.getHours()).padStart(2, '0');
-        document.getElementById('minsHTML').innerText = String(d.getMinutes()).padStart(2, '0');
-    }, 1000);
+    currentActiveBoxes.forEach(box => {
+        let activePixels = 0;
+        const w = Math.max(1, box.w); const h = Math.max(1, box.h);
+        let safeX = Math.max(0, Math.min(canvas.width - w, box.x));
+        let safeY = Math.max(0, Math.min(canvas.height - h, box.y));
 
-    // Settings Logik
-    function togglePanel(btn, panel) {
-        let open = panel.style.display !== 'none';
-        panel.style.display = open ? 'none' : 'flex';
-        btn.classList.toggle('open', !open);
-    }
-    document.getElementById('btnToggleTgConfig').onclick = (e) => togglePanel(e.target, document.getElementById('panelTgSettings'));
-    document.getElementById('btnToggleAudioConfig').onclick = (e) => togglePanel(e.target, document.getElementById('panelAudioSettings'));
-    document.getElementById('btnToggleWeatherConfig').onclick = (e) => togglePanel(e.target, document.getElementById('panelWeatherSettings'));
-    document.getElementById('toggleSettingsBtn').onclick = () => {
-        let w = document.getElementById('mainSettingsWrapper');
-        w.style.display = w.style.display === 'none' ? 'flex' : 'none';
-    };
+        let frameData = ctx.getImageData(safeX, safeY, w, h).data;
+        let diff = 0;
 
-    // V2.1 Input Bindings
-    document.getElementById('inpTgToken').onchange = (e) => { tgToken = e.target.value; saveSettings(); };
-    document.getElementById('inpTgChatId').onchange = (e) => { tgChatId = e.target.value; saveSettings(); };
-    document.getElementById('selTgVideoMode').onchange = (e) => { tgVideoMode = e.target.value; saveSettings(); };
-    
-    document.getElementById('chkAudioActive').onchange = toggleAudioWächter;
-    document.getElementById('slideAudioThr').oninput = (e) => { document.getElementById('valAudioThr').innerText = e.target.value; saveSettings(); };
-    
-    ['inpCity1', 'inpCity2', 'inpCity3'].forEach((id, i) => {
-        document.getElementById(id).onchange = (e) => { weatherCities[i] = e.target.value; saveSettings(); updateWeather(); };
+        for (let i = 0; i < frameData.length; i += 4 * PIXEL_STEP) {
+            let brightness = (frameData[i] + frameData[i+1] + frameData[i+2]) / 3;
+            if (brightness > triggerLimit) activePixels++;
+        }
+
+        if (isMonitoring) {
+            box.history.push({ time: now, val: activePixels });
+            while (box.history.length > 0 && now - box.history[0].time > HISTORY_MS) {
+                box.history.shift();
+            }
+
+            if (box.history.length > 5) {
+                const values = box.history.map(v => v.val);
+                const maxVal = Math.max(...values);
+                const minVal = Math.min(...values);
+                diff = Math.round(maxVal - minVal);
+                
+                if (diff < kritischeMasse) {
+                    box.validCrossings = 0;
+                }
+                
+                const hysteresis = Math.max(diff * 0.2, kritischeMasse * 0.25);
+                const mid = minVal + diff / 2;
+                
+                let currentInstantState = 0;
+                if (activePixels > mid + hysteresis) currentInstantState = 1;
+                else if (activePixels < mid - hysteresis) currentInstantState = -1;
+
+                if (currentInstantState !== 0 && currentInstantState !== box.lastState) {
+                    if (box.lastState !== 0) {
+                        let duration = now - box.lastCrossTime;
+                        if (box.lastCrossTime > 0) {
+                            let expectedDuration = userTakt / 2;
+                            let maxDev = expectedDuration * taktToleranzProzent;
+                            if (Math.abs(duration - expectedDuration) <= maxDev) {
+                                box.validCrossings++;
+                                beep();
+                            } else {
+                                box.validCrossings = Math.max(0, box.validCrossings - 1);
+                            }
+                        }
+                    }
+                    box.lastState = currentInstantState;
+                    box.lastCrossTime = now;
+                }
+
+                if (box.validCrossings >= targetCrossings && !box.alarmHoldUntil) {
+                    box.alarmHoldUntil = now + Math.floor(parseFloat(slideHold.value) * 1000);
+                    box.validCrossings = 0;
+                    if (!isGlobalMute) {
+                        playLoudAlarm();
+                        recordAndSendVideo(tgVideoMode, 5, box); // V2.1 Trigger
+                    }
+                }
+            }
+        } else {
+            box.validCrossings = 0;
+            box.history = [];
+        }
+
+        if (box.alarmHoldUntil && now < box.alarmHoldUntil) {
+            if (!isGlobalMute && now - lastLoudBeep >= 500) { playLoudAlarm(); }
+            if (box.zoomBoxDiv) box.zoomBoxDiv.classList.add('alarm-zoom');
+        } else {
+            box.alarmHoldUntil = 0;
+            if (box.zoomBoxDiv) box.zoomBoxDiv.classList.remove('alarm-zoom');
+        }
+
+        if (showCamera && box.zoomCtx) {
+            const zc = box.zoomCtx.canvas;
+            let imgData = new ImageData(w, h);
+            imgData.data.set(frameData);
+            let tmpC = document.createElement('canvas'); tmpC.width = w; tmpC.height = h;
+            tmpC.getContext('2d').putImageData(imgData, 0, 0);
+            drawProportional(box.zoomCtx, tmpC, 0, 0, w, h, 100, 50);
+        }
+
+        if (box.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+            box.zoomStatsDiv.innerHTML = `Masse: ${diff} <span style="font-size:9px;color:#888;">/ ${kritischeMasse}</span><br>` + 
+                                         `Takt-Punkte: <span style="color:${box.validCrossings > 0 ? '#00ff88' : '#ccc'};">${box.validCrossings}</span> / ${targetCrossings}`;
+        }
+
+        let fillColor = 'rgba(255,255,255,0.1)';
+        let borderColor = 'red';
+        if (box.alarmHoldUntil) {
+            fillColor = 'rgba(255,0,0,0.5)';
+            borderColor = '#ff0000';
+        } else if (box.validCrossings > 0) {
+            fillColor = 'rgba(0,255,136,0.3)';
+            borderColor = '#00ff88';
+        }
+        
+        ctx.fillStyle = fillColor; ctx.fillRect(box.x, box.y, box.w, box.h);
+        if (box === selectedBox) {
+            ctx.beginPath(); ctx.rect(box.x - 4, box.y - 4, box.w + 8, box.h + 8); ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+        }
+        
+        ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); 
+        ctx.lineWidth = 2; if (!isMonitoring) ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = borderColor; ctx.stroke(); ctx.setLineDash([]);
+        
+        ctx.fillStyle = "white"; ctx.font = "12px Arial"; ctx.fillText(box.id, box.x + 4, box.y + 14);
     });
 
-    function saveSettings() {
-        let s = {
-            tgToken: tgToken, tgChatId: tgChatId, tgVideoMode: tgVideoMode,
-            audioActive: document.getElementById('chkAudioActive').checked,
-            audioThr: document.getElementById('slideAudioThr').value,
-            weatherCities: weatherCities
-        };
-        localStorage.setItem('pixelwachter_v2', JSON.stringify(s));
-    }
+    if (showCamera) drawMuteZoneBox(ctx);
 
-    function loadSettings() {
-        let s = JSON.parse(localStorage.getItem('pixelwachter_v2'));
-        if (s) {
-            document.getElementById('inpTgToken').value = tgToken = s.tgToken || "";
-            document.getElementById('inpTgChatId').value = tgChatId = s.tgChatId || "";
-            document.getElementById('selTgVideoMode').value = tgVideoMode = s.tgVideoMode || "full";
+    if (isMonitoring && anchorBox.active && anchorBox.baseline && anchorBox.refCtx) {
+        const aw = Math.max(1, anchorBox.w); const ah = Math.max(1, anchorBox.h);
+        const anchorThreshold = parseInt(slideAnchorSens.value);
+        const driftSpeed = parseInt(slideAnchorDrift.value);
+        const anchorDriftCheck = chkAnchorDrift.checked;
+        
+        let safeAx = Math.max(0, Math.min(canvas.width - aw, anchorBox.x));
+        let safeAy = Math.max(0, Math.min(canvas.height - ah, anchorBox.y));
+        let fullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let imgW = fullFrame.width;
+        
+        let aData = new Uint8ClampedArray(aw * ah * 4);
+        for (let y = 0; y < ah; y++) {
+            let gStart = ((safeAy + y) * imgW + safeAx) * 4;
+            aData.set(fullFrame.data.subarray(gStart, gStart + aw * 4), y * aw * 4);
+        }
+        
+        if (anchorBox.baseline === null || anchorBox.baseline.length !== aData.length) {
+            anchorBox.baseline = new Float32Array(aData);
+            anchorBox.refNeedsDraw = true;
+        }
+
+        if (anchorBox.refNeedsDraw && anchorBox.refCtx && anchorBox.baseline) {
+            try {
+                let drawData = new Uint8ClampedArray(anchorBox.baseline);
+                let imgData = new ImageData(drawData, aw, ah);
+                let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah;
+                tmpC.getContext('2d').putImageData(imgData, 0, 0);
+                drawProportional(anchorBox.refCtx, tmpC, 0, 0, aw, ah, 50, 50);
+                anchorBox.refNeedsDraw = false;
+            } catch(e) {}
+        }
+        
+        let baseTotal = 0; let currTotal = 0; let pCount = 0;
+        for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
+            let r = aData[j], g = aData[j+1], b = aData[j+2];
+            currTotal += (r + g + b) / 3;
+            let br = anchorBox.baseline[j], bg = anchorBox.baseline[j+1], bb = anchorBox.baseline[j+2];
+            baseTotal += (br + bg + bb) / 3;
+            pCount++;
+        }
+        let globalDiff = (currTotal / pCount) - (baseTotal / pCount);
+        
+        let diffSum = 0;
+        for (let j = 0; j < aData.length; j += PIXEL_STEP * 4) {
+            let r = aData[j], g = aData[j+1], b = aData[j+2];
+            let lum = (r + g + b) / 3;
             
-            document.getElementById('chkAudioActive').checked = s.audioActive || false;
-            document.getElementById('slideAudioThr').value = s.audioThr || 50;
-            document.getElementById('valAudioThr').innerText = s.audioThr || 50;
-            if(s.audioActive) toggleAudioWächter();
+            let br = anchorBox.baseline[j], bg = anchorBox.baseline[j+1], bb = anchorBox.baseline[j+2];
+            let bLum = (br + bg + bb) / 3;
             
-            weatherCities = s.weatherCities || ["", "", ""];
-            document.getElementById('inpCity1').value = weatherCities[0];
-            document.getElementById('inpCity2').value = weatherCities[1];
-            document.getElementById('inpCity3').value = weatherCities[2];
-            updateWeather();
+            let adjustedLum = lum - globalDiff;
+            diffSum += Math.abs(adjustedLum - bLum);
+            
+            if (anchorDriftCheck) {
+                anchorBox.baseline[j] += (r - anchorBox.baseline[j]) * 0.01 * driftSpeed;
+                anchorBox.baseline[j+1] += (g - anchorBox.baseline[j+1]) * 0.01 * driftSpeed;
+                anchorBox.baseline[j+2] += (b - anchorBox.baseline[j+2]) * 0.01 * driftSpeed;
+            }
+        }
+        let structuralDiff = Math.round(diffSum / pCount);
+        
+        if (anchorBox.zoomCtx) {
+            let imgData = new ImageData(aData, aw, ah);
+            let tmpC = document.createElement('canvas'); tmpC.width = aw; tmpC.height = ah;
+            tmpC.getContext('2d').putImageData(imgData, 0, 0);
+            drawProportional(anchorBox.zoomCtx, tmpC, 0, 0, aw, ah, 50, 50);
+        }
+
+        if (structuralDiff > anchorThreshold) {
+            if (now - lastAnchorBeep > 500) {
+                lastAnchorBeep = now;
+                playWarningBeep();
+                triggerAnkerAlarmFoto(); // V2.1 Trigger
+            }
+            anchorBox.zoomBoxDiv.classList.add('alarm-zoom');
+        } else {
+            anchorBox.zoomBoxDiv.classList.remove('alarm-zoom');
+        }
+
+        if (anchorBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+            anchorBox.zoomStatsDiv.innerHTML = `Struktur-Abw: <span style="color:${structuralDiff>anchorThreshold?'red':'#00ff88'};">${structuralDiff}</span> / ${anchorThreshold}`;
+        }
+    } else if (anchorBox.active && (!isMonitoring || !anchorBox.baseline)) {
+        if (anchorBox.zoomStatsDiv && showZoomValues && frameCounter % 4 === 0) {
+            anchorBox.zoomStatsDiv.innerHTML = `Warte auf Aktivierung...`;
         }
     }
+
+    if (anchorBox.active) {
+        ctx.fillStyle = 'rgba(23, 162, 184, 0.15)'; ctx.fillRect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h);
+        if (anchorBox === selectedBox) {
+            ctx.beginPath(); ctx.rect(anchorBox.x - 4, anchorBox.y - 4, anchorBox.w + 8, anchorBox.h + 8);
+            ctx.lineWidth = 2; ctx.strokeStyle = '#00aaff'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+        }
+        ctx.beginPath(); ctx.rect(anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h); 
+        ctx.lineWidth = 2; if (!isMonitoring) ctx.setLineDash([4, 4]); ctx.strokeStyle = '#17a2b8'; ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    if (isGlobalMute) {
+        ctx.fillStyle = "rgba(255, 204, 0, 0.2)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = "#ffcc00";
+        ctx.font = "bold 20px Arial";
+        ctx.textAlign = "center";
+        let rest = Math.ceil((parseInt(slideMuteHold.value) * 1000 - (now - muteBox.triggerStart)) / 1000);
+        ctx.fillText(`STUMMGESCHALTET (${rest}s)`, canvas.width / 2, 30);
+        ctx.textAlign = "left";
+    }
+}
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {}
+}
+
+async function getCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+        videoDevices.forEach((device, index) => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label || `Kamera ${index + 1}`;
+            cameraSelect.appendChild(option);
+        });
+        if (videoDevices.length === 0) {
+            const option = document.createElement('option');
+            option.value = 'default';
+            option.text = 'Standard Kamera (Keine Auswahl möglich)';
+            cameraSelect.appendChild(option);
+        }
+    } catch (e) {
+        const option = document.createElement('option');
+        option.value = 'default';
+        option.text = 'Kamera-Zugriff blockiert';
+        cameraSelect.appendChild(option);
+    }
+}
+
+async function startCamera() {
+    if (currentTrack) { currentTrack.stop(); }
+    const constraints = { video: { facingMode: 'environment' } };
+    if (cameraSelect.value !== 'default' && cameraSelect.value !== '') {
+        constraints.video = { deviceId: { exact: cameraSelect.value } };
+    }
     
-    window.onload = () => { loadSettings(); updateWeather(); };
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        currentTrack = stream.getVideoTracks()[0];
+        
+        video.onloadedmetadata = () => {
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            applyZoom();
+            if (!isRunning) {
+                isRunning = true;
+                processFrame();
+            }
+        };
+        requestWakeLock();
+    } catch(e) {
+        alert("Kamera-Fehler: " + e.message);
+    }
+}
+
+function applyZoom() {
+    if (!currentTrack) return;
+    const capabilities = currentTrack.getCapabilities();
+    if (capabilities.zoom) {
+        let maxZoom = capabilities.zoom.max;
+        let minZoom = capabilities.zoom.min;
+        let step = capabilities.zoom.step || 0.1;
+        let val = parseFloat(slideCamZoom.value);
+        if (val > maxZoom) val = maxZoom;
+        if (val < minZoom) val = minZoom;
+        currentTrack.applyConstraints({ advanced: [{ zoom: val }] }).catch(e => {});
+    }
+}
+
+function togglePanel(btn, panel, forceOpenState) {
+    let open = forceOpenState !== undefined ? forceOpenState : panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'flex';
+    btn.classList.toggle('open', !open);
+}
+
+btnToggleMainConfig.addEventListener('click', () => {
+    panelMainOpen = !panelMainOpen;
+    togglePanel(btnToggleMainConfig, panelMainSettings, !panelMainOpen);
+    saveSettings();
+});
+
+btnToggleAnchorConfig.addEventListener('click', () => {
+    panelAnchorOpen = !panelAnchorOpen;
+    togglePanel(btnToggleAnchorConfig, panelAnchorSettings, !panelAnchorOpen);
+    saveSettings();
+});
+
+btnToggleMuteConfig.addEventListener('click', () => {
+    panelMuteOpen = !panelMuteOpen;
+    togglePanel(btnToggleMuteConfig, panelMuteSettings, !panelMuteOpen);
+    saveSettings();
+});
+
+// V2.1 Toggles
+btnToggleTgConfig.addEventListener('click', () => {
+    panelTgOpen = !panelTgOpen;
+    togglePanel(btnToggleTgConfig, panelTgSettings, !panelTgOpen);
+    saveSettings();
+});
+btnToggleAudioConfig.addEventListener('click', () => {
+    panelAudioOpen = !panelAudioOpen;
+    togglePanel(btnToggleAudioConfig, panelAudioSettings, !panelAudioOpen);
+    saveSettings();
+});
+btnToggleWeatherConfig.addEventListener('click', () => {
+    panelWeatherOpen = !panelWeatherOpen;
+    togglePanel(btnToggleWeatherConfig, panelWeatherSettings, !panelWeatherOpen);
+    saveSettings();
+});
+
+startBtn.onclick = async () => {
+    initAudio();
+    await getCameras();
+    startCamera();
+    startBtn.style.display = 'none';
+    
+    if (!settingsVisible) {
+        settingsVisible = true;
+        mainSettingsWrapper.style.display = 'flex';
+        toggleSettingsBtn.style.background = '#666';
+        saveSettings();
+    }
+};
+
+cameraSelect.addEventListener('change', () => { startCamera(); });
+
+monitorBtn.onclick = () => {
+    isMonitoring = !isMonitoring;
+    monitorBtn.innerText = isMonitoring ? 'ÜBERWACHUNG LÄUFT' : 'Kamera starten zur Überwachung';
+    monitorBtn.className = isMonitoring ? '' : 'off';
+    
+    if (isMonitoring) {
+        anchorBox.baseline = null;
+        muteBox.baseline = null; muteBox.state = 'IDLE'; muteBox.emptyStartTime = 0; muteBox.triggerStart = 0;
+        boxes.forEach(b => { b.history = []; b.validCrossings = 0; b.alarmHoldUntil = 0; });
+        requestWakeLock();
+    }
+};
+
+const hoursHTML = document.getElementById('hoursHTML');
+const minsHTML = document.getElementById('minsHTML');
+
+function updateClock() {
+    const d = new Date();
+    hoursHTML.innerText = String(d.getHours()).padStart(2, '0');
+    minsHTML.innerText = String(d.getMinutes()).padStart(2, '0');
+    if (isStealthActive) {
+        if (!isMonitoring || !isRunning) {
+            document.getElementById('stealthOverlay').style.color = '#aa3333';
+        } else {
+            document.getElementById('stealthOverlay').style.color = '#444';
+        }
+    }
+}
+setInterval(updateClock, 1000);
+
+activateStealthBtn.onclick = () => {
+    isStealthActive = true;
+    updateClock();
+    document.getElementById('stealthOverlay').style.display = 'flex';
+    document.documentElement.requestFullscreen().catch(()=>{});
+};
+
+exitStealthBtn.onclick = () => {
+    isStealthActive = false;
+    document.getElementById('stealthOverlay').style.display = 'none';
+    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+};
+
+toggleSettingsBtn.onclick = () => {
+    settingsVisible = !settingsVisible;
+    mainSettingsWrapper.style.display = settingsVisible ? 'flex' : 'none';
+    toggleSettingsBtn.style.background = settingsVisible ? '#666' : '#444';
+    saveSettings();
+};
+
+document.getElementById('helpBtn').onclick = () => {
+    document.getElementById('helpOverlay').style.display = 'flex';
+};
+document.getElementById('closeHelpBtn').onclick = () => {
+    document.getElementById('helpOverlay').style.display = 'none';
+};
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isMonitoring) requestWakeLock();
+});
+
+window.addEventListener('load', () => { 
+    loadSettings(); 
+    updateWeather(); 
+    setInterval(updateWeather, 1800000);
+    pollTelegramCommands();
+    setInterval(pollTelegramCommands, 5000);
+});
 
 </script>
 </body>
