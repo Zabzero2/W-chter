@@ -22,11 +22,11 @@
         transition: background-color 0.5s ease, border-color 0.5s ease;
     }
 
-    /* Kräftiges Blau wenn Audio-Wächter an ist */
-    body.audio-guard-on { background-color: #0d1b2a; }
-    body.audio-guard-on #topPanelContainer, 
-    body.audio-guard-on .dpad-container, 
-    body.audio-guard-on .module-section { 
+    /* Kräftiges Blau wenn Lokaler Ton aus ist oder Audio-Wächter an ist */
+    body.silent-mode-on { background-color: #0d1b2a; }
+    body.silent-mode-on #topPanelContainer, 
+    body.silent-mode-on .dpad-container, 
+    body.silent-mode-on .module-section { 
         background-color: #1b263b; 
         border-color: #415a77; 
     }
@@ -158,32 +158,32 @@
 <div id="helpOverlay" class="overlay">
     <div class="help-content">
         <h2>Hilfe & Anleitung</h2>
-        <p>Der <b>Pixel-Wächter Pro</b> überwacht optische Helligkeitsschwankungen und akustische Signale im Stellwerk vollautomatisch.</p>
+        <p>Der <b>Pixel-Wächter Pro</b> überwacht optische Helligkeitsschwankungen und akustische Signale im eingerichteten Überwachungsbereich vollautomatisch.</p>
         
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Schritt-für-Schritt Einrichtung</h3>
         <ol>
             <li><b>Kamera starten:</b> Erlaube den Kamerazugriff und richte das Gerät aus.</li>
-            <li><b>Mess-Felder platzieren:</b> Tippe das gewünschte Feld direkt im Live-Bild an und schiebe die Box über den zu überwachenden Bereich (z.B. Zugnummernfeld).</li>
+            <li><b>Mess-Felder platzieren:</b> Tippe das gewünschte Feld direkt im Live-Bild an und schiebe die Box über den zu überwachenden Bereich (z.B. eine Digitalanzeige oder Kontrolllampe).</li>
             <li><b>Feinjustieren:</b> Nutze das D-Pad für pixelgenaues Ausrichten. Stelle die <i>Pixel-Helligkeit</i> und das <i>Max-Delta Limit</i> so ein, dass sie nur bei der gewünschten Anzeige anschlagen.</li>
         </ol>
 
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smart-Modem & Warnungen</h3>
         <ul>
             <li><b>Telegram-Warnung:</b> Hinterlege einen Bot, um bei Alarmen automatisch Medien (Bilder/Videos) aufs Handy zu erhalten.</li>
-            <li><b>Remote-Befehle:</b> Sende <code>/foto</code>, <code>/video</code> oder <code>/audio</code> an deinen Bot. Für längere Aufnahmen nutze z.B. <code>/audio 30</code> (nimmt 30s auf, max 60s).</li>
-            <li><b>Audio-Wächter:</b> Misst die Lautstärke im Raum. Ist er aktiv, färbt sich das Menü tiefblau und das Tablet bleibt bei Alarmen <b>komplett stumm</b> (nur Telegram-Media). Der Audio-Wächter lässt sich nur aktivieren, wenn Telegram konfiguriert ist.</li>
+            <li><b>Remote-Befehle:</b> Sende <code>/foto</code>, <code>/video</code> oder <code>/audio</code> an deinen Bot. Für längere Aufnahmen nutze z.B. <code>/audio 30</code> oder <code>/video 30</code> (nimmt 30s auf, max 60s).</li>
+            <li><b>Lokale Töne / Audio-Wächter:</b> Über die Auswahlbox kannst du bestimmen, ob das Tablet bei Alarm klingeln soll. Ist der Audio-Wächter aktiv, wird das Gerät zwingend stummgeschaltet, damit der Raum überwacht werden kann (nur Telegram-Media). Der Stumm-Modus wird durch ein blaues Menü signalisiert.</li>
             <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos, nebeneinander in Spalten aktualisiert.</li>
         </ul>
 
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Spezial-Module</h3>
         <ul>
             <li><b>Anker-Referenz:</b> Überwacht das Bild. Verrutscht das Tablet, schlägt das System Alarm und sendet ein Vorher/Nachher-Bild via Telegram.</li>
-            <li><b>Mute-Zone:</b> Ermöglicht das automatische Abschalten aller Alarme, z.B. wenn ein Mauszeiger in das Feld bewegt wird.</li>
+            <li><b>Mute-Zone:</b> Ermöglicht das automatische Abschalten aller Alarme, z.B. wenn eine Bewegung in einem abweichenden Bereich detektiert wird.</li>
         </ul>
 
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Tarnmodus</h3>
-        <p>Verdunkelt das Display für den Pausenraum.<br>
-        <b>Farbcodes der Uhr:</b> Weiß = Normal aktiv. Blass-Rosa = Kamera/Überwachung pausiert. Blass-Blau = Audio-Wächter ist aktiv (Lautlos-Modus).<br>
+        <p>Verdunkelt das Display für Pausenzeiten.<br>
+        <b>Farbcodes der Uhr:</b> Weiß = Normal aktiv. Blass-Rosa = Kamera/Überwachung pausiert. Blass-Blau = Gerät ist stummgeschaltet (Nur Telegram).<br>
         <b>Steuerung:</b> Oberer Punkt tippen = Audio-Wächter lautlos ein/ausschalten. Unterer Punkt tippen = Tarnmodus beenden.</p>
 
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
@@ -266,6 +266,14 @@
                     <label><input type="checkbox" id="chkAudioGuard"> Audio-Wächter aktiv</label>
                 </div>
                 
+                <div class="slider-row" id="rowLocalSound" style="display: none; margin-bottom: 10px;">
+                    <label style="width: 140px;">Lokale Alarm-Töne:</label>
+                    <select id="selLocalSound">
+                        <option value="on">AN (Tablet klingelt lokal)</option>
+                        <option value="off">AUS (Stumm / Nur via Telegram)</option>
+                    </select>
+                </div>
+
                 <div class="slider-row" id="rowAudioThres">
                     <label style="width:130px;">Audio-Schwelle: <span id="valAudioThreshold">25</span></label>
                     <button class="adj-btn" id="audioThresMinus">-</button>
@@ -505,6 +513,7 @@ const chkMuteDrift = document.getElementById('chkMuteDrift');
 // Smart Features UI
 const chkTelegram = document.getElementById('chkTelegram');
 const chkAudioGuard = document.getElementById('chkAudioGuard');
+const selLocalSound = document.getElementById('selLocalSound');
 const telegramSettingsBox = document.getElementById('telegramSettingsBox');
 const txtTelegramToken = document.getElementById('txtTelegramToken');
 const txtTelegramChatId = document.getElementById('txtTelegramChatId');
@@ -638,6 +647,29 @@ let muteBox = {
 let activeBoxCount = 2;
 let selectedBox = boxes[0];
 
+function isLocalMuted() {
+    if (!chkTelegram.checked || !txtTelegramToken.value.trim() || !txtTelegramChatId.value.trim()) return false;
+    return chkAudioGuard.checked || selLocalSound.value === 'off';
+}
+
+function updateSmartUI() {
+    const tgActive = chkTelegram.checked && txtTelegramToken.value.trim() !== '' && txtTelegramChatId.value.trim() !== '';
+    if (tgActive) {
+        document.getElementById('rowLocalSound').style.display = 'flex';
+    } else {
+        document.getElementById('rowLocalSound').style.display = 'none';
+        selLocalSound.value = 'on'; 
+    }
+
+    if (chkAudioGuard.checked) {
+        selLocalSound.value = 'off';
+        selLocalSound.disabled = true;
+    } else {
+        selLocalSound.disabled = false;
+    }
+    updateAppVisuals();
+}
+
 function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
     ctx.fillStyle = "black"; ctx.fillRect(0, 0, targetW, targetH);
     let scale = Math.min(targetW / sw, targetH / sh);
@@ -675,10 +707,10 @@ function updateMaxDeltaLimitRange() {
 }
 
 function updateAppVisuals() {
-    if (chkAudioGuard.checked) {
-        document.body.classList.add('audio-guard-on');
+    if (isLocalMuted()) {
+        document.body.classList.add('silent-mode-on');
     } else {
-        document.body.classList.remove('audio-guard-on');
+        document.body.classList.remove('silent-mode-on');
     }
     updateStealthClock();
 }
@@ -737,10 +769,16 @@ chkShowZoom.addEventListener('change', (e) => {
 chkShowCam.addEventListener('change', (e) => { showCamera = e.target.checked; canvas.style.display = showCamera ? 'block' : 'none'; saveSettings(); });
 chkShowDpad.addEventListener('change', (e) => { dpadPanel.style.display = e.target.checked ? 'flex' : 'none'; saveSettings(); });
 
-chkTelegram.addEventListener('change', () => { telegramSettingsBox.style.display = chkTelegram.checked ? 'flex' : 'none'; saveSettings(); });
-txtTelegramToken.addEventListener('input', saveSettings); txtTelegramChatId.addEventListener('input', saveSettings);
+chkTelegram.addEventListener('change', () => { 
+    telegramSettingsBox.style.display = chkTelegram.checked ? 'flex' : 'none'; 
+    updateSmartUI();
+    saveSettings(); 
+});
+txtTelegramToken.addEventListener('input', () => { updateSmartUI(); saveSettings(); }); 
+txtTelegramChatId.addEventListener('input', () => { updateSmartUI(); saveSettings(); });
 selTgVideoMode.addEventListener('change', saveSettings);
 txtWeatherCities.addEventListener('input', saveSettings); 
+selLocalSound.addEventListener('change', () => { updateSmartUI(); saveSettings(); });
 
 chkAudioGuard.addEventListener('change', (e) => { 
     if (chkAudioGuard.checked) {
@@ -752,8 +790,8 @@ chkAudioGuard.addEventListener('change', (e) => {
             alert('ACHTUNG: Alle lokalen Alarme sind stummgeschaltet! Warnungen erfolgen nur noch über Telegram.');
         }
     }
+    updateSmartUI();
     saveSettings(); 
-    updateAppVisuals();
     if(isRunning) {
         if(chkAudioGuard.checked) restartAudioSystem();
         else if(micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
@@ -903,7 +941,7 @@ function saveSettings() {
         cameraId: cameraSelect.value, positions: boxes.map(b => ({ x: b.x, y: b.y })),
         anchor: { x: anchorBox.x, y: anchorBox.y, active: anchorBox.active },
         mute: { x: muteBox.x, y: muteBox.y, active: muteBox.active },
-        telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked, tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), 
+        telegram: chkTelegram.checked, audioGuard: chkAudioGuard.checked, localSound: selLocalSound.value, tgToken: txtTelegramToken.value.trim(), tgChat: txtTelegramChatId.value.trim(), 
         tgVideoMode: selTgVideoMode.value, audioThreshold: slideAudioThreshold.value, weather: txtWeatherCities.value.trim()
     };
     localStorage.setItem('pixel_settings_v2', JSON.stringify(settings));
@@ -947,6 +985,7 @@ function loadSettings() {
             
             if (s.telegram !== undefined) { chkTelegram.checked = s.telegram; telegramSettingsBox.style.display = s.telegram ? 'flex' : 'none'; }
             if (s.audioGuard !== undefined) chkAudioGuard.checked = s.audioGuard;
+            if (s.localSound) selLocalSound.value = s.localSound;
             if (s.tgToken) txtTelegramToken.value = s.tgToken; if (s.tgChat) txtTelegramChatId.value = s.tgChat; 
             if (s.tgVideoMode) selTgVideoMode.value = s.tgVideoMode;
             if (s.audioThreshold) slideAudioThreshold.value = s.audioThreshold;
@@ -959,7 +998,7 @@ function loadSettings() {
     } catch(e) {}
     
     boxCountSelect.value = activeBoxCount; 
-    createZoomDisplays(); updateMaxDeltaLimitRange(); updateLabels(); updateUIVisibility(); updateAppVisuals(); updateMonitorButtonUI();
+    createZoomDisplays(); updateMaxDeltaLimitRange(); updateLabels(); updateUIVisibility(); updateSmartUI(); updateMonitorButtonUI();
     boxes.forEach(b => { b.w = parseInt(slideWidth.value); b.h = parseInt(slideHeight.value); b.baseline = null; });
     anchorBox.w = parseInt(slideAnchorW.value); anchorBox.h = parseInt(slideAnchorH.value);
     muteBox.w = parseInt(slideMuteW.value); muteBox.h = parseInt(slideMuteH.value);
@@ -977,8 +1016,8 @@ function updateStealthClock() {
     
     if (!isMonitoring || !isRunning) {
         stealthOverlay.style.color = '#ffcccc'; 
-    } else if (chkAudioGuard.checked) {
-        stealthOverlay.style.color = '#88ccff'; // Dezent bläulich im Tarnmodus
+    } else if (isLocalMuted()) {
+        stealthOverlay.style.color = '#88ccff'; // Dezent bläulich im Tarnmodus, wenn stumm
     } else {
         stealthOverlay.style.color = 'white';
     }
@@ -992,8 +1031,8 @@ toggleAudioGuardBtnStealth.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!chkTelegram.checked || !txtTelegramToken.value.trim() || !txtTelegramChatId.value.trim()) return; 
     chkAudioGuard.checked = !chkAudioGuard.checked;
+    updateSmartUI();
     saveSettings();
-    updateAppVisuals();
     if (chkAudioGuard.checked && isRunning) restartAudioSystem();
     else if (!chkAudioGuard.checked && micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 });
@@ -1172,11 +1211,11 @@ function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
 canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
 canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.addEventListener('touchmove', moveDrag, { passive: false }); window.addEventListener('touchend', endDrag);
 
-// --- AUDIO TÖNE (Blockiert wenn Audio-Wächter aktiv) ---
+// --- AUDIO TÖNE ---
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 
 function playBeep() { 
-    if (chkAudioGuard.checked) return;
+    if (isLocalMuted()) return;
     const now = Date.now(); if (now - lastBeep < 1000) return; lastBeep = now; 
     initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
     osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; 
@@ -1184,7 +1223,7 @@ function playBeep() {
 }
 
 function playAnchorBeep() { 
-    if (chkAudioGuard.checked) return;
+    if (isLocalMuted()) return;
     const now = Date.now(); if (now - lastAnchorBeep < 1500) return; lastAnchorBeep = now; 
     initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
     osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; 
@@ -1192,14 +1231,14 @@ function playAnchorBeep() {
 }
 
 function playWarningBeep() { 
-    if (chkAudioGuard.checked) return;
+    if (isLocalMuted()) return;
     initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
     osc.type = 'sine'; osc.frequency.value = 800; gain.gain.value = 0.05; 
     osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
 }
 
 function playLoudAlarm() { 
-    if (chkAudioGuard.checked) return;
+    if (isLocalMuted()) return;
     const now = Date.now(); if (now - lastLoudBeep < 1000) return; lastLoudBeep = now; 
     initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
     osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
@@ -1254,7 +1293,7 @@ async function restartAudioSystem() {
         analyser.fftSize = 256; 
         dataArray = new Uint8Array(analyser.frequencyBinCount);
         source.connect(analyser); 
-    } catch(e) { alert("Mikrofon Fehler: " + e.message); chkAudioGuard.checked = false; updateAppVisuals(); }
+    } catch(e) { alert("Mikrofon Fehler: " + e.message); chkAudioGuard.checked = false; updateSmartUI(); updateAppVisuals(); }
 }
 
 function processAudio() {
@@ -1301,10 +1340,11 @@ async function sendTgMedia(endpoint, formData) {
     try { await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/${endpoint}`, { method: 'POST', body: formData }); } catch(e) {}
 }
 
-function recordAndSendVideo(boxId, isRemote = false) {
+function recordAndSendVideo(boxId, isRemote = false, durationMs = 4000) {
     if(isRecordingVideo || !chkTelegram.checked) return;
     isRecordingVideo = true; 
-    let caption = isRemote ? "🎥 Remote Live-Video" : "🎥 Alarm Box " + boxId;
+    let sec = durationMs / 1000;
+    let caption = isRemote ? `🎥 Remote Live-Video (${sec}s)` : "🎥 Alarm Box " + boxId;
     sendTgMessage(caption + " (Wird aufgezeichnet...)");
     
     try {
@@ -1329,7 +1369,10 @@ function recordAndSendVideo(boxId, isRemote = false) {
             isRecordingBoxId = null;
             setTimeout(() => { isRecordingVideo = false; }, 5000); 
         };
-        recorder.start(); setTimeout(() => { recorder.stop(); }, 4000); 
+        recorder.start(); 
+        setTimeout(() => { 
+            if(recorder.state !== 'inactive') recorder.stop(); 
+        }, durationMs); 
     } catch(e) {
         sendTgPhoto(isRemote ? "📸 Remote Live-Bild" : "📸 Notfall-Bild Box " + boxId); 
         isRecordingBoxId = null; setTimeout(() => { isRecordingVideo = false; }, 5000);
@@ -1402,7 +1445,15 @@ async function pollTelegram() {
                 if (item.message && item.message.chat.id.toString() === txtTelegramChatId.value.trim()) {
                     let text = item.message.text.trim();
                     if (text === '/foto') sendTgPhoto("📸 Remote Live-Bild");
-                    else if (text === '/video') recordAndSendVideo(null, true);
+                    else if (text.startsWith('/video')) {
+                        let parts = text.split(' ');
+                        let durationSec = 4; // Default: 4 Sekunden
+                        if(parts.length > 1 && !isNaN(parts[1])) {
+                            durationSec = parseInt(parts[1]);
+                            if (durationSec > 60) durationSec = 60; // Deckelung auf max 60s
+                        }
+                        recordAndSendVideo(null, true, durationSec * 1000);
+                    }
                     else if (text.startsWith('/audio')) {
                         let parts = text.split(' ');
                         let durationSec = 10; // Default: 10 Sekunden
