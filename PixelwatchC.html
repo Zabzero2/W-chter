@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 
-<title>Pixel-Wächter Pro V2.1 (Labor)</title>
+<title>Pixel-Wächter Pro</title>
 
 <style>
     body {
@@ -142,15 +142,16 @@
 
 <div id="helpOverlay" class="overlay">
     <div class="help-content">
-        <h2>Hilfe & Anleitung V2.1 (Labor)</h2>
-        <p>Der <b>Pixel-Wächter Pro V2.1</b> vereint V1.0-Stabilität mit Smart-Features.</p>
+        <h2>Hilfe & Anleitung</h2>
+        <p>Willkommen beim <b>Pixel-Wächter Pro</b>. Dieses System überwacht optische und akustische Alarme vollautomatisch.</p>
         
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Smart-Modem & Warnungen</h3>
         <ul>
-            <li><b>Telegram-Warnung:</b> Sende Befehle wie <code>/foto</code> an deinen Bot für Live-Bilder. Wähle im Menü zwischen Datenspar-Video (Nur Box) und HD-Vollbild.</li>
-            <li><b>Anker-Push:</b> Verrutscht die Kamera, piept das Tablet wie gewohnt und sendet sofort ein Warn-Foto per Telegram.</li>
-            <li><b>Audio-Wächter:</b> Das Tablet bleibt stumm! Bei langer hoher Frequenz blinkt es kurz auf und sendet das Audio lautlos per Telegram. Nutze den Live-Pegel im Menü zur Kalibrierung!</li>
-            <li><b>Wetter-Station:</b> Zeigt jetzt auch Nebel und Regenintensität mit großzügigem Abstand im Tarnmodus an.</li>
+            <li><b>Telegram-Warnung:</b> Verbinde einen Bot, um Medien aufs Handy zu erhalten. Bei Alarm sendet das System vollautomatisch Bilder oder Videos.</li>
+            <li><b>Remote-Befehle:</b> Sende <code>/foto</code>, <code>/video</code> oder <code>/audio</code> an deinen Bot, um jederzeit die aktuelle Lage im Raum abzufragen.</li>
+            <li><b>Anker-Push:</b> Verrutscht die Kamera (Tablet bewegt), sendet das System sofort ein Vergleichsbild (Referenz vs. Ist-Zustand).</li>
+            <li><b>Audio-Wächter:</b> Das Tablet bleibt stumm, um im Raum nicht zu stören! Bei lauten Tönen blinkt es kurz rot auf und sendet das Audio per Telegram. Nutze den Live-Pegel in den Einstellungen zur Kalibrierung der Mikrofonschwelle.</li>
+            <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein. Im Tarnmodus wird das Wetter (inkl. Nebel und Regenintensität) lautlos aktualisiert.</li>
         </ul>
         <button id="closeHelpBtn" style="margin-top: 15px; width: 100%; background: #00aaff; padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">Verstanden & Schließen</button>
     </div>
@@ -230,7 +231,7 @@
                 <div class="checkbox-group" style="flex-wrap: wrap; margin-bottom: 10px;">
                     <label><input type="checkbox" id="chkLocalAlarm" checked> Lokaler Ton (Tablet)</label>
                     <label><input type="checkbox" id="chkTelegram"> Telegram (Bilder/Media)</label>
-                    <label><input type="checkbox" id="chkAudioGuard"> Audio-Wächter (>1kHz)</label>
+                    <label><input type="checkbox" id="chkAudioGuard"> Audio-Wächter (Lautstärke)</label>
                 </div>
                 
                 <div class="slider-row" id="rowAudioThres">
@@ -523,20 +524,19 @@ let lastFrameTime = 0; let frameCounter = 0;
 const TARGET_FPS = 15; const FRAME_INTERVAL = 1000 / TARGET_FPS;
 const HIT_PAD = 30; const HISTORY_MS = 5000; const PIXEL_STEP = 1; 
 
-// V2 Audio Wächter Variables
+// Audio Wächter Variables
 let analyser, dataArray;
 let micStream = null;
 let isMutedInternally = false;
 let internalMuteTimeout = null;
-let loudFrames = []; 
-const AUDIO_DENSITY_REQ_MS = 600; 
 let lastAcousticAlarm = 0;
 
-// V2 Telegram Variables
+// Telegram Variables
 let isRecordingVideo = false;
 let isRecordingAudio = false;
 let isRecordingBoxId = null;
 let tgUpdateOffset = 0;
+let lastAnchorBeep = 0;
 
 // Boxen Setup (V61)
 let boxes = [
@@ -555,7 +555,7 @@ let muteBox = {
     state: 'IDLE', timerStart: 0, continuousStart: 0, wasEmpty: true, lastWarningTime: 0, emptyStartTime: 0, triggerStart: 0, zoomCtx: null, zoomBoxDiv: null, zoomStatsDiv: null 
 };
 
-// ---------- UI HELPER FUNKTIONEN (V61) ----------
+// ---------- UI HELPER FUNKTIONEN ----------
 function drawProportional(ctx, sourceCanvas, sx, sy, sw, sh, targetW, targetH) {
     ctx.fillStyle = "black"; ctx.fillRect(0, 0, targetW, targetH);
     let scale = Math.min(targetW / sw, targetH / sh);
@@ -732,7 +732,7 @@ function updateZoomSelectionUI() {
     if (selectedBox && selectedBox.zoomBoxDiv) { selectedBox.zoomBoxDiv.classList.add('active-zoom'); selectedBoxIdLabel.innerText = selectedBox.id; }
 }
 
-// ---------- SETTINGS (Speichern/Laden V2) ----------
+// ---------- SETTINGS ----------
 function saveSettings() {
     const settings = {
         expert: chkExpert.checked, sens: slideSens.value, mass: slideMass.value, width: slideWidth.value, height: slideHeight.value, takt: slideTakt.value, toleranz: slideToleranz.value, pulse: slidePulse.value, hold: slideHold.value, count: activeBoxCount, 
@@ -788,7 +788,7 @@ function loadSettings() {
 }
 loadSettings();
 
-// ---------- DRAG & DROP (V61) ----------
+// ---------- DRAG & DROP ----------
 function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect(); let clientX, clientY;
     if (e.type.includes('touch')) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; } else { clientX = e.clientX; clientY = e.clientY; }
@@ -826,7 +826,6 @@ function endDrag() { if(draggingBox) saveSettings(); draggingBox = null; }
 canvas.addEventListener('mousedown', startDrag); canvas.addEventListener('mousemove', moveDrag); window.addEventListener('mouseup', endDrag);
 canvas.addEventListener('touchstart', startDrag, { passive: false }); canvas.addEventListener('touchmove', moveDrag, { passive: false }); window.addEventListener('touchend', endDrag);
 
-// D-Pad
 function bindTurboButton(btnId, actionFn) {
     const btn = document.getElementById(btnId); let turboTimeout, turboInterval;
     const start = (e) => { e.preventDefault(); actionFn(1); turboTimeout = setTimeout(() => { let tick = 0; turboInterval = setInterval(() => { tick++; actionFn(tick>15?3:1); }, 50); }, 600); };
@@ -841,46 +840,49 @@ bindTurboButton('btnWPlus', (s) => { selectedBox.w = Math.min(100, selectedBox.w
 bindTurboButton('btnHMinus', (s) => { selectedBox.h = Math.max(5, selectedBox.h - s); selectedBox.baseline=null; saveSettings(); if(selectedBox===anchorBox) slideAnchorH.value = selectedBox.h; else if(selectedBox===muteBox) slideMuteH.value = selectedBox.h; else slideHeight.value = selectedBox.h; updateLabels(); });
 bindTurboButton('btnHPlus', (s) => { selectedBox.h = Math.min(50, selectedBox.h + s); selectedBox.baseline=null; saveSettings(); if(selectedBox===anchorBox) slideAnchorH.value = selectedBox.h; else if(selectedBox===muteBox) slideMuteH.value = selectedBox.h; else slideHeight.value = selectedBox.h; updateLabels(); });
 
-
-// ---------- AUDIO ECHO BLOCKER & V1.0 TÖNE ----------
+// ---------- AUDIO TÖNE (V1.0 STANDARD) ----------
 function setInternalMute(duration) {
     isMutedInternally = true;
     if(internalMuteTimeout) clearTimeout(internalMuteTimeout);
-    internalMuteTimeout = setTimeout(() => { isMutedInternally = false; loudFrames = []; }, duration);
+    internalMuteTimeout = setTimeout(() => { isMutedInternally = false; }, duration);
 }
 
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
 
+// Der klassische normale Alarm-Ton aus v1.0
 function playLocalBeep() { 
     if(!chkLocalAlarm.checked) return;
     setInternalMute(1000);
-    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
-    osc.type = 'square'; osc.frequency.value = 1000; gain.gain.value = 0.08; 
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.25); 
+    initAudio(); 
+    const osc = audioCtx.createOscillator(); 
+    const gain = audioCtx.createGain(); 
+    osc.type = 'square'; 
+    osc.frequency.value = 1000; 
+    gain.gain.value = 0.08; 
+    osc.connect(gain); 
+    gain.connect(audioCtx.destination); 
+    osc.start(); 
+    osc.stop(audioCtx.currentTime + 0.25); 
 }
-function playAnchorBeep() { 
-    if(!chkLocalAlarm.checked) return;
-    setInternalMute(1500);
-    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
-    osc.type = 'sawtooth'; osc.frequency.value = 250; gain.gain.value = 0.1; 
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.5); 
-}
-function playWarningBeep() { 
-    if(!chkLocalAlarm.checked) return;
-    setInternalMute(1000);
-    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
-    osc.type = 'sine'; osc.frequency.value = 800; gain.gain.value = 0.05; 
-    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); 
-}
+
+// Der laute Endlos-Mute Alarm
 function playLoudAlarm() { 
     if(!chkLocalAlarm.checked) return;
     setInternalMute(2000);
-    initAudio(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); 
-    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
-    gain.gain.value = 0.25; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.8); 
+    initAudio(); 
+    const osc = audioCtx.createOscillator(); 
+    const gain = audioCtx.createGain(); 
+    osc.type = 'sawtooth'; 
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
+    osc.frequency.linearRampToValueAtTime(1200, audioCtx.currentTime + 0.5);
+    gain.gain.value = 0.25; 
+    osc.connect(gain); 
+    gain.connect(audioCtx.destination); 
+    osc.start(); 
+    osc.stop(audioCtx.currentTime + 0.8); 
 }
 
-// ---------- WETTER API (Open-Meteo mit Nebel & Intensität) ----------
+// ---------- WETTER API (Open-Meteo mit Text) ----------
 async function fetchWeather() {
     if(!txtWeatherCities.value) { weatherDisplay.innerHTML = ''; return; }
     let cities = txtWeatherCities.value.split(',').map(c => c.trim()).filter(c => c);
@@ -896,37 +898,41 @@ async function fetchWeather() {
             let code = wData.current_weather.weathercode; let temp = Math.round(wData.current_weather.temperature);
             
             let emoji = '☁️'; let desc = '';
-            if(code === 0 || code === 1) { emoji = '☀️'; } 
-            else if(code === 2) { emoji = '⛅'; } 
-            else if(code === 3) { emoji = '☁️'; } 
+            if(code === 0 || code === 1) { emoji = '☀️'; desc = 'Klar'; } 
+            else if(code === 2) { emoji = '⛅'; desc = 'Leicht bewölkt'; } 
+            else if(code === 3) { emoji = '☁️'; desc = 'Bewölkt'; } 
             else if(code === 45 || code === 48) { emoji = '🌫️'; desc = 'Nebel'; } 
             else if(code === 51 || code === 53 || code === 55) { emoji = '💧'; desc = 'Niesel'; } 
-            else if(code === 61 || code === 80) { emoji = '🌧️'; desc = 'Leicht'; } 
-            else if(code === 63 || code === 81) { emoji = '🌧️'; desc = 'Mittel'; } 
-            else if(code === 65 || code === 82) { emoji = '🌧️'; desc = 'Stark'; } 
+            else if(code === 61 || code === 80) { emoji = '🌧️'; desc = 'Regen (Leicht)'; } 
+            else if(code === 63 || code === 81) { emoji = '🌧️'; desc = 'Regen (Mittel)'; } 
+            else if(code === 65 || code === 82) { emoji = '🌧️'; desc = 'Regen (Stark)'; } 
             else if(code === 71 || code === 73 || code === 75 || code === 77) { emoji = '❄️'; desc = 'Schnee'; } 
             else if(code >= 95) { emoji = '⛈️'; desc = 'Gewitter'; }
             
             let text = `<b>${city}</b>: ${temp}°C ${emoji}`;
-            if(desc) text += ` <span style="font-size:0.6em; color:#888;">(${desc})</span>`;
+            if(desc) text += ` (${desc})`;
             output.push(text);
         } catch(e) {}
     }
-    // Großzügiger Abstand zwischen den Orten
-    weatherDisplay.innerHTML = output.join("&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;");
+    // Breiter, sauberer Abstand
+    weatherDisplay.innerHTML = output.join("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
 }
 setInterval(fetchWeather, 5 * 60 * 1000); 
 
-// ---------- AUDIO WÄCHTER (Kalibrierbar & Lokal Stumm) ----------
+// ---------- AUDIO WÄCHTER (Reine Lautstärke) ----------
 async function restartAudioSystem() {
     if(micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     if(!chkAudioGuard.checked || !isRunning) return;
     try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const source = audioCtx.createMediaStreamSource(micStream);
-        const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 1000; 
-        analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; dataArray = new Uint8Array(analyser.frequencyBinCount);
-        source.connect(filter); filter.connect(analyser);
+        
+        analyser = audioCtx.createAnalyser(); 
+        analyser.fftSize = 256; 
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        // DIREKTE VERBINDUNG, KEIN FILTER MEHR!
+        source.connect(analyser); 
     } catch(e) { alert("Mikrofon Fehler: " + e.message); chkAudioGuard.checked = false; }
 }
 
@@ -938,26 +944,22 @@ function processAudio() {
     let now = Date.now();
     let threshold = parseInt(slideAudioThreshold.value);
 
-    // Live Pegel Anzeige im UI
+    // Live Pegel
     if (panelSmartOpen && frameCounter % 5 === 0) {
         let lbl = document.getElementById('liveAudioLevel');
         lbl.innerText = avg;
         lbl.style.color = avg > threshold ? "#ff0000" : "#00ff88";
     }
     
-    if(avg > threshold) loudFrames.push(now);
-    loudFrames = loudFrames.filter(t => now - t < 2000); // 2-Sekunden Eimer
-    
-    let loudDurationMs = loudFrames.length * (1000 / TARGET_FPS);
-    if (loudDurationMs >= AUDIO_DENSITY_REQ_MS && (now - lastAcousticAlarm > 10000)) {
-        lastAcousticAlarm = now; loudFrames = []; 
+    // Einfache Auslösung (Kein Eimer)
+    if(avg > threshold && (now - lastAcousticAlarm > 10000)) {
+        lastAcousticAlarm = now; 
         
-        // Optisches Feedback, KEIN lokaler Ton!
         const micUi = document.getElementById('micAlarmUI');
         micUi.style.display = 'block';
         setTimeout(() => micUi.style.display = 'none', 4000);
 
-        if (chkTelegram.checked) recordAndSendAudio();
+        if (chkTelegram.checked) recordAndSendAudio(false);
     }
 }
 
@@ -973,16 +975,19 @@ async function sendTgMedia(endpoint, formData) {
     try { await fetch(`https://api.telegram.org/bot${txtTelegramToken.value.trim()}/${endpoint}`, { method: 'POST', body: formData }); } catch(e) {}
 }
 
-function recordAndSendVideo(boxId) {
+// Video (Box oder Full)
+function recordAndSendVideo(boxId, isRemote = false) {
     if(isRecordingVideo || !chkTelegram.checked) return;
-    isRecordingVideo = true; sendTgMessage("🚨 Alarm Box " + boxId + "! Erstelle Beweis-Video...");
+    isRecordingVideo = true; 
+    let caption = isRemote ? "🎥 Remote Live-Video" : "🎥 Alarm Box " + boxId;
+    sendTgMessage(caption + " (Aufzeichnung läuft...)");
+    
     try {
         let stream;
-        const mode = selTgVideoMode.value;
-        if(mode === 'box') {
+        const mode = isRemote ? 'full' : selTgVideoMode.value;
+        if(mode === 'box' && boxId !== null) {
             isRecordingBoxId = boxId;
             let b = boxes.find(x => x.id === boxId);
-            // Leinwand etwas vergrößern für Qualität
             recordCanvas.width = b.w * 3; recordCanvas.height = b.h * 3;
             stream = recordCanvas.captureStream(15);
         } else {
@@ -994,26 +999,31 @@ function recordAndSendVideo(boxId) {
         recorder.ondataavailable = e => chunks.push(e.data);
         recorder.onstop = async () => {
             let blob = new Blob(chunks, { type: 'video/webm' });
-            let fd = new FormData(); fd.append("video", blob, "alarm.webm"); fd.append("caption", "🎥 Live-Aufnahme Box " + boxId);
+            let fd = new FormData(); fd.append("video", blob, "video.webm"); fd.append("caption", caption);
             await sendTgMedia("sendVideo", fd);
             isRecordingBoxId = null;
             setTimeout(() => { isRecordingVideo = false; }, 5000); 
         };
         recorder.start(); setTimeout(() => { recorder.stop(); }, 4000); 
     } catch(e) {
-        sendTgPhoto("📸 Notfall-Bild Box " + boxId); isRecordingBoxId = null; setTimeout(() => { isRecordingVideo = false; }, 5000);
+        sendTgPhoto(isRemote ? "📸 Remote Live-Bild" : "📸 Notfall-Bild Box " + boxId); 
+        isRecordingBoxId = null; setTimeout(() => { isRecordingVideo = false; }, 5000);
     }
 }
 
-function recordAndSendAudio() {
+// Audio
+function recordAndSendAudio(isRemote = false) {
     if(isRecordingAudio || !chkTelegram.checked || !micStream) return;
-    isRecordingAudio = true; sendTgMessage("🚨 Telefon / Audio-Alarm! Zeichne 5s auf...");
+    isRecordingAudio = true; 
+    let caption = isRemote ? "🎙️ Remote Live-Audio" : "🎙️ Audio-Alarm erkannt";
+    if (isRemote) sendTgMessage(caption + " (Aufzeichnung läuft...)");
+
     try {
         let recorder = new MediaRecorder(micStream); let chunks = [];
         recorder.ondataavailable = e => chunks.push(e.data);
         recorder.onstop = async () => {
             let blob = new Blob(chunks, { type: 'audio/webm' });
-            let fd = new FormData(); fd.append("voice", blob, "alarm.webm"); fd.append("caption", "🎙️ Audio-Meldung");
+            let fd = new FormData(); fd.append("voice", blob, "audio.webm"); fd.append("caption", caption);
             await sendTgMedia("sendVoice", fd);
             setTimeout(() => { isRecordingAudio = false; }, 5000); 
         };
@@ -1021,6 +1031,7 @@ function recordAndSendAudio() {
     } catch(e) { setTimeout(() => { isRecordingAudio = false; }, 5000); }
 }
 
+// Foto (Vollbild)
 function sendTgPhoto(caption) {
     if(!chkTelegram.checked) return;
     canvas.toBlob(async (blob) => {
@@ -1028,7 +1039,35 @@ function sendTgPhoto(caption) {
     }, 'image/jpeg', 0.8);
 }
 
-// Long Polling
+// Anker-Foto (Referenz + Live Komposit)
+function sendAnchorTgPhoto() {
+    if(!chkTelegram.checked || !anchorBox.baseline) return;
+    let scale = 3; 
+    let tmpC = document.createElement('canvas');
+    tmpC.width = (anchorBox.w * 2 + 10) * scale;
+    tmpC.height = anchorBox.h * scale;
+    let tCtx = tmpC.getContext('2d');
+    tCtx.fillStyle = '#111'; tCtx.fillRect(0,0,tmpC.width,tmpC.height);
+
+    // Ref zeichnen
+    let imgData = new ImageData(new Uint8ClampedArray(anchorBox.baseline), anchorBox.w, anchorBox.h);
+    let refC = document.createElement('canvas'); refC.width = anchorBox.w; refC.height = anchorBox.h;
+    refC.getContext('2d').putImageData(imgData, 0, 0);
+    
+    tCtx.imageSmoothingEnabled = false;
+    tCtx.drawImage(refC, 0, 0, anchorBox.w, anchorBox.h, 0, 0, anchorBox.w * scale, anchorBox.h * scale);
+    
+    // Live zeichnen
+    tCtx.drawImage(canvas, anchorBox.x, anchorBox.y, anchorBox.w, anchorBox.h, (anchorBox.w + 10) * scale, 0, anchorBox.w * scale, anchorBox.h * scale);
+
+    tmpC.toBlob(async (blob) => {
+        let fd = new FormData(); fd.append("photo", blob, "anchor.jpg");
+        fd.append("caption", "🚨 WARNUNG: Anker verrutscht!\nLinks: Referenz | Rechts: Live");
+        await sendTgMedia("sendPhoto", fd);
+    }, 'image/jpeg', 0.9);
+}
+
+// Long Polling (Commands)
 async function pollTelegram() {
     if (!chkTelegram.checked || !isRunning || !txtTelegramToken.value) { setTimeout(pollTelegram, 5000); return; }
     try {
@@ -1037,8 +1076,11 @@ async function pollTelegram() {
         if (data.ok && data.result.length > 0) {
             for (let item of data.result) {
                 tgUpdateOffset = item.update_id + 1;
-                if (item.message && item.message.text === '/foto') {
-                    if(item.message.chat.id.toString() === txtTelegramChatId.value.trim()) sendTgPhoto("📸 Remote Live-Bild");
+                if (item.message && item.message.chat.id.toString() === txtTelegramChatId.value.trim()) {
+                    let text = item.message.text;
+                    if (text === '/foto') sendTgPhoto("📸 Remote Live-Bild");
+                    else if (text === '/video') recordAndSendVideo(null, true);
+                    else if (text === '/audio') recordAndSendAudio(true);
                 }
             }
         }
@@ -1046,7 +1088,7 @@ async function pollTelegram() {
     setTimeout(pollTelegram, 1000);
 }
 
-// ---------- V61 BILD-ANALYSE (Anker, Mute, Rhythmus) ----------
+// ---------- BILD-ANALYSE (Anker, Mute, Rhythmus) ----------
 
 function analyzeAnchor(now, fullFrame, imgW, imgH) {
     if (!anchorBox.active) return false;
@@ -1085,10 +1127,11 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
         if (anchorBox.alarmStart === 0) anchorBox.alarmStart = now; 
         else if (now - anchorBox.alarmStart > 1000) {
             anchorBox.isAlarm = true;
-            // Telegram Push für Anker (mit 60s Sperre gegen Dauerspam)
+            if(now - lastAnchorBeep > 3000) { playLocalBeep(); lastAnchorBeep = now; } // Klassischer V1.0 Ton mit Debounce
+            
             if(chkTelegram.checked && (!anchorBox.lastTgAlarm || now - anchorBox.lastTgAlarm > 60000)) {
                 anchorBox.lastTgAlarm = now;
-                sendTgPhoto("🚨 WARNUNG: Kamera (Anker) verrutscht! Überwachung gefährdet.");
+                sendAnchorTgPhoto();
             }
         }
     } else { 
@@ -1105,7 +1148,6 @@ function analyzeAnchor(now, fullFrame, imgW, imgH) {
         anchorBox.zoomStatsDiv.innerHTML = `Abw: <span style="color:#00ff88;">${structuralDiff}</span> / Max: ${anchorThreshold}<br>` + (anchorBox.isAlarm && isMonitoring ? `<b style="color:#ffaa00;">VERRUTSCHT!</b>` : `Größe: ${aw}x${ah} px`);
     }
 
-    if (anchorBox.isAlarm && isMonitoring) playAnchorBeep();
     return anchorBox.isAlarm; 
 }
 
@@ -1159,7 +1201,7 @@ function analyzeMute(now, fullFrame, imgW, imgH) {
         if (now - muteBox.timerStart >= muteHoldMs) muteBox.state = 'WAITING_FOR_EMPTY';
         else {
             let duration = now - muteBox.continuousStart;
-            if (duration > 600000) playLoudAlarm(); else if (duration > 300000) { if (now - muteBox.lastWarningTime > 5000) { playWarningBeep(); muteBox.lastWarningTime = now; } }
+            if (duration > 600000) playLoudAlarm(); else if (duration > 300000) { if (now - muteBox.lastWarningTime > 5000) { playLocalBeep(); muteBox.lastWarningTime = now; } }
         }
     }
     
@@ -1242,11 +1284,10 @@ function analyzeBoxes(now, fullFrame, imgW, imgH) {
             if (!isMonitoring) txt += `<br><b style="color:#ff4444;">[PAUSE]</b>`; box.zoomStatsDiv.innerHTML = txt;
         }
     }
-    if (boxAlarmTriggered && muteBox.state !== 'MUTED') { playLocalBeep(); recordAndSendVideo(alarmBoxId); }
+    if (boxAlarmTriggered && muteBox.state !== 'MUTED') { playLocalBeep(); recordAndSendVideo(alarmBoxId, false); }
 }
 
 function drawUI() {
-    // Record Canvas für Lupen-Video (Nur die Box) füttern, falls aktiv
     if (isRecordingBoxId !== null) {
         let b = boxes.find(x => x.id === isRecordingBoxId);
         if (b) {
@@ -1286,7 +1327,6 @@ function processFrame() {
     if (elapsed < FRAME_INTERVAL) return; lastFrameTime = now - (elapsed % FRAME_INTERVAL);
     frameCounter++; 
 
-    // Audio immer parallel analysieren
     processAudio();
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
