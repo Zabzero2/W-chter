@@ -172,7 +172,7 @@
             <li><b>Telegram-Warnung:</b> Hinterlege einen Bot, um bei Alarmen automatisch Medien (Bilder/Videos) aufs Handy zu erhalten.</li>
             <li><b>Remote-Befehle:</b> Sende <code>/foto</code>, <code>/video</code> oder <code>/audio</code> an deinen Bot. Für längere Aufnahmen nutze z.B. <code>/audio 30</code> oder <code>/video 30</code> (nimmt 30s auf, max 60s).</li>
             <li><b>Lokale Töne / Audio-Wächter:</b> Über die Auswahlbox kannst du bestimmen, ob das Tablet bei Alarm klingeln soll. Ist der Audio-Wächter aktiv, wird das Gerät zwingend stummgeschaltet, damit der Raum überwacht werden kann (nur Telegram-Media). Der Stumm-Modus wird durch ein blaues Menü signalisiert.</li>
-            <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein. Im Tarnmodus wird das Wetter lautlos, nebeneinander in Spalten aktualisiert.</li>
+            <li><b>Wetter-Station:</b> Gebe Orte in die Einstellungen ein (mehrere Orte getrennt durch Semikolon <code>;</code>). Für exakte GPS-Standorte oder spezielle Suchen nutze das Format <code>Anzeigename=Suchbegriff oder GPS</code> (z.B. <code>Lauingen=48.57,10.43</code> oder <code>Zuhause=München</code>).</li>
         </ul>
 
         <h3 style="color: white; font-size: 16px; margin-bottom: 5px;">Spezial-Module</h3>
@@ -303,7 +303,7 @@
                 </div>
                 <div class="slider-row">
                     <label>Wetter-Orte:</label>
-                    <input type="text" id="txtWeatherCities" placeholder="München, Augsburg">
+                    <input type="text" id="txtWeatherCities" placeholder="München; Lauingen=48.57,10.43">
                 </div>
             </div>
         </div>
@@ -1248,21 +1248,47 @@ function playLoudAlarm() {
 // --- WETTER API ---
 async function fetchWeather() {
     if(!txtWeatherCities.value) { weatherDisplay.innerHTML = ''; return; }
-    let cities = txtWeatherCities.value.split(',').map(c => c.trim()).filter(c => c);
+    
+    let cities = txtWeatherCities.value.split(';').map(c => c.trim()).filter(c => c);
     let output = [];
-    for(let city of cities) {
+    
+    for(let cityEntry of cities) {
         try {
-            let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=de`);
-            let geoData = await geoRes.json();
-            if(!geoData.results || geoData.results.length === 0) continue;
-            let lat = geoData.results[0].latitude; let lon = geoData.results[0].longitude;
+            let displayName = cityEntry;
+            let searchQuery = cityEntry;
+            
+            // Format: "Zuhause=München" oder "Lauingen=48.57,10.43"
+            if(cityEntry.includes('=')) {
+                let parts = cityEntry.split('=');
+                displayName = parts[0].trim();
+                searchQuery = parts[1].trim();
+            }
+
+            // Prüfen ob searchQuery GPS Koordinaten sind (z.B. "48.57,10.43" oder "48.57, 10.43")
+            let isGps = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(searchQuery);
+            let lat, lon;
+
+            if (isGps) {
+                let coords = searchQuery.split(',');
+                lat = parseFloat(coords[0].trim());
+                lon = parseFloat(coords[1].trim());
+            } else {
+                let geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery)}&count=1&language=de`);
+                let geoData = await geoRes.json();
+                if(!geoData.results || geoData.results.length === 0) continue;
+                lat = geoData.results[0].latitude; 
+                lon = geoData.results[0].longitude;
+            }
+
             let wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
             let wData = await wRes.json();
-            let code = wData.current_weather.weathercode; let temp = Math.round(wData.current_weather.temperature);
+            let code = wData.current_weather.weathercode; 
+            let temp = Math.round(wData.current_weather.temperature);
+            let isDay = wData.current_weather.is_day === 1;
             
             let emoji = '☁️'; let desc = '';
-            if(code === 0 || code === 1) { emoji = '☀️'; desc = 'Klar'; }
-            else if(code === 2 || code === 3) { emoji = '⛅'; desc = 'Bewölkt'; }
+            if(code === 0 || code === 1) { emoji = isDay ? '☀️' : '🌙'; desc = 'Klar'; }
+            else if(code === 2 || code === 3) { emoji = isDay ? '⛅' : '☁️'; desc = 'Bewölkt'; }
             else if(code === 45 || code === 48) { emoji = '🌫️'; desc = 'Nebel'; }
             else if(code >= 51 && code <= 67) { emoji = '🌧️'; desc = 'Regen'; }
             else if(code >= 71 && code <= 77) { emoji = '❄️'; desc = 'Schnee'; }
@@ -1272,7 +1298,7 @@ async function fetchWeather() {
             output.push(`
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5vw;">
                     <div style="font-size: 4vw; color: white;">${emoji} ${temp}°C</div>
-                    <div style="font-size: 2vw; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${city}</div>
+                    <div style="font-size: 2vw; font-weight: bold; letter-spacing: 1px;">${displayName}</div>
                     <div style="font-size: 1.8vw; color: #888;">${desc}</div>
                 </div>
             `);
